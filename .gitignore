@@ -1,0 +1,70 @@
+# -----------------------------
+# Universal Monorepo .gitignore
+# -----------------------------
+
+# Dependencies
+**/node_modules/
+
+# Build outputs
+**/dist/
+**/build/
+**/.next/
+**/.nuxt/
+**/.svelte-kit/
+**/.output/
+
+# Coverage and test artifacts
+**/coverage/
+**/.nyc_output/
+
+# Caches
+**/.cache/
+**/.turbo/
+**/.parcel-cache/
+**/.eslintcache
+**/*.tsbuildinfo
+
+# Logs and runtime files
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.pid
+*.seed
+*.pid.lock
+
+# Environment files
+**/.env*
+!**/.env.example
+
+# Editor and IDE
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.iml
+*.suo
+*.user
+*.userossc
+*.sln.docstates
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+
+# Package manager stores
+.pnpm-store/
+.npm/
+.yarn/cache/
+.yarn/unplugged/
+.yarn/build-state.yml
+.yarn/install-state.gz
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+*~

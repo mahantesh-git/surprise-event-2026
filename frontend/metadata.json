@@ -1,0 +1,6 @@
+{
+  "name": "Quest: The Code Scavenger",
+  "description": "A two-player collaborative scavenger hunt where one player solves code puzzles to unlock coordinates for the other player to find and scan QR codes.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": []
+}
