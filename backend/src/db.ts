@@ -2,6 +2,7 @@ import { MongoClient, type Collection } from 'mongodb';
 import type { TeamDocument, QuestionDocument } from './types';
 
 let client: MongoClient | null = null;
+let connectingPromise: Promise<MongoClient> | null = null;
 
 function getMongoUri() {
   const uri = process.env.MONGODB_URI;
@@ -13,22 +14,38 @@ function getDatabaseName() {
   return process.env.MONGODB_DB_NAME || 'quest';
 }
 
-export async function getTeamsCollection(): Promise<Collection<TeamDocument>> {
-  if (!client) {
-    client = new MongoClient(getMongoUri());
-    await client.connect();
+async function getClient() {
+  if (client) {
+    return client;
   }
 
-  return client.db(getDatabaseName()).collection<TeamDocument>('teams');
+  if (!connectingPromise) {
+    const pendingClient = new MongoClient(getMongoUri());
+    connectingPromise = pendingClient.connect()
+      .then(() => {
+        client = pendingClient;
+        return pendingClient;
+      })
+      .catch((error) => {
+        connectingPromise = null;
+        client = null;
+        throw error;
+      });
+  }
+
+  return connectingPromise;
+}
+
+export async function getTeamsCollection(): Promise<Collection<TeamDocument>> {
+  const dbClient = await getClient();
+
+  return dbClient.db(getDatabaseName()).collection<TeamDocument>('teams');
 }
 
 export async function getQuestionsCollection(): Promise<Collection<QuestionDocument>> {
-  if (!client) {
-    client = new MongoClient(getMongoUri());
-    await client.connect();
-  }
+  const dbClient = await getClient();
 
-  return client.db(getDatabaseName()).collection<QuestionDocument>('questions');
+  return dbClient.db(getDatabaseName()).collection<QuestionDocument>('questions');
 }
 
 export async function ensureIndexes() {

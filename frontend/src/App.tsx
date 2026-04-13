@@ -20,7 +20,7 @@ import { QRScanner } from '@/components/QRScanner';
 import { AdminPanel } from '@/components/AdminPanel';
 import { RoleSelection } from '@/components/RoleSelection';
 import { useGameState, type Role } from '@/hooks/useGameState';
-import { getQuestions, type RoundQuestion } from '@/lib/api';
+import { compilePython, getQuestions, type RoundQuestion } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
 export default function App() {
@@ -219,16 +219,38 @@ export default function App() {
 
   const currentRound = rounds[Math.min(gameState!.round, rounds.length - 1)];
 
-  const checkP1 = () => {
-    if (p1Input.trim().toLowerCase() === currentRound.p1.ans.toLowerCase()) {
-      setFeedback({ type: 'ok', msg: `Correct! ${currentRound.p1.output}` });
-      setTimeout(() => {
-        updateState({ stage: 'p1_solved' });
-        setFeedback(null);
-        setP1Input('');
-        setShowHint(false);
-      }, 1000);
-    } else setFeedback({ type: 'err', msg: 'Incorrect. Try again!' });
+  const normalizeAnswer = (value: string) => value.replace(/\s+/g, ' ').trim().toLowerCase();
+
+  const checkP1 = async () => {
+    if (!session?.token) return;
+
+    try {
+      const result = await compilePython(session.token, currentRound.p1.code);
+      if (!result.ok) {
+        const msg = result.timedOut ? 'Execution timed out. Try again.' : (result.stderr || 'Compilation failed');
+        setFeedback({ type: 'err', msg });
+        return;
+      }
+
+      const actualOutput = result.stdout.trim();
+      const expectedOutput = currentRound.p1.ans.trim();
+      const userAnswer = p1Input.trim();
+
+      if (normalizeAnswer(userAnswer) === normalizeAnswer(actualOutput) && normalizeAnswer(actualOutput) === normalizeAnswer(expectedOutput)) {
+        setFeedback({ type: 'ok', msg: `Correct! ${currentRound.p1.output}` });
+        setTimeout(() => {
+          updateState({ stage: 'p1_solved' });
+          setFeedback(null);
+          setP1Input('');
+          setShowHint(false);
+        }, 1000);
+      } else {
+        const details = actualOutput ? ` Compiler output: ${actualOutput}` : ' No output was produced.';
+        setFeedback({ type: 'err', msg: `Incorrect output.${details}` });
+      }
+    } catch (error) {
+      setFeedback({ type: 'err', msg: error instanceof Error ? error.message : 'Compilation failed' });
+    }
   };
 
   const checkP2 = () => {

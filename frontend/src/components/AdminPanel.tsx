@@ -6,12 +6,15 @@ import {
   adminLogin,
   createAdminQuestion,
   createAdminTeam,
+  deleteAllAdminQuestions,
+  deleteAllAdminTeams,
   deleteAdminQuestion,
   deleteAdminTeam,
   getAdminQuestions,
   getAdminTeams,
   type RoundQuestion,
   updateAdminQuestion,
+  wipeAdminDatabase,
 } from '@/lib/api';
 
 const ADMIN_SESSION_KEY = 'quest-admin-session';
@@ -115,6 +118,20 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
     }
   };
 
+  const handleDeleteAllTeams = async () => {
+    if (!token) return;
+    const confirmed = window.confirm('Delete all teams? This will clear all team progress.');
+    if (!confirmed) return;
+
+    setError(null);
+    try {
+      await deleteAllAdminTeams(token);
+      await refreshData(token);
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : 'Failed to delete all teams');
+    }
+  };
+
   const handleEditQuestion = (question: RoundQuestion) => {
     setEditingQuestionId(question.id || null);
     setDraftQuestion(question);
@@ -146,6 +163,38 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
       await refreshData(token);
     } catch (deleteError) {
       setError(deleteError instanceof Error ? deleteError.message : 'Failed to delete question');
+    }
+  };
+
+  const handleDeleteAllQuestions = async () => {
+    if (!token) return;
+    const confirmed = window.confirm('Delete all questions? This cannot be undone.');
+    if (!confirmed) return;
+
+    setError(null);
+    try {
+      await deleteAllAdminQuestions(token);
+      setEditingQuestionId(null);
+      setDraftQuestion(createEmptyQuestion(1));
+      await refreshData(token);
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : 'Failed to delete all questions');
+    }
+  };
+
+  const handleWipeDatabase = async () => {
+    if (!token) return;
+    const confirmed = window.confirm('Delete ALL teams and ALL questions from database? This is irreversible.');
+    if (!confirmed) return;
+
+    setError(null);
+    try {
+      await wipeAdminDatabase(token);
+      setEditingQuestionId(null);
+      setDraftQuestion(createEmptyQuestion(1));
+      await refreshData(token);
+    } catch (wipeError) {
+      setError(wipeError instanceof Error ? wipeError.message : 'Failed to wipe database');
     }
   };
 
@@ -203,6 +252,9 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
             <CardDescription>Current teams in the system.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
+            <div className="flex justify-end">
+              <Button className="bg-red-600 text-white hover:bg-red-700" onClick={handleDeleteAllTeams}>Delete All Teams</Button>
+            </div>
             {teams.map((team) => (
               <div key={team.id} className="flex flex-col md:flex-row md:items-center md:justify-between rounded-md border border-zinc-200 dark:border-zinc-800 p-3 gap-2">
                 <div>
@@ -267,6 +319,9 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
             <CardDescription>Add, edit, remove rounds.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
+            <div className="flex justify-end">
+              <Button className="bg-red-600 text-white hover:bg-red-700" onClick={handleDeleteAllQuestions}>Delete All Questions</Button>
+            </div>
             {questions
               .slice()
               .sort((a, b) => a.round - b.round)
@@ -283,6 +338,16 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                 </div>
               ))}
             {!questions.length && !loading && <div className="text-sm text-zinc-500">No questions yet.</div>}
+          </CardContent>
+        </Card>
+
+        <Card className="border-red-200 dark:border-red-900/40">
+          <CardHeader>
+            <CardTitle>Danger Zone</CardTitle>
+            <CardDescription>Remove all collections from database in one action.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button className="bg-red-700 text-white hover:bg-red-800" onClick={handleWipeDatabase}>Delete All Data From DB</Button>
           </CardContent>
         </Card>
       </div>

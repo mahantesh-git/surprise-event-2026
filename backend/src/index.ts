@@ -9,6 +9,7 @@ import { requireAdmin, requireAuth, signAdminToken, signToken, normalizeRole, ty
 import { createTeam, findTeamByName, verifyTeamPassword, findTeamById } from './team-service';
 import { createInitialGameState, normalizeGameState, sanitizeGameStateUpdate } from './game';
 import { DEFAULT_QUESTIONS } from './defaultQuestions';
+import { runPythonCode } from './pythonRunner';
 
 const envPath = path.resolve(__dirname, '../.env');
 const fallbackEnvPath = path.resolve(__dirname, '../.env.example');
@@ -195,6 +196,37 @@ app.post('/api/game/reset', requireAuth, async (request: AuthedRequest, response
   response.json({ gameState: nextState });
 });
 
+app.post('/api/game/compile', requireAuth, async (request: AuthedRequest, response) => {
+  const auth = request.auth;
+  if (!auth) {
+    response.status(401).json({ error: 'Not authenticated' });
+    return;
+  }
+
+  if (auth.role !== 'solver') {
+    response.status(403).json({ error: 'Only solver can compile questions' });
+    return;
+  }
+
+  const code = typeof request.body?.code === 'string' ? request.body.code : '';
+  if (!code.trim()) {
+    response.status(400).json({ error: 'code is required' });
+    return;
+  }
+
+  if (code.length > 4000) {
+    response.status(400).json({ error: 'Code is too large' });
+    return;
+  }
+
+  try {
+    const result = await runPythonCode(code);
+    response.json(result);
+  } catch {
+    response.status(500).json({ error: 'Python runtime is not available on server' });
+  }
+});
+
 app.get('/api/questions', async (_request, response) => {
   const questions = await getQuestionsCollection();
   const docs = await questions.find({}, { sort: { round: 1 } }).toArray();
@@ -261,6 +293,12 @@ app.delete('/api/admin/teams/:id', requireAdmin, async (request: AdminAuthedRequ
   response.json({ ok: true });
 });
 
+app.delete('/api/admin/teams', requireAdmin, async (_request: AdminAuthedRequest, response) => {
+  const teams = await getTeamsCollection();
+  const result = await teams.deleteMany({});
+  response.json({ ok: true, deletedCount: result.deletedCount });
+});
+
 app.get('/api/admin/questions', requireAdmin, async (_request: AdminAuthedRequest, response) => {
   const questions = await getQuestionsCollection();
   const docs = await questions.find({}, { sort: { round: 1 } }).toArray();
@@ -308,6 +346,34 @@ app.delete('/api/admin/questions/:id', requireAdmin, async (request: AdminAuthed
   response.json({ ok: true });
 });
 
+app.delete('/api/admin/questions', requireAdmin, async (_request: AdminAuthedRequest, response) => {
+  const questions = await getQuestionsCollection();
+  const result = await questions.deleteMany({});
+  response.json({ ok: true, deletedCount: result.deletedCount });
+});
+
+app.delete('/api/admin/database', requireAdmin, async (_request: AdminAuthedRequest, response) => {
+  const teams = await getTeamsCollection();
+  const questions = await getQuestionsCollection();
+
+  const [teamsResult, questionsResult] = await Promise.all([
+    teams.deleteMany({}),
+    questions.deleteMany({}),
+  ]);
+
+  response.json({
+    ok: true,
+    deletedTeams: teamsResult.deletedCount,
+    deletedQuestions: questionsResult.deletedCount,
+  });
+});
+
+app.use((error: unknown, _request: express.Request, response: express.Response, _next: express.NextFunction) => {
+  const message = error instanceof Error ? error.message : 'Internal server error';
+  console.error('API error:', error);
+  response.status(500).json({ error: message });
+});
+
 app.use((_request, response) => {
   response.status(404).json({ error: 'Not found' });
 });
@@ -315,8 +381,19 @@ app.use((_request, response) => {
 async function main() {
   await ensureIndexes();
   await seedQuestionsIfEmpty();
-  app.listen(port, () => {
+
+  const server = app.listen(port, () => {
     console.log(`Backend listening on http://localhost:${port}`);
+  });
+
+  server.on('error', (error: NodeJS.ErrnoException) => {
+    if (error.code === 'EADDRINUSE') {
+      console.error(`Port ${port} is already in use. Stop the existing process or change PORT in backend/.env.`);
+      process.exit(1);
+    }
+
+    console.error('Server failed to start', error);
+    process.exit(1);
   });
 }
 

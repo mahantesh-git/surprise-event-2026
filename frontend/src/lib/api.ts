@@ -70,6 +70,13 @@ export async function resetGameState(token: string) {
   }, token);
 }
 
+export async function compilePython(token: string, code: string) {
+  return requestJson<{ ok: boolean; stdout: string; stderr: string; timedOut: boolean }>('/game/compile', {
+    method: 'POST',
+    body: JSON.stringify({ code }),
+  }, token);
+}
+
 export interface RoundQuestion {
   id?: string;
   round: number;
@@ -113,6 +120,10 @@ export async function deleteAdminTeam(token: string, teamId: string) {
   return requestJson<{ ok: boolean }>(`/admin/teams/${teamId}`, { method: 'DELETE' }, token);
 }
 
+export async function deleteAllAdminTeams(token: string) {
+  return requestJson<{ ok: boolean; deletedCount: number }>('/admin/teams', { method: 'DELETE' }, token);
+}
+
 export async function getAdminQuestions(token: string) {
   return requestJson<{ questions: RoundQuestion[] }>('/admin/questions', { method: 'GET' }, token);
 }
@@ -133,4 +144,12 @@ export async function updateAdminQuestion(token: string, id: string, payload: Ro
 
 export async function deleteAdminQuestion(token: string, id: string) {
   return requestJson<{ ok: boolean }>(`/admin/questions/${id}`, { method: 'DELETE' }, token);
+}
+
+export async function deleteAllAdminQuestions(token: string) {
+  return requestJson<{ ok: boolean; deletedCount: number }>('/admin/questions', { method: 'DELETE' }, token);
+}
+
+export async function wipeAdminDatabase(token: string) {
+  return requestJson<{ ok: boolean; deletedTeams: number; deletedQuestions: number }>('/admin/database', { method: 'DELETE' }, token);
 }
