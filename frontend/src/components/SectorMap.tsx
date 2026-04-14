@@ -33,6 +33,7 @@ export function SectorMap({ rounds, currentRound, stage }: SectorMapProps) {
   const runnerRingRef = useRef<L.Circle | null>(null);
   const watchIdRef = useRef<number | null>(null);
   const routeLayerRef = useRef<L.Polyline | null>(null);
+  const hasCenteredRef = useRef<boolean>(false);
 
   const isComplete = stage === 'complete';
   const isRunnerStage = ['p2_travel', 'p2_scan', 'p2_solve', 'p2_solved'].includes(stage);
@@ -188,22 +189,25 @@ export function SectorMap({ rounds, currentRound, stage }: SectorMapProps) {
       }).addTo(map);
     }
 
-    // If the browser falls back to IP geolocation (e.g., PC testing), accuracy will be > 5000m.
-    // We don't want to zoom out 400km to show both Bangalore (IP) and the Hubli Campus.
-    if (accuracy < 1000) {
-      if (hasTarget && targetLat !== null && targetLng !== null) {
-        const bounds = L.latLngBounds([[lat, lng], [targetLat, targetLng]]);
-        map.fitBounds(bounds, { padding: [60, 60], maxZoom: 19 });
+    // Only auto-center the very first time we get a GPS lock, so we don't
+    // yank the camera constantly while the user is trying to pan/zoom.
+    if (!hasCenteredRef.current) {
+      if (accuracy < 1000) {
+        if (hasTarget && targetLat !== null && targetLng !== null) {
+          const bounds = L.latLngBounds([[lat, lng], [targetLat, targetLng]]);
+          map.fitBounds(bounds, { padding: [60, 60], maxZoom: 19 });
+        } else {
+          map.setView([lat, lng], accuracy < 200 ? 18 : 15);
+        }
       } else {
-        map.setView([lat, lng], accuracy < 200 ? 18 : 15);
+        // For poor accuracy (PC testing), keep the camera locked on the target/campus
+        if (hasTarget && targetLat !== null && targetLng !== null) {
+          map.setView([targetLat, targetLng], 18);
+        } else {
+          map.setView([defaultLat, defaultLng], 17);
+        }
       }
-    } else {
-      // For poor accuracy (PC testing), keep the camera locked on the target/campus
-      if (hasTarget && targetLat !== null && targetLng !== null) {
-        map.setView([targetLat, targetLng], 18);
-      } else {
-        map.setView([defaultLat, defaultLng], 17);
-      }
+      hasCenteredRef.current = true;
     }
   }, [runnerCoords, hasTarget, targetLat, targetLng]);
 
@@ -289,14 +293,30 @@ export function SectorMap({ rounds, currentRound, stage }: SectorMapProps) {
           )}
         </div>
 
-        {/* Locate Me button (manual trigger) */}
-        {isRunnerStage && geoStatus !== 'watching' && (
+        {/* Locate Me / Recenter button (manual trigger) */}
+        {isRunnerStage && (
           <button
-            onClick={startWatching}
+            onClick={() => {
+              if (geoStatus !== 'watching') {
+                startWatching();
+              } else if (mapRef.current && runnerCoords) {
+                const [lat, lng, accuracy] = runnerCoords;
+                if (accuracy < 1000) {
+                  if (hasTarget && targetLat !== null && targetLng !== null) {
+                    const bounds = L.latLngBounds([[lat, lng], [targetLat, targetLng]]);
+                    mapRef.current.fitBounds(bounds, { padding: [60, 60], maxZoom: 19 });
+                  } else {
+                    mapRef.current.setView([lat, lng], accuracy < 200 ? 18 : 15);
+                  }
+                } else if (targetLat !== null && targetLng !== null) {
+                  mapRef.current.setView([targetLat, targetLng], 18);
+                }
+              }
+            }}
             className="absolute bottom-3 right-3 z-[1000] bg-black/80 border border-[#00BFFF]/40 px-3 py-2 flex items-center gap-2 font-mono text-[9px] uppercase tracking-widest text-[#00BFFF] hover:bg-[#00BFFF]/10 transition-colors pointer-events-auto"
           >
             <LocateFixed className="h-3 w-3" />
-            Locate Me
+            {geoStatus === 'watching' ? 'Recenter' : 'Locate Me'}
           </button>
         )}
 
