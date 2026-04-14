@@ -2,7 +2,7 @@ export const DEFAULT_QUESTIONS = [
   {
     round: 1,
     p1: { title: 'Python Loop Sum', code: 'nums = [2, 4, 6, 8]\ntotal = 0\nfor n in nums:\n    total += n\nprint(total)', hint: 'Add all numbers in the list and print the total.', ans: '20', output: 'Printed output = 20' },
-    coord: { lat: '12.9716° N', lng: '77.5946° E', place: 'Science Block, Pillar 4' },
+    coord: { lat: '15.434850° N', lng: '75.646450° E', place: 'BCA Block, Lab 2 Entrance' },
     volunteer: { name: 'Ravi', initials: 'RV', bg: 'bg-indigo-100', color: 'text-indigo-700' },
     p2: { title: 'Multiplication', code: 'result = 3 * 4\nprint(result)', hint: 'Multiply 3 by 4 and print the result.', ans: '12', output: 'Printed output = 12' },
     qrPasskey: 'QUEST-R1',
@@ -12,7 +12,7 @@ export const DEFAULT_QUESTIONS = [
   {
     round: 2,
     p1: { title: 'String Filter', code: 'text = "quest runner"\nvowels = "aeiou"\ncount = sum(1 for ch in text if ch in vowels)\nprint(count)', hint: 'Count vowel characters in the string.', ans: '4', output: 'Printed output = 4' },
-    coord: { lat: '12.9721° N', lng: '77.5953° E', place: 'Library, East Entrance' },
+    coord: { lat: '15.433450° N', lng: '75.647950° E', place: 'JT College Central Library' },
     volunteer: { name: 'Priya', initials: 'PR', bg: 'bg-emerald-100', color: 'text-emerald-700' },
     p2: { title: 'Power of 2', code: 'x = 2 ** 4\nprint(x)', hint: 'Compute 2 to the power of 4 and print.', ans: '16', output: 'Printed output = 16' },
     qrPasskey: 'QUEST-R2',
@@ -22,7 +22,7 @@ export const DEFAULT_QUESTIONS = [
   {
     round: 3,
     p1: { title: 'Dictionary Lookup', code: 'scores = {"math": 18, "code": 22, "logic": 20}\nprint(scores["code"] + scores["logic"])', hint: 'Read values from the dictionary and add them.', ans: '42', output: 'Printed output = 42' },
-    coord: { lat: '12.9728° N', lng: '77.5961° E', place: 'Cafeteria, North Exit' },
+    coord: { lat: '15.435050° N', lng: '75.647550° E', place: 'Campus Canteen' },
     volunteer: { name: 'Arjun', initials: 'AJ', bg: 'bg-amber-100', color: 'text-amber-700' },
     p2: { title: 'Even Check', code: 'n = 8\nprint(n % 2 == 0)', hint: 'Use modulo to test evenness and print boolean.', ans: 'True', output: 'Printed output = True' },
     qrPasskey: 'QUEST-R3',
@@ -32,7 +32,7 @@ export const DEFAULT_QUESTIONS = [
   {
     round: 4,
     p1: { title: 'List Comprehension', code: 'nums = [3, 6, 9, 12, 15]\ntriples = [n // 3 for n in nums if n % 6 == 0]\nprint(sum(triples))', hint: 'Keep numbers divisible by 6, divide each by 3, then sum.', ans: '6', output: 'Printed output = 6' },
-    coord: { lat: '12.9735° N', lng: '77.5968° E', place: 'Auditorium, Backstage' },
+    coord: { lat: '15.433250° N', lng: '75.646550° E', place: 'Principal\'s Office Corridor' },
     volunteer: { name: 'Sita', initials: 'ST', bg: 'bg-rose-100', color: 'text-rose-700' },
     p2: { title: 'List Append', code: 'colors = ["red", "blue"]\ncolors.append("green")\nprint(len(colors))', hint: 'Start with 2 colors, append one, print new length.', ans: '3', output: 'Printed output = 3' },
     qrPasskey: 'QUEST-R4',
@@ -42,7 +42,7 @@ export const DEFAULT_QUESTIONS = [
   {
     round: 5,
     p1: { title: 'Function + Condition', code: 'def badge(points):\n    if points >= 90:\n        return "Gold"\n    if points >= 75:\n        return "Silver"\n    return "Bronze"\n\nprint(badge(88))', hint: 'Follow the if-conditions for input 88.', ans: 'Silver', output: 'Printed output = Silver' },
-    coord: { lat: '12.9742° N', lng: '77.5975° E', place: 'Sports Complex, Court 2' },
+    coord: { lat: '15.434650° N', lng: '75.648150° E', place: 'Campus Quadrangle' },
     volunteer: { name: 'Vikram', initials: 'VK', bg: 'bg-cyan-100', color: 'text-cyan-700' },
     p2: { title: 'Math & Objects', code: 'data = {"val": 10}\nprint(data["val"] * 2)', hint: "Read key 'val', multiply by 2, print result.", ans: '20', output: 'Printed output = 20' },
     qrPasskey: 'QUEST-R5',
@@ -52,7 +52,7 @@ export const DEFAULT_QUESTIONS = [
   {
     round: 6,
     p1: { title: 'Set Operations', code: 'a = {1, 2, 3, 4}\nb = {3, 4, 5, 6}\nprint(len(a.union(b)) - len(a.intersection(b)))', hint: 'Use union and intersection sizes.', ans: '4', output: 'Printed output = 4' },
-    coord: { lat: '12.9750° N', lng: '77.5982° E', place: 'Main Gate, Security Post' },
+    coord: { lat: '15.433850° N', lng: '75.645850° E', place: 'Main Gate, Security Post' },
     volunteer: { name: 'Anjali', initials: 'AN', bg: 'bg-purple-100', color: 'text-purple-700' },
     p2: { title: 'Square Function', code: 'def g(x):\n    return x * x\nprint(g(3))', hint: 'Call g(3) and print the square.', ans: '9', output: 'Printed output = 9' },
     qrPasskey: 'QUEST-R6',

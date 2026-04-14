@@ -277,8 +277,18 @@
     @apply !border-white/10 !border;
   }
 
-  #qr-reader__camera_selection {
-    @apply !mb-4;
+  /* Prevent html5-qrcode from injecting a double-sized video */
+  #qr-reader video {
+    width: 100% !important;
+    height: auto !important;
+    display: block;
+    object-fit: cover;
+  }
+
+  /* Hide the built-in dashboard UI (file upload, etc.) */
+  #qr-reader__dashboard_section_csr,
+  #qr-reader__dashboard_section_fsr {
+    display: none !important;
   }
 
   /* ── Custom Animations ───────────────────────────────── */
