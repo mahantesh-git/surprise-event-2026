@@ -17,6 +17,8 @@ export function createInitialGameState(roundCount: number): GameState {
     stage: 'p1_solve',
     roundsDone: new Array(safeRoundCount).fill(false),
     handoff: null,
+    startTime: null,
+    finishTime: null,
   };
 }
 
@@ -32,7 +34,9 @@ export function isValidGameState(value: unknown): value is GameState {
     && Array.isArray(candidate.roundsDone)
     && candidate.roundsDone.length > 0
     && candidate.roundsDone.every((item: unknown) => typeof item === 'boolean')
-    && (candidate.handoff === null || candidate.handoff === undefined || isHandoffDetails(candidate.handoff));
+    && (candidate.handoff === null || candidate.handoff === undefined || isHandoffDetails(candidate.handoff))
+    && (candidate.startTime === null || candidate.startTime === undefined || typeof candidate.startTime === 'string')
+    && (candidate.finishTime === null || candidate.finishTime === undefined || typeof candidate.finishTime === 'string');
 }
 
 export function normalizeGameState(state: GameState, roundCount: number): GameState {
@@ -47,6 +51,8 @@ export function normalizeGameState(state: GameState, roundCount: number): GameSt
     round: Math.min(Math.max(state.round, 0), maxRoundIndex),
     roundsDone,
     handoff: state.handoff && isHandoffDetails(state.handoff) ? state.handoff : null,
+    startTime: typeof state.startTime === 'string' ? state.startTime : null,
+    finishTime: typeof state.finishTime === 'string' ? state.finishTime : null,
   };
 }
 
@@ -57,6 +63,8 @@ export function sanitizeGameStateUpdate(currentState: GameState, update: Partial
     stage: currentState.stage,
     roundsDone: [...currentState.roundsDone],
     handoff: currentState.handoff,
+    startTime: currentState.startTime,
+    finishTime: currentState.finishTime,
   };
 
   if (update.round !== undefined) {
@@ -81,6 +89,16 @@ export function sanitizeGameStateUpdate(currentState: GameState, update: Partial
       return null;
     }
     nextState.handoff = update.handoff ?? null;
+  }
+
+  if (update.startTime !== undefined) {
+    if (update.startTime !== null && typeof update.startTime !== 'string') return null;
+    nextState.startTime = update.startTime;
+  }
+
+  if (update.finishTime !== undefined) {
+    if (update.finishTime !== null && typeof update.finishTime !== 'string') return null;
+    nextState.finishTime = update.finishTime;
   }
 
   return nextState;

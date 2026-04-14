@@ -4,7 +4,7 @@ import express from 'express';
 import path from 'path';
 import { ObjectId } from 'mongodb';
 import type { LoginPayload, GameState } from './types';
-import { ensureIndexes, getQuestionsCollection, getTeamsCollection } from './db';
+import { ensureIndexes, getQuestionsCollection, getTeamsCollection, getConfigCollection } from './db';
 import { requireAdmin, requireAuth, signAdminToken, signToken, normalizeRole, type AdminAuthedRequest, type AuthedRequest } from './auth';
 import { createTeam, findTeamByName, verifyTeamPassword, findTeamById } from './team-service';
 import { createInitialGameState, normalizeGameState, sanitizeGameStateUpdate } from './game';
@@ -62,6 +62,13 @@ app.post('/api/auth/login', async (request, response) => {
     return;
   }
 
+  const configCollection = await getConfigCollection();
+  const loginConfig = await configCollection.findOne({ key: 'loginEnabled' });
+  if (!loginConfig?.value) {
+    response.status(403).json({ error: 'Event login is currently disabled by administrators.' });
+    return;
+  }
+
   const team = await findTeamByName(teamName);
   if (!team) {
     response.status(401).json({ error: 'Invalid team credentials' });
@@ -82,7 +89,13 @@ app.post('/api/auth/login', async (request, response) => {
   });
 
   const teams = await getTeamsCollection();
-  await teams.updateOne({ _id: team._id }, { $set: { lastLoginAt: new Date(), updatedAt: new Date() } });
+
+  let gameState = team.gameState;
+  if (!gameState.startTime) {
+    gameState = { ...gameState, startTime: new Date().toISOString() };
+  }
+
+  await teams.updateOne({ _id: team._id }, { $set: { lastLoginAt: new Date(), updatedAt: new Date(), gameState } });
 
   response.json({
     token,
@@ -91,7 +104,7 @@ app.post('/api/auth/login', async (request, response) => {
       id: team._id.toString(),
       name: team.name,
     },
-    gameState: team.gameState,
+    gameState,
   });
 });
 
@@ -307,9 +320,11 @@ app.post('/api/runner/complete-round', requireAuth, async (request: AuthedReques
       ...team.gameState,
       stage: 'complete',
       roundsDone,
+      finishTime: team.gameState.finishTime || new Date().toISOString(),
     };
   } else {
     nextState = {
+      ...team.gameState,
       round: currentRound + 1,
       stage: 'p1_solve',
       roundsDone,
@@ -321,6 +336,76 @@ app.post('/api/runner/complete-round', requireAuth, async (request: AuthedReques
   await teams.updateOne({ _id: team._id }, { $set: { gameState: nextState, updatedAt: new Date() } });
 
   response.json({ ok: true, gameState: nextState });
+});
+
+// Runner GPS location update — called frequently by runner's device
+app.put('/api/runner/location', requireAuth, async (request: AuthedRequest, response) => {
+  const auth = request.auth!;
+  if (auth.role !== 'runner') {
+    response.status(403).json({ error: 'Only runners can update location' });
+    return;
+  }
+
+  const { lat, lng } = request.body as { lat?: unknown; lng?: unknown };
+  if (typeof lat !== 'number' || typeof lng !== 'number' || isNaN(lat) || isNaN(lng)) {
+    response.status(400).json({ error: 'lat and lng must be valid numbers' });
+    return;
+  }
+
+  const teams = await getTeamsCollection();
+  await teams.updateOne(
+    { _id: new ObjectId(auth.teamId) },
+    { $set: { 'gameState.currentLat': lat, 'gameState.currentLng': lng, updatedAt: new Date() } }
+  );
+
+  response.json({ ok: true });
+});
+
+app.get('/api/leaderboard', async (_request, response) => {
+  const teams = await getTeamsCollection();
+  const docs = await teams.find({}, { sort: { 'gameState.round': -1, 'gameState.startTime': 1 } }).toArray();
+  
+  const leaderboard = docs.map(team => {
+    const solvedCount = team.gameState.roundsDone.filter(Boolean).length;
+    return {
+      id: team._id.toString(),
+      name: team.name,
+      round: team.gameState.round,
+      solvedCount,
+      stage: team.gameState.stage,
+      startTime: team.gameState.startTime,
+      finishTime: team.gameState.finishTime,
+      currentLat: team.gameState.currentLat ?? null,
+      currentLng: team.gameState.currentLng ?? null,
+    };
+  });
+  
+  response.json({ leaderboard });
+});
+
+app.get('/api/admin/config', requireAdmin, async (_request: AdminAuthedRequest, response) => {
+  const config = await getConfigCollection();
+  const docs = await config.find({}).toArray();
+  const configMap = docs.reduce((acc, doc) => {
+    acc[doc.key] = doc.value;
+    return acc;
+  }, {} as Record<string, any>);
+  response.json(configMap);
+});
+
+app.put('/api/admin/config', requireAdmin, async (request: AdminAuthedRequest, response) => {
+  const { key, value } = request.body as { key?: string; value?: any };
+  if (!key) {
+    response.status(400).json({ error: 'key is required' });
+    return;
+  }
+  const config = await getConfigCollection();
+  await config.updateOne(
+    { key },
+    { $set: { value, updatedAt: new Date() } },
+    { upsert: true }
+  );
+  response.json({ ok: true });
 });
 
 app.post('/api/admin/login', (request, response) => {

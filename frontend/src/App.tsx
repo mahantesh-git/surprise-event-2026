@@ -16,10 +16,12 @@ import { GridBackground } from '@/components/GridBackground';
 import { AdminPanel } from '@/components/AdminPanel';
 import { RoleSelection } from '@/components/RoleSelection';
 import { useGameState, Role } from '@/hooks/useGameState';
+import { useRunnerGps } from '@/hooks/useRunnerGps';
 import { getQuestions, compilePython, RoundQuestion } from '@/lib/api';
 import { PersistentProgress } from '@/components/PersistentProgress';
 import { SectorMap } from '@/components/SectorMap';
 import { RunnerGame } from '@/components/RunnerGame';
+import { Leaderboard } from '@/components/Leaderboard';
 import { highlightCode } from '@/lib/syntax';
 
 export default function App() {
@@ -36,6 +38,12 @@ export default function App() {
   const [showHint, setShowHint] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'ok' | 'err', msg: string } | null>(null);
   const [devMode, setDevMode] = useState(false);
+
+  // Stream runner GPS to backend while in field stages
+  useRunnerGps(
+    role === 'runner' ? (session?.token ?? null) : null,
+    role === 'runner' ? (gameState?.stage ?? null) : null
+  );
 
   // Use sync scroll for code/trace if needed in future
 
@@ -251,6 +259,8 @@ export default function App() {
         ctaText="SYSTEM"
         metaText={role?.toUpperCase()}
         onMenuOpen={() => {}}
+        startTime={gameState?.startTime}
+        finishTime={gameState?.finishTime}
       />
       
       <div className="min-h-screen pt-16 pb-8 px-4 sm:px-6 relative z-10 text-white bg-[#15171A] reveal-up">

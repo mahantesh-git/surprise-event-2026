@@ -29,6 +29,7 @@ async function requestJson<T>(path: string, init: RequestInit = {}, token?: stri
     ...init,
     headers: {
       'Content-Type': 'application/json',
+      'ngrok-skip-browser-warning': 'true',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(init.headers || {}),
     },
@@ -163,4 +164,38 @@ export async function deleteAllAdminQuestions(token: string) {
 
 export async function wipeAdminDatabase(token: string) {
   return requestJson<{ ok: boolean; deletedTeams: number; deletedQuestions: number }>('/admin/database', { method: 'DELETE' }, token);
+}
+
+export interface LeaderboardTeam {
+  id: string;
+  name: string;
+  round: number;
+  solvedCount: number;
+  stage: string;
+  startTime: string | null;
+  finishTime: string | null;
+  currentLat: number | null;
+  currentLng: number | null;
+}
+
+export async function getLeaderboard() {
+  return requestJson<{ leaderboard: LeaderboardTeam[] }>('/leaderboard', { method: 'GET' });
+}
+
+export async function updateRunnerLocation(token: string, lat: number, lng: number) {
+  return requestJson<{ ok: boolean }>('/runner/location', {
+    method: 'PUT',
+    body: JSON.stringify({ lat, lng }),
+  }, token);
+}
+
+export async function getAdminConfig(token: string) {
+  return requestJson<Record<string, any>>('/admin/config', { method: 'GET' }, token);
+}
+
+export async function updateAdminConfig(token: string, key: string, value: any) {
+  return requestJson<{ ok: boolean }>('/admin/config', {
+    method: 'PUT',
+    body: JSON.stringify({ key, value }),
+  }, token);
 }

@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Lock, LogOut, Plus, Trash2, Edit3, Save, X, Database, ShieldAlert, ChevronLeft, Terminal } from 'lucide-react';
+import { Lock, LogOut, Plus, Trash2, Edit3, Save, X, Database, ShieldAlert, ChevronLeft, Terminal, Trophy } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { Leaderboard } from '@/components/Leaderboard';
 import { 
     adminLogin, 
     getAdminTeams, 
@@ -13,6 +14,8 @@ import {
     deleteAdminQuestion, 
     deleteAllAdminQuestions,
     wipeAdminDatabase, 
+    getAdminConfig,
+    updateAdminConfig,
     type RoundQuestion 
 } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -46,6 +49,8 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
   const [teams, setTeams] = useState<Array<{ id: string; name: string; email: string; createdAt: string; lastLoginAt: string | null }>>([]);
   const [questions, setQuestions] = useState<RoundQuestion[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loginEnabled, setLoginEnabled] = useState(false);
+  const [activeTab, setActiveTab] = useState<'manage' | 'leaderboard'>('manage');
 
   const [teamName, setTeamName] = useState('');
   const [teamEmail, setTeamEmail] = useState('');
@@ -59,12 +64,14 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
   }, [questions]);
 
   const refreshData = async (sessionToken: string) => {
-    const [teamsResponse, questionsResponse] = await Promise.all([
+    const [teamsResponse, questionsResponse, configResponse] = await Promise.all([
       getAdminTeams(sessionToken),
       getAdminQuestions(sessionToken),
+      getAdminConfig(sessionToken),
     ]);
     setTeams(teamsResponse.teams);
     setQuestions(questionsResponse.questions);
+    setLoginEnabled(!!configResponse.loginEnabled);
   };
 
   useEffect(() => {
@@ -92,6 +99,18 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
     window.localStorage.removeItem(ADMIN_SESSION_KEY);
     setToken(null);
     setError(null);
+  };
+
+  const handleToggleLogin = async () => {
+    if (!token) return;
+    setError(null);
+    try {
+      const newVal = !loginEnabled;
+      await updateAdminConfig(token, 'loginEnabled', newVal);
+      setLoginEnabled(newVal);
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : 'Failed to update config');
+    }
   };
 
   const handleCreateTeam = async () => {
@@ -304,7 +323,28 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
               Control<span className="text-[#95FF00]">_</span>Center
             </h1>
           </div>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Tabs */}
+            <div className="flex border border-white/10 bg-white/[0.02]">
+              <button
+                onClick={() => setActiveTab('manage')}
+                className={`px-5 h-10 text-[10px] font-bold uppercase tracking-widest transition-colors flex items-center gap-2 ${
+                  activeTab === 'manage' ? 'bg-[#95FF00]/10 text-[#95FF00]' : 'text-white/30 hover:text-white/60'
+                }`}
+              >
+                <Database className="w-3 h-3" />
+                Manage
+              </button>
+              <button
+                onClick={() => setActiveTab('leaderboard')}
+                className={`px-5 h-10 text-[10px] font-bold uppercase tracking-widest transition-colors flex items-center gap-2 border-l border-white/10 ${
+                  activeTab === 'leaderboard' ? 'bg-[#95FF00]/10 text-[#95FF00]' : 'text-white/30 hover:text-white/60'
+                }`}
+              >
+                <Trophy className="w-3 h-3" />
+                Leaderboard
+              </button>
+            </div>
             <Button variant="ink" className="font-bold uppercase tracking-[0.2em] h-10 px-6 border-white/5 bg-white/[0.02] text-[10px]" onClick={onBack}>
               Terminal_Exit
             </Button>
@@ -326,6 +366,13 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
           </motion.div>
         )}
 
+        {activeTab === 'leaderboard' && (
+          <div className="-mx-4 sm:-mx-6 h-[calc(100vh-200px)] min-h-[500px] relative">
+            <Leaderboard />
+          </div>
+        )}
+
+        {activeTab === 'manage' && (<>
         {/* Create Team Section */}
         <section className="space-y-4">
           <div className="flex items-center gap-4">
@@ -339,6 +386,33 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
             <Button variant="sage" className="font-bold uppercase tracking-[0.3em] h-11 px-8" onClick={handleCreateTeam}>
               Register
             </Button>
+          </div>
+        </section>
+
+        {/* Global Event Control */}
+        <section className="space-y-4">
+          <div className="flex items-center gap-4">
+            <ShieldAlert className="text-[#95FF00] w-3 h-3" />
+            <h2 className="text-[9px] font-mono uppercase tracking-[0.5em] text-white/30">Global_Event_Config</h2>
+          </div>
+          <div className="corner-card border-white/5 bg-white/[0.01] p-6 flex flex-row justify-between items-center gap-4">
+            <div>
+              <h3 className="font-bold uppercase tracking-widest">Enable Team Login</h3>
+              <p className="text-white/50 text-xs font-mono tracking-tighter">Controls whether operatives can authenticate into the system and start their timer.</p>
+            </div>
+            <button
+              onClick={handleToggleLogin}
+              className={`relative inline-flex h-8 w-14 items-center rounded-none transition-colors focus:outline-none focus:ring-2 focus:ring-[#95FF00] focus:ring-offset-2 focus:ring-offset-[#15171A] ${
+                loginEnabled ? 'bg-[#95FF00]' : 'bg-white/10'
+              }`}
+            >
+              <span className="sr-only">Toggle Team Login</span>
+              <span
+                className={`inline-block h-6 w-6 transform bg-white transition-transform ${
+                  loginEnabled ? 'translate-x-7 bg-black' : 'translate-x-1'
+                }`}
+              />
+            </button>
           </div>
         </section>
 
@@ -560,6 +634,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
           </div>
 
         </div>
+        </>)}
       </div>
     </div>
   );

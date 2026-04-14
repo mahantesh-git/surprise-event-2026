@@ -16,6 +16,10 @@ export interface GameState {
   stage: Stage;
   roundsDone: boolean[];
   handoff: HandoffDetails | null;
+  startTime?: string | null;
+  finishTime?: string | null;
+  currentLat?: number | null;
+  currentLng?: number | null;
 }
 
 export interface TeamDocument {
@@ -79,5 +83,11 @@ export interface QuestionDocument {
   cx: number;
   cy: number;
   createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ConfigDocument {
+  key: string;
+  value: any;
   updatedAt: Date;
 }

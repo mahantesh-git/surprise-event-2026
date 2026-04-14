@@ -1,5 +1,5 @@
 import { MongoClient, type Collection } from 'mongodb';
-import type { TeamDocument, QuestionDocument } from './types';
+import type { TeamDocument, QuestionDocument, ConfigDocument } from './types';
 
 let client: MongoClient | null = null;
 let connectingPromise: Promise<MongoClient> | null = null;
@@ -48,9 +48,17 @@ export async function getQuestionsCollection(): Promise<Collection<QuestionDocum
   return dbClient.db(getDatabaseName()).collection<QuestionDocument>('questions');
 }
 
+export async function getConfigCollection(): Promise<Collection<ConfigDocument>> {
+  const dbClient = await getClient();
+
+  return dbClient.db(getDatabaseName()).collection<ConfigDocument>('config');
+}
+
 export async function ensureIndexes() {
   const teams = await getTeamsCollection();
   const questions = await getQuestionsCollection();
+  const config = await getConfigCollection();
   await teams.createIndex({ nameNormalized: 1 }, { unique: true });
   await questions.createIndex({ round: 1 }, { unique: true });
+  await config.createIndex({ key: 1 }, { unique: true });
 }

@@ -1,5 +1,6 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
+import { GameTimer } from './GameTimer';
 
 export interface NavbarProps {
   brandName?: string;
@@ -7,6 +8,8 @@ export interface NavbarProps {
   onMenuOpen?: () => void;
   metaText?: string;
   className?: string;
+  startTime?: string | null;
+  finishTime?: string | null;
 }
 
 /**
@@ -19,6 +22,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onMenuOpen,
   metaText,
   className,
+  startTime,
+  finishTime,
 }) => {
   return (
     <nav
@@ -45,7 +50,6 @@ export const Navbar: React.FC<NavbarProps> = ({
 
       {/* Right side: meta + status + hamburger */}
       <div className="flex items-center gap-6">
-        {/* Simulated System Status */}
         <div className="hidden md:flex flex-col items-end gap-1 font-mono">
           <div className="flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-[#95FF00] animate-pulse" />
@@ -55,6 +59,11 @@ export const Navbar: React.FC<NavbarProps> = ({
             Packet_Loss: 0.0002%
           </div>
         </div>
+
+        {/* Dynamic Timer if data passed */}
+        {startTime !== undefined && (
+           <GameTimer startTime={startTime} finishTime={finishTime || null} />
+        )}
 
         {metaText && (
           <div className="flex flex-col items-end">

@@ -9,6 +9,8 @@ export interface GameState {
   stage: Stage;
   roundsDone: boolean[];
   handoff: HandoffDetails | null;
+  startTime?: string | null;
+  finishTime?: string | null;
 }
 
 export interface HandoffDetails {
