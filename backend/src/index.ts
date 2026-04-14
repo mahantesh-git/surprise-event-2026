@@ -233,6 +233,96 @@ app.get('/api/questions', async (_request, response) => {
   response.json({ questions: docs.map(({ _id, ...rest }) => ({ id: _id.toString(), ...rest })) });
 });
 
+// Runner verifies the QR passkey to unlock their minigame
+app.post('/api/runner/verify-passkey', requireAuth, async (request: AuthedRequest, response) => {
+  const auth = request.auth;
+  if (!auth || auth.role !== 'runner') {
+    response.status(403).json({ error: 'Only runners can verify passkeys' });
+    return;
+  }
+
+  const { passkey } = request.body as { passkey?: string };
+  if (!passkey) {
+    response.status(400).json({ error: 'passkey is required' });
+    return;
+  }
+
+  const team = await findTeamById(auth.teamId);
+  if (!team) {
+    response.status(404).json({ error: 'Team not found' });
+    return;
+  }
+
+  const questions = await getQuestionsCollection();
+  const roundCount = await getRoundCount();
+  const currentRoundIndex = team.gameState.round;
+  const question = await questions.findOne({ round: currentRoundIndex + 1 });
+
+  if (!question) {
+    response.status(404).json({ error: 'No question found for this round' });
+    return;
+  }
+
+  if (question.qrPasskey.trim().toUpperCase() !== passkey.trim().toUpperCase()) {
+    response.status(401).json({ error: 'Invalid passkey' });
+    return;
+  }
+
+  // Advance stage to runner_game so both devices know the runner unlocked the game
+  const teams = await getTeamsCollection();
+  const nextState = { ...team.gameState, stage: 'runner_game' as const };
+  await teams.updateOne({ _id: team._id }, { $set: { gameState: nextState, updatedAt: new Date() } });
+
+  // Return the game type for this round (cycle through tap/memory/pattern)
+  const gameTypes = ['tap', 'memory', 'pattern'] as const;
+  const gameType = gameTypes[currentRoundIndex % 3];
+
+  response.json({ ok: true, gameType, stage: 'runner_game' });
+});
+
+// Runner completes minigame — advances both solver & runner to next round
+app.post('/api/runner/complete-round', requireAuth, async (request: AuthedRequest, response) => {
+  const auth = request.auth;
+  if (!auth || auth.role !== 'runner') {
+    response.status(403).json({ error: 'Only runners can complete rounds' });
+    return;
+  }
+
+  const team = await findTeamById(auth.teamId);
+  if (!team) {
+    response.status(404).json({ error: 'Team not found' });
+    return;
+  }
+
+  const roundCount = await getRoundCount();
+  const currentRound = team.gameState.round;
+  const roundsDone = [...team.gameState.roundsDone];
+  roundsDone[currentRound] = true;
+
+  const isLastRound = currentRound >= roundCount - 1;
+
+  let nextState: GameState;
+  if (isLastRound) {
+    nextState = {
+      ...team.gameState,
+      stage: 'complete',
+      roundsDone,
+    };
+  } else {
+    nextState = {
+      round: currentRound + 1,
+      stage: 'p1_solve',
+      roundsDone,
+      handoff: null,
+    };
+  }
+
+  const teams = await getTeamsCollection();
+  await teams.updateOne({ _id: team._id }, { $set: { gameState: nextState, updatedAt: new Date() } });
+
+  response.json({ ok: true, gameState: nextState });
+});
+
 app.post('/api/admin/login', (request, response) => {
   const { email, password } = request.body as { email?: string; password?: string };
   if (!email || !password) {

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { getGameState, getSession, loginTeam, resetGameState, updateGameState } from '@/lib/api';
 
-export type Stage = 'p1_solve' | 'p1_solved' | 'p2_travel' | 'p2_scan' | 'p2_solve' | 'p2_solved' | 'complete';
+export type Stage = 'p1_solve' | 'p1_solved' | 'runner_travel' | 'runner_game' | 'runner_done' | 'complete';
 export type Role = 'solver' | 'runner';
 
 export interface GameState {
@@ -176,5 +176,11 @@ export function useGameState(role: Role) {
     });
   };
 
-  return { session, gameState, loading, error, login, logout, updateState, resetGame, setError };
+  const sync = async () => {
+    if (session) {
+      await syncGameState(session.token);
+    }
+  };
+
+  return { session, gameState, loading, error, login, logout, updateState, resetGame, setError, sync };
 }

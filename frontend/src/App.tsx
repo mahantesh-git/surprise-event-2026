@@ -2,12 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Zap, 
-  Navigation, 
-  Code2, 
   CheckCircle2, 
   MapPin, 
   QrCode, 
-  ChevronRight, 
   RefreshCw 
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -16,13 +13,13 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Navbar } from '@/components/Navbar';
 import { GridBackground } from '@/components/GridBackground';
-import { QRScanner } from '@/components/QRScanner';
 import { AdminPanel } from '@/components/AdminPanel';
 import { RoleSelection } from '@/components/RoleSelection';
 import { useGameState, Role } from '@/hooks/useGameState';
 import { getQuestions, compilePython, RoundQuestion } from '@/lib/api';
 import { PersistentProgress } from '@/components/PersistentProgress';
 import { SectorMap } from '@/components/SectorMap';
+import { RunnerGame } from '@/components/RunnerGame';
 import { highlightCode } from '@/lib/syntax';
 
 export default function App() {
@@ -31,16 +28,13 @@ export default function App() {
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState<string | null>(null);
   const role = pathname === '/solver' || pathname === '/runner' ? (pathname.slice(1) as Role) : null;
-  const { session, gameState, loading, login, logout, resetGame, updateState } = useGameState((role ?? 'solver') as Role);
+  const { session, gameState, loading, login, logout, resetGame, updateState, sync } = useGameState((role ?? 'solver') as Role);
   const [rounds, setRounds] = useState<RoundQuestion[]>([]);
   const [roundsLoading, setRoundsLoading] = useState(false);
   const [roundsError, setRoundsError] = useState<string | null>(null);
   const [p1Input, setP1Input] = useState('');
-  const [p2Input, setP2Input] = useState('');
-  const [qrInput, setQrInput] = useState('');
   const [showHint, setShowHint] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'ok' | 'err', msg: string } | null>(null);
-  const [isScanning, setIsScanning] = useState(false);
   const [devMode, setDevMode] = useState(false);
 
   // Use sync scroll for code/trace if needed in future
@@ -232,34 +226,6 @@ export default function App() {
     }
   };
 
-  const checkP2 = () => {
-    if (p2Input.trim().toLowerCase() === currentRound.p2.ans.toLowerCase()) {
-      setFeedback({ type: 'ok', msg: `Correct! ${currentRound.p2.output}` });
-      const newRoundsDone = [...gameState!.roundsDone];
-      newRoundsDone[gameState!.round] = true;
-      setTimeout(() => {
-        updateState({ roundsDone: newRoundsDone, stage: 'p2_solved' });
-        setFeedback(null);
-        setP2Input('');
-        setShowHint(false);
-      }, 1000);
-    } else setFeedback({ type: 'err', msg: 'Incorrect. Try again!' });
-  };
-
-  const handleQRScan = (text: string) => {
-    if (text.toUpperCase().includes(currentRound.qrPasskey.toUpperCase())) {
-      setIsScanning(false);
-      updateState({ stage: 'p2_solve' });
-    }
-  };
-
-  const checkQRPasskey = () => {
-    if (qrInput.trim().toUpperCase() === currentRound.qrPasskey.toUpperCase()) {
-      updateState({ stage: 'p2_solve' });
-      setQrInput('');
-    } else setFeedback({ type: 'err', msg: 'Invalid passkey.' });
-  };
-
   const nextRound = () => {
     if (gameState!.round < rounds.length - 1) {
       updateState({ round: gameState!.round + 1, stage: 'p1_solve', handoff: null });
@@ -270,13 +236,11 @@ export default function App() {
     await resetGame();
     setFeedback(null);
     setP1Input('');
-    setP2Input('');
-    setQrInput('');
     setShowHint(false);
   };
 
   const isMyTurn = (role === 'solver' && ['p1_solve', 'p1_solved'].includes(gameState!.stage)) ||
-                   (role === 'runner' && ['p2_travel', 'p2_scan', 'p2_solve', 'p2_solved'].includes(gameState!.stage));
+                   (role === 'runner' && ['runner_travel', 'runner_game', 'runner_done'].includes(gameState!.stage));
 
   return (
     <>
@@ -312,19 +276,14 @@ export default function App() {
 
           {/* Main Content */}
           <AnimatePresence mode="wait">
-            {isScanning ? (
-              <motion.div key="scanner" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}>
-                <QRScanner onScan={handleQRScan} onClose={() => setIsScanning(false)} />
-              </motion.div>
-            ) : (
-              <motion.div key={gameState!.stage + gameState!.round} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+            <motion.div key={gameState!.stage + gameState!.round} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
                 {!isMyTurn && gameState!.stage !== 'complete' ? (
                   <div className="corner-card border-[#95FF00]/20 bg-[#95FF00]/5 p-16 text-center space-y-6">
                     <div className="corner-br" /> <div className="corner-bl" />
                     <div className="relative w-20 h-20 mx-auto">
                       <div className="absolute inset-0 border border-[#95FF00] animate-ping opacity-20" />
                       <div className="w-full h-full bg-[#95FF00]/10 border border-[#95FF00]/40 flex items-center justify-center">
-                        {role === 'solver' ? <Navigation className="text-[#95FF00] animate-pulse" /> : <Code2 className="text-[#95FF00] animate-pulse" />}
+                        {role === 'solver' ? <MapPin className="text-[#95FF00] animate-pulse" /> : <Zap className="text-[#95FF00] animate-pulse" />}
                       </div>
                     </div>
                     <div className="space-y-2">
@@ -496,7 +455,7 @@ export default function App() {
                               variant="emerald"
                               size="md"
                               onClick={() => updateState({
-                                stage: 'p2_travel',
+                                stage: 'runner_travel',
                                 handoff: {
                                   passkey: currentRound.qrPasskey,
                                   lat: currentRound.coord.lat,
@@ -513,8 +472,8 @@ export default function App() {
                       </div>
                     )}
 
-                    {/* P2 Travel - Runner travels */}
-                    {gameState!.stage === 'p2_travel' && (
+                    {/* Runner Travel - Runner navigates to location */}
+                    {gameState!.stage === 'runner_travel' && (
                       <div className="corner-card bg-black/40 backdrop-blur-xl p-8 border border-white/5 relative overflow-hidden">
                         <div className="corner-br" /> <div className="corner-bl" />
                         <div className="space-y-6">
@@ -563,20 +522,11 @@ export default function App() {
                               <div className="corner-bl opacity-50"></div>
                             </div>
 
-                            {/* QR/Passkey buttons */}
-                            <div className="space-y-3 pt-4 border-t border-white/5">
-                              <Button className="w-full font-bold uppercase tracking-[0.2em] h-14" variant="sage" size="md" onClick={() => setIsScanning(true)}>
+                            {/* Arrived — open passkey + minigame */}
+                            <div className="pt-4 border-t border-white/5">
+                              <Button className="w-full font-bold uppercase tracking-[0.2em] h-14" variant="sage" size="md" onClick={() => updateState({ stage: 'runner_game' })}>
                                 <QrCode className="mr-3 h-5 w-5" />
-                                SCAN_LOCATION_QR
-                              </Button>
-                              <div className="flex items-center gap-4 py-2">
-                                <div className="h-[1px] flex-1 bg-white/5" />
-                                <span className="label-technical text-white/20">OR</span>
-                                <div className="h-[1px] flex-1 bg-white/5" />
-                              </div>
-                              <Button variant="secondary" className="w-full font-mono text-[10px] uppercase tracking-[0.2em] h-10 border-white/10 hover:bg-[#95FF00]/5 hover:text-[#95FF00]" onClick={() => updateState({ stage: 'p2_scan' })}>
-                                <ChevronRight className="mr-2 h-3 w-3" />
-                                MANUAL_PASSKEY_ENTRY
+                                I'M AT THE LOCATION — ENTER PASSKEY
                               </Button>
                             </div>
                           </div>
@@ -584,176 +534,17 @@ export default function App() {
                       </div>
                     )}
 
-                    {/* P2 Scan - Passkey entry */}
-                    {gameState!.stage === 'p2_scan' && (
-                      <div className="corner-card bg-black/40 backdrop-blur-xl p-8 border border-white/5 relative max-w-md mx-auto">
-                        <div className="corner-br" /> <div className="corner-bl" />
-                        <div className="space-y-6">
-                          <div className="text-center space-y-2">
-                             <span className="label-technical">Biometric Authentication Required</span>
-                             <h2 className="text-xl font-bold tracking-widest uppercase">Enter Passkey</h2>
-                          </div>
-                          <div className="space-y-4">
-                            <div className="relative">
-                              <input 
-                                placeholder="PASSKEY..." 
-                                className="w-full high-clearance-input text-center h-16" 
-                                value={qrInput} 
-                                onChange={(e) => setQrInput(e.target.value)} 
-                                onKeyDown={(e) => e.key === 'Enter' && checkQRPasskey()} 
-                                autoFocus
-                                autoComplete="off"
-                                spellCheck="false"
-                              />
-                              {feedback && (
-                                <div className="absolute -bottom-[2px] left-0 right-0 h-[2px] bg-rose-500" />
-                              )}
-                            </div>
-                            {feedback && (
-                              <div className="p-3 border border-rose-600/50 bg-rose-600/10 text-rose-400 text-[10px] uppercase tracking-widest text-center font-mono">
-                                {feedback.msg}
-                              </div>
-                            )}
-                            <Button className="w-full font-bold uppercase tracking-[0.2em] h-14" variant="sage" size="md" onClick={checkQRPasskey}>
-                              ESTABLISH_AUTH
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* P2 Solve - Runner solves */}
-                    {gameState!.stage === 'p2_solve' && (
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-                        {/* Left Column: Code Logic */}
-                        <div className="corner-card space-y-4 bg-black/40 backdrop-blur-xl p-8 border border-white/5 relative h-full">
-                          <div className="corner-br" /> <div className="corner-bl" />
-                          <div className="space-y-6">
-                            <div className="flex flex-col gap-2">
-                              <span className="label-technical text-[#95FF00]">Terminal Access Objective</span>
-                              <h2 className="text-xl font-bold tracking-widest uppercase">{currentRound.p2.title}</h2>
-                            </div>
-                            
-                            <div className="relative group">
-                              <div className="absolute -top-3 left-4 px-2 bg-[#15171A] border border-white/10 font-mono text-[9px] uppercase tracking-widest text-white/40 z-10">
-                                terminal_payload.py
-                              </div>
-                              <div className="code-display min-h-[300px] border-[#95FF00]/10 transition-colors group-hover:border-[#95FF00]/30">
-                                {highlightCode(currentRound.p2.code)}
-                              </div>
-                            </div>
-
-                            <div className="space-y-4">
-                              <div className="flex items-center justify-between">
-                                <span className="label-technical">Extraction Hint</span>
-                                <button 
-                                  onClick={() => setShowHint(!showHint)}
-                                  className="text-[10px] font-mono uppercase tracking-widest text-[#95FF00]/60 hover:text-[#95FF00] transition-colors flex items-center gap-1"
-                                >
-                                  {showHint ? "CLOSE_DECRYPT" : "DECRYPT_HINT"}
-                                </button>
-                              </div>
-                              
-                              <AnimatePresence>
-                                {showHint && (
-                                  <motion.div 
-                                    initial={{ height: 0, opacity: 0 }}
-                                    animate={{ height: 'auto', opacity: 1 }}
-                                    exit={{ height: 0, opacity: 0 }}
-                                    className="overflow-hidden"
-                                  >
-                                    <div className="p-4 border border-[#95FF00]/20 bg-[#95FF00]/5 text-[11px] font-mono leading-relaxed text-white/70 uppercase tracking-tight">
-                                      {currentRound.p2.hint}
-                                    </div>
-                                  </motion.div>
-                                )}
-                              </AnimatePresence>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Right Column: Execution & Input */}
-                        <div className="space-y-6">
-                          <div className="corner-card bg-black/40 backdrop-blur-xl p-8 border border-white/5 relative">
-                            <div className="corner-tr" /> <div className="corner-bl" />
-                            <div className="space-y-6">
-                              <div className="space-y-4">
-                                <span className="label-technical">Data Extraction Buffer</span>
-                                <div className="relative">
-                                  <input 
-                                    placeholder="EXTRACT ANSWER..." 
-                                    className="w-full high-clearance-input" 
-                                    value={p2Input} 
-                                    onChange={(e) => setP2Input(e.target.value)} 
-                                    onKeyDown={(e) => e.key === 'Enter' && checkP2()} 
-                                    autoFocus
-                                    autoComplete="off"
-                                    spellCheck="false"
-                                  />
-                                  {feedback && (
-                                    <div className={cn(
-                                      "absolute -bottom-[2px] left-0 right-0 h-[2px]",
-                                      feedback.type === 'ok' ? "bg-[#95FF00]" : "bg-rose-500"
-                                    )} />
-                                  )}
-                                </div>
-                              </div>
-
-                              <div className="flex gap-2">
-                                <Button className="flex-1 font-bold uppercase tracking-[0.2em] h-14" variant="sage" size="md" onClick={checkP2}>
-                                  EXTRACT_PAYLOAD
-                                </Button>
-                                {devMode && (
-                                  <Button variant="secondary" className="w-14 h-14 border-white/10" size="sm" onClick={() => setP2Input(currentRound.p2.ans)}>
-                                    <Zap className="h-4 w-4" />
-                                  </Button>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="corner-card bg-[#0B0C0D] border-white/5 p-6 h-[240px] flex flex-col font-mono text-[11px]">
-                            <span className="label-technical mb-4 block text-[#95FF00]/60 text-[10px]">Feedback & Logs</span>
-                            <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-2">
-                              {feedback ? (
-                                <div className={cn(
-                                  "p-3 border-l-2 bg-white/[0.02]",
-                                  feedback.type === 'ok' ? "border-[#95FF00] text-[#95FF00]" : "border-rose-500 text-rose-500"
-                                )}>
-                                  <div className="text-[9px] uppercase tracking-widest opacity-50 mb-1">
-                                    {feedback.type === 'err' ? "Authentication Error" : "System Status"}
-                                  </div>
-                                  {feedback.msg}
-                                </div>
-                              ) : (
-                                <div className="text-white/20 animate-pulse flex items-center gap-2">
-                                  <div className="w-1 h-3 bg-white/20 animate-blink" />
-                                  WAITING_FOR_SEQUENCE_INIT...
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* P2 Solved - Round complete */}
-                    {gameState!.stage === 'p2_solved' && (
-                      <div className="corner-card bg-black/40 backdrop-blur-xl p-8 border border-white/5 relative text-center">
-                        <div className="corner-br" /> <div className="corner-bl" />
-                        <CheckCircle2 className="h-16 w-16 text-[#95FF00] mx-auto mb-6" />
-                        <h2 className="text-2xl font-bold tracking-[0.2em] uppercase mb-2">Round {gameState!.round + 1} Complete</h2>
-                        <p className="text-[10px] text-white/40 uppercase tracking-[0.3em] mb-8">Access granted. Proceed to next objective.</p>
-                        <Button 
-                          className="w-full font-bold uppercase tracking-[0.2em] h-14" 
-                          variant="sage"
-                          size="md" 
-                          onClick={nextRound}
-                        >
-                          {gameState!.round < rounds.length - 1 ? "Next Round" : "Finish Quest"}
-                          <ChevronRight className="ml-2 h-5 w-5" />
-                        </Button>
-                      </div>
+                    {/* Runner Game - Passkey entry + Minigame */}
+                    {(gameState!.stage === 'runner_game') && (
+                      <RunnerGame
+                        token={session!.token}
+                        currentRoundIndex={gameState!.round}
+                        totalRounds={rounds.length}
+                        onRoundComplete={async () => {
+                          // Allow the server's already-updated complete or p1_solve state to sync back down.
+                          await sync();
+                        }}
+                      />
                     )}
 
                     {/* Quest Complete */}
@@ -793,7 +584,6 @@ export default function App() {
                   </>
                 )}
               </motion.div>
-            )}
           </AnimatePresence>
 
           {/* Game Map */}

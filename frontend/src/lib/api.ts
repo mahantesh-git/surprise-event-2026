@@ -63,6 +63,18 @@ export async function updateGameState(token: string, updates: GameStateUpdate) {
     body: JSON.stringify(updates),
   }, token);
 }
+export async function verifyRunnerPasskey(token: string, passkey: string) {
+  return requestJson<{ ok: boolean; gameType: string }>('/runner/verify-passkey', {
+    method: 'POST',
+    body: JSON.stringify({ passkey }),
+  }, token);
+}
+
+export async function completeRunnerGame(token: string) {
+  return requestJson<{ ok: boolean }>('/runner/complete-round', {
+    method: 'POST',
+  }, token);
+}
 
 export async function resetGameState(token: string) {
   return requestJson<{ gameState: GameState }>('/game/reset', {
@@ -83,7 +95,6 @@ export interface RoundQuestion {
   p1: { title: string; code: string; hint: string; ans: string; output: string };
   coord: { lat: string; lng: string; place: string };
   volunteer: { name: string; initials: string; bg: string; color: string };
-  p2: { title: string; code: string; hint: string; ans: string; output: string };
   qrPasskey: string;
   cx: number;
   cy: number;

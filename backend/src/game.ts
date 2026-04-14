@@ -21,7 +21,7 @@ export function createInitialGameState(roundCount: number): GameState {
 }
 
 export function isValidStage(value: unknown): value is GameState['stage'] {
-  return value === 'p1_solve' || value === 'p1_solved' || value === 'p2_travel' || value === 'p2_scan' || value === 'p2_solve' || value === 'p2_solved' || value === 'complete';
+  return value === 'p1_solve' || value === 'p1_solved' || value === 'runner_travel' || value === 'runner_game' || value === 'runner_done' || value === 'complete';
 }
 
 export function isValidGameState(value: unknown): value is GameState {

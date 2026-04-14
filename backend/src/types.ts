@@ -1,6 +1,7 @@
 export type Role = 'solver' | 'runner';
 
-export type Stage = 'p1_solve' | 'p1_solved' | 'p2_travel' | 'p2_scan' | 'p2_solve' | 'p2_solved' | 'complete';
+export type Stage = 'p1_solve' | 'p1_solved' | 'runner_travel' | 'runner_game' | 'runner_done' | 'complete';
+
 
 export interface HandoffDetails {
   passkey: string;
@@ -74,7 +75,6 @@ export interface QuestionDocument {
   p1: PuzzlePart;
   coord: CoordinateInfo;
   volunteer: VolunteerInfo;
-  p2: PuzzlePart;
   qrPasskey: string;
   cx: number;
   cy: number;

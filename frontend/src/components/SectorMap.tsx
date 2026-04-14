@@ -36,7 +36,7 @@ export function SectorMap({ rounds, currentRound, stage }: SectorMapProps) {
   const hasCenteredRef = useRef<boolean>(false);
 
   const isComplete = stage === 'complete';
-  const isRunnerStage = ['p2_travel', 'p2_scan', 'p2_solve', 'p2_solved'].includes(stage);
+  const isRunnerStage = ['runner_travel', 'runner_game', 'runner_done'].includes(stage);
 
   const visibleRoundIndex = isRunnerStage ? currentRound : currentRound - 1;
   const current = visibleRoundIndex >= 0 ? rounds?.[Math.min(visibleRoundIndex, rounds.length - 1)] : null;

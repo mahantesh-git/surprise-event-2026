@@ -27,7 +27,6 @@ function createEmptyQuestion(nextRound: number): RoundQuestion {
     p1: { title: '', code: '', hint: '', ans: '', output: '' },
     coord: { lat: '', lng: '', place: '' },
     volunteer: { name: '', initials: '', bg: 'bg-indigo-100', color: 'text-indigo-700' },
-    p2: { title: '', code: '', hint: '', ans: '', output: '' },
     qrPasskey: '',
     cx: 0.5,
     cy: 0.5,
