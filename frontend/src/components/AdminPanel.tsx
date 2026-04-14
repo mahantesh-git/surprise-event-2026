@@ -254,9 +254,13 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
               <div className="space-y-4">
                 <div className="relative group">
                   <Input 
+                    type="email"
                     placeholder="Admin Email" 
                     value={email} 
                     onChange={(event) => setEmail(event.target.value)}
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck="false"
                     className="bg-black/50 border-white/10 group-focus-within:border-[#95FF00]/50 transition-colors uppercase text-[10px] tracking-widest h-12"
                   />
                 </div>
@@ -267,6 +271,9 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                     value={password} 
                     onChange={(event) => setPassword(event.target.value)} 
                     onKeyDown={(event) => event.key === 'Enter' && handleAdminLogin()}
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck="false"
                     className="bg-black/50 border-white/10 group-focus-within:border-[#95FF00]/50 transition-colors uppercase text-[10px] tracking-widest h-12"
                   />
                 </div>

@@ -415,7 +415,7 @@ app.post('/api/admin/login', (request, response) => {
     return;
   }
 
-  if (email !== getAdminEmail() || password !== getAdminPassword()) {
+  if (email.toLowerCase() !== getAdminEmail().toLowerCase() || password !== getAdminPassword()) {
     response.status(401).json({ error: 'Invalid admin credentials' });
     return;
   }

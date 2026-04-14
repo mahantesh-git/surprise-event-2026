@@ -6,6 +6,8 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { verifyRunnerPasskey, completeRunnerGame } from '@/lib/api';
+import { QRScanner } from '@/components/QRScanner';
+import { MapPin } from 'lucide-react';
 
 // ─── HAPTIC UTILITY ───────────────────────────────────────────
 function haptic(pattern: number | number[] = 50) {
@@ -218,7 +220,7 @@ const PatternGame = ({ onComplete }: { onComplete: () => void }) => {
 
 // ─── TYPES ────────────────────────────────────────────────────
 type GameType = 'tap' | 'memory' | 'pattern';
-type RunnerScreen = 'passkey' | 'game' | 'victory';
+type RunnerScreen = 'location' | 'qr_scanner' | 'passkey' | 'game' | 'victory';
 
 interface RunnerGameProps {
   token: string;
@@ -229,7 +231,7 @@ interface RunnerGameProps {
 
 // ─── MAIN COMPONENT ───────────────────────────────────────────
 export function RunnerGame({ token, currentRoundIndex, totalRounds, onRoundComplete }: RunnerGameProps) {
-  const [screen, setScreen] = useState<RunnerScreen>('passkey');
+  const [screen, setScreen] = useState<RunnerScreen>('location');
   const [passkey, setPasskey] = useState('');
   const [gameType, setGameType] = useState<GameType>('tap');
   const [error, setError] = useState<string | null>(null);
@@ -276,6 +278,60 @@ export function RunnerGame({ token, currentRoundIndex, totalRounds, onRoundCompl
 
   return (
     <AnimatePresence mode="wait">
+      {/* ── LOCATION VERIFICATION ── */}
+      {screen === 'location' && (
+        <motion.div key="location" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+          <div className="corner-card bg-black/40 backdrop-blur-xl p-8 border border-white/5 relative max-w-md mx-auto">
+            <div className="corner-br" /><div className="corner-bl" />
+            <div className="space-y-6">
+              <div className="text-center space-y-3">
+                <div className="w-16 h-16 bg-[#95FF00]/10 border border-[#95FF00]/30 flex items-center justify-center mx-auto">
+                  <MapPin className="w-8 h-8 text-[#95FF00]" />
+                </div>
+                <span className="label-technical block">Location Verification</span>
+                <h2 className="text-xl font-bold tracking-widest uppercase">Arrived at Node?</h2>
+                <p className="text-[10px] text-white/40 font-mono uppercase tracking-widest leading-relaxed">
+                  Verify your physical presence by scanning the Authorized QR code at this location.
+                </p>
+              </div>
+
+              {error && (
+                <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }}
+                  className="flex items-center gap-2 p-3 bg-rose-500/10 border border-rose-500/30 text-rose-400 text-[10px] font-mono uppercase tracking-wider">
+                  <AlertCircle className="w-4 h-4 shrink-0" />{error}
+                </motion.div>
+              )}
+
+              <Button
+                className="w-full font-bold uppercase tracking-[0.2em] h-14"
+                variant="sage" size="md"
+                onClick={() => { setError(null); setScreen('qr_scanner'); }}
+              >
+                <QrCode className="mr-2 h-5 w-5" /> SCAN LOCATION QR
+              </Button>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* ── QR SCANNER ── */}
+      {screen === 'qr_scanner' && (
+        <motion.div key="qr_scanner" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="max-w-md mx-auto">
+          <QRScanner
+            onScan={(text) => {
+              if (text.trim() === "QUEST-AUTHORIZED-LOCATION") {
+                setError(null);
+                setScreen('passkey');
+              } else {
+                setError('Invalid Location QR. Area Restricted.');
+                setScreen('location');
+              }
+            }}
+            onClose={() => setScreen('location')}
+          />
+        </motion.div>
+      )}
+
       {/* ── PASSKEY ENTRY ── */}
       {screen === 'passkey' && (
         <motion.div key="passkey" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>

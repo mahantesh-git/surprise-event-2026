@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Html5Qrcode, Html5QrcodeScannerState } from 'html5-qrcode';
 import { Button } from '@/components/ui/button';
 import { X } from 'lucide-react';
@@ -9,6 +9,7 @@ interface QRScannerProps {
 }
 
 export function QRScanner({ onScan, onClose }: QRScannerProps) {
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const qrRef = useRef<Html5Qrcode | null>(null);
 
   useEffect(() => {
@@ -23,7 +24,19 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
       { fps: 10, qrbox: { width: 240, height: 240 } },
       (decodedText) => { onScan(decodedText); },
       () => { /* ignore per-frame errors */ }
-    ).catch((err) => console.error('QR start error:', err));
+    ).catch((err) => {
+      console.warn('QR environment camera failed, trying user camera:', err);
+      // Fallback to 'user' facing camera if 'environment' fails (e.g. laptop webcam)
+      qr.start(
+        { facingMode: 'user' },
+        { fps: 10, qrbox: { width: 240, height: 240 } },
+        (decodedText) => { onScan(decodedText); },
+        () => { /* ignore per-frame errors */ }
+      ).catch((fallbackErr) => {
+        console.error('QR absolute start error:', fallbackErr);
+        setErrorMsg('Camera access denied or camera is currently in use by another app.');
+      });
+    });
 
     return () => {
       const instance = qrRef.current;
@@ -83,8 +96,14 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
         <div className="absolute -bottom-2 -right-2 w-8 h-8 border-b-2 border-r-2 border-[#95FF00] z-20 transition-all group-hover:-bottom-3 group-hover:-right-3" />
 
         <div className="relative overflow-hidden border border-white/5 bg-black/40">
-          <div id="qr-reader" className="w-full min-h-[300px]" />
-          <div className="scanner-line absolute top-0 left-0 w-full h-[1px] bg-[#95FF00] shadow-[0_0_15px_#95FF00] pointer-events-none z-50" />
+          <div id="qr-reader" className="w-full min-h-[300px] flex items-center justify-center">
+            {errorMsg && (
+              <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/90 p-6 text-center text-rose-500 font-mono text-[11px] uppercase tracking-widest border border-rose-500/30">
+                {errorMsg}
+              </div>
+            )}
+          </div>
+          <div className="scanner-line absolute top-0 left-0 w-full h-[1px] bg-[#95FF00] shadow-[0_0_15px_#95FF00] pointer-events-none z-40" />
         </div>
       </div>
 
