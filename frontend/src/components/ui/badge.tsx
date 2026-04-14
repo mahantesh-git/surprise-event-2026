@@ -1,24 +1,25 @@
 import * as React from 'react';
 import { cn } from '@/lib/utils';
 
-type BadgeVariant = 'default' | 'secondary' | 'outline' | 'destructive';
+type BadgeVariant = 'default' | 'secondary' | 'outline' | 'destructive' | 'neon';
 
 export interface BadgeProps extends React.HTMLAttributes<HTMLDivElement> {
   variant?: BadgeVariant;
 }
 
 const badgeClasses: Record<BadgeVariant, string> = {
-  default: 'bg-zinc-900 text-white dark:bg-zinc-50 dark:text-zinc-900',
-  secondary: 'bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-50',
-  outline: 'border border-zinc-200 text-zinc-900 dark:border-zinc-800 dark:text-zinc-50',
-  destructive: 'bg-red-600 text-white',
+  default: 'bg-[#1A1D21] text-white border border-[rgba(255,255,255,0.1)]',
+  secondary: 'bg-[rgba(255,255,255,0.05)] text-white/70 border border-transparent',
+  outline: 'border border-[#95FF00] text-[#95FF00]',
+  destructive: 'bg-red-500/10 text-red-500 border border-red-500',
+  neon: 'bg-[#95FF00]/10 text-[#95FF00] border border-[#95FF00]/50 shadow-[0_0_10px_rgba(149,255,0,0.1)]'
 };
 
 export function Badge({ className, variant = 'default', ...props }: BadgeProps) {
   return (
     <div
       className={cn(
-        'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors',
+        'inline-flex items-center px-2 py-0.5 text-[10px] font-mono uppercase tracking-widest font-bold transition-colors',
         badgeClasses[variant],
         className,
       )}

@@ -38,14 +38,15 @@ export class ErrorBoundary extends React.Component<Props, State> {
       }
 
       return (
-        <div className="min-h-screen flex items-center justify-center p-4 bg-zinc-50 dark:bg-zinc-950">
-          <div className="max-w-md w-full bg-white dark:bg-zinc-900 p-6 rounded-xl shadow-lg border border-red-100 dark:border-red-900/30 text-center">
-            <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+        <div className="min-h-screen flex items-center justify-center p-4 surface-paper">
+          <div className="max-w-md w-full bg-paper p-6 border border-rose-200 text-center">
+            <AlertCircle className="h-12 w-12 text-rose-600 mx-auto mb-4" />
             <h2 className="text-xl font-bold mb-2">Something went wrong</h2>
-            <p className="text-sm text-zinc-500 mb-6">{errorMessage}</p>
+            <p className="text-sm text-[rgba(33,33,33,0.6)] mb-6">{errorMessage}</p>
             <Button 
               onClick={() => window.location.reload()}
-              className="w-full bg-zinc-900 text-white dark:bg-white dark:text-zinc-900"
+              className="w-full"
+              variant="ink"
             >
               Reload Application
             </Button>

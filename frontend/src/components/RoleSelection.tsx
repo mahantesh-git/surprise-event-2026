@@ -1,70 +1,126 @@
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { motion } from 'motion/react';
 import { Code2, Navigation, Zap } from 'lucide-react';
+import { GridBackground } from '@/components/GridBackground';
 
 interface RoleSelectionProps {
   onSelect: (role: 'solver' | 'runner') => void;
 }
 
 export function RoleSelection({ onSelect }: RoleSelectionProps) {
+  const roles = [
+    {
+      key: 'solver' as const,
+      label: 'Solver',
+      sub: 'Decode complex puzzles, execute logic, and unearth hidden coordinates to guide your operative in the field.',
+      icon: <Code2 size={24} strokeWidth={1.5} />,
+      delay: 0.1,
+    },
+    {
+      key: 'runner' as const,
+      label: 'Runner',
+      sub: 'Navigate physical space, locate key informants, and scan access nodes to secure critical data fragments.',
+      icon: <Navigation size={24} strokeWidth={1.5} />,
+      delay: 0.2,
+    },
+  ];
+
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-zinc-50 dark:bg-zinc-950">
-      <div className="max-w-md w-full space-y-6">
-        <div className="text-center space-y-2">
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <Zap className="h-8 w-8 text-amber-500 fill-amber-500" />
-            <h1 className="text-3xl font-bold tracking-tight">QUEST</h1>
-          </div>
-          <p className="text-zinc-500 dark:text-zinc-400">Collaborative Scavenger Hunt</p>
+    <div className="relative min-h-screen bg-[#15171A] text-white overflow-hidden flex flex-col justify-center px-6 md:px-12 pt-20 pb-12">
+      {/* Ambient orbs handle the background now */}
+
+      {/* Navbar simulation for landing page */}
+      <nav className="absolute top-0 left-0 right-0 z-50 flex items-center justify-between px-6 md:px-12 py-6">
+        <span className="font-mono text-[10px] tracking-[0.3em] uppercase text-[#95FF00] flex flex-row items-center gap-2">
+          <div className="w-1.5 h-1.5 rounded-full bg-[#95FF00] animate-pulse" />
+          SYSTEM.PROTOCOL <span className="text-white/40">v1.0.4</span>
+        </span>
+        <button 
+          onClick={() => {
+            window.history.pushState({}, '', '/admin');
+            window.dispatchEvent(new PopStateEvent('popstate'));
+          }}
+          className="font-mono text-[10px] text-white/40 tracking-[0.2em] uppercase hover:text-[#95FF00] transition-colors border-b border-white/5 pb-1"
+        >
+          Admin_Portal
+        </button>
+      </nav>
+
+      <div className="max-w-6xl mx-auto w-full relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
+        
+        {/* Left Col - Hero Title */}
+        <div className="lg:col-span-7 pr-0 lg:pr-8">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            transition={{ duration: 0.7, ease: "easeOut" }}
+          >
+            {/* Badge */}
+            <div className="mb-6 inline-flex items-center gap-2 border border-[#95FF00]/40 px-4 py-1.5 bg-[#95FF00]/5 font-mono text-[10px] uppercase tracking-[0.2em] text-[#95FF00]">
+              <span className="w-1 h-1 bg-[#95FF00]" />
+              Secure_Connection_Active
+            </div>
+            
+            {/* Headline */}
+            <h1 className="text-[clamp(3.5rem,8vw,7rem)] font-bold uppercase tracking-tighter leading-[0.85] mb-8 font-space-grotesk text-white">
+              QUEST <br/>
+              <span className="text-white/10">THE CODE</span><br/>
+              <span className="text-[#95FF00]" style={{ textShadow: '0 0 50px rgba(149,255,0,0.3)' }}>SCAVENGER</span>
+            </h1>
+
+            {/* Subtext */}
+            <p className="font-mono text-xs tracking-wider text-white/40 max-w-sm leading-relaxed border-l border-[#95FF00]/40 pl-6 py-2 uppercase">
+              Operational synchronization required. Select your clearance role to initialize mission protocol.
+            </p>
+          </motion.div>
         </div>
 
-        <div className="grid gap-4">
-          <Card 
-            className="cursor-pointer hover:border-blue-500 transition-colors group"
-            onClick={() => onSelect('solver')}
-          >
-            <CardHeader className="flex flex-row items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform">
-                <Code2 className="h-6 w-6" />
+        {/* Right Col - Role Selection Cards */}
+        <div className="lg:col-span-5 flex flex-col gap-6">
+          {roles.map((role, idx) => (
+            <motion.button
+              key={role.key}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: role.delay + 0.3, duration: 0.6, ease: "easeOut" }}
+              whileHover={{ x: 10 }}
+              onClick={() => onSelect(role.key)}
+              className="corner-card group relative text-left bg-black/40 backdrop-blur-xl border border-white/5 hover:border-[#95FF00]/40 transition-all duration-300 cursor-crosshair overflow-hidden p-8"
+            >
+              <div className="corner-br opacity-20 group-hover:opacity-100" /> 
+              <div className="corner-bl opacity-20 group-hover:opacity-100" />
+              
+              {/* Giant background number overlay */}
+              <div className="absolute -top-4 -right-2 text-[120px] font-bold opacity-[0.03] text-white group-hover:text-[#95FF00] group-hover:opacity-[0.08] transition-all duration-500 leading-none tracking-tighter pointer-events-none font-space-grotesk">
+                0{idx + 1}
               </div>
-              <div>
-                <CardTitle>I am the Solver</CardTitle>
-                <CardDescription>Solve code puzzles to unlock locations.</CardDescription>
-              </div>
-            </CardHeader>
-          </Card>
 
-          <Card 
-            className="cursor-pointer hover:border-emerald-500 transition-colors group"
-            onClick={() => onSelect('runner')}
-          >
-            <CardHeader className="flex flex-row items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
-                <Navigation className="h-6 w-6" />
-              </div>
-              <div>
-                <CardTitle>I am the Runner</CardTitle>
-                <CardDescription>Travel to locations and scan QR codes.</CardDescription>
-              </div>
-            </CardHeader>
-          </Card>
-        </div>
+              <div className="relative z-10 flex flex-col h-full">
+                <div className="flex items-center gap-5 mb-4">
+                  <div className="w-14 h-14 rounded-none bg-black border border-white/10 flex items-center justify-center text-white/40 group-hover:text-[#95FF00] group-hover:border-[#95FF00] transition-all duration-300">
+                    {role.icon}
+                  </div>
+                  <h3 className="text-4xl font-bold uppercase tracking-tight text-white group-hover:text-[#95FF00] transition-colors font-space-grotesk">
+                    {role.label}
+                  </h3>
+                </div>
+                
+                <p className="font-mono text-[11px] text-white/30 tracking-widest leading-relaxed min-h-[48px] uppercase">
+                  {role.sub}
+                </p>
 
-        <p className="text-center text-xs text-zinc-400">
-          Choose a solver or runner page, then log in with your team name and password.
-        </p>
-        <div className="pt-2">
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={() => {
-              window.history.pushState({}, '', '/admin');
-              window.dispatchEvent(new PopStateEvent('popstate'));
-            }}
-          >
-            Open Admin Panel
-          </Button>
+                <div className="mt-8 flex items-center justify-between">
+                  <span className="font-mono text-[9px] uppercase tracking-[0.3em] text-[#95FF00] opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    ACCESS_NODE_0{idx + 1}
+                  </span>
+                  <div className="h-[1px] flex-1 mx-4 bg-[#95FF00]/10 scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-500" />
+                  <span className="font-mono text-sm text-[#95FF00] transition-transform duration-300 group-hover:translate-x-2">
+                    [ INITIALIZE ]
+                  </span>
+                </div>
+              </div>
+            </motion.button>
+          ))}
         </div>
       </div>
     </div>

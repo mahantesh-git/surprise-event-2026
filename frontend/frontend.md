@@ -1,254 +1,344 @@
-Design Audit Report: Sutéra — Reality By Design
-sutera.ch | Senior UI/UX & Frontend Systems Analysis
-1. Visual Identity & Brand Feel
-Overall Mood: Post-digital minimalism meets technical precision — think aerospace documentation crossed with experimental editorial design. It occupies a rare niche between Swiss graphic design rigor and speculative futures aesthetics.
+Magic Receipt AI — Full UI/UX Design Audit
 
+1. Visual Identity & Brand Feel
+Overall Mood: Futuristic tech-noir with editorial flair — think retro-computing meets modern AI startup.
 Brand Personality:
 
-Intellectually confident without being cold
-Technically fluent but humanist at its core
-Solo practitioner energy — intimate, curated, not corporate
-Strongly "designed by a designer for designers" — the site itself is the portfolio
+Confident and slightly irreverent ("Receipts are a nightmare. Deal with it. Not anymore!")
+Technical precision aesthetic borrowed from sci-fi interfaces and old terminal UIs
+Self-aware humor balanced with professional credibility
+Anti-corporate — deliberately edgy for a fintech tool
+
 Emotional Tone:
 
-Curiosity and precision in equal measure
-A sense of inhabiting the edge between human biology and machine systems
-Understated gravity — nothing shouts, everything signals
-The name etymology ("underneath the earth") embedded in the UI as a wink to deep roots and quiet foundations
+Empowerment through automation
+Playful frustration relief — the brand acknowledges the pain before solving it
+Trust through visual precision (grid corners, measurement UI chrome, battery indicators)
+Premium without being stuffy
+
+
 2. Color System
 Primary Colors:
 
-#FFFFFF — dominant background, almost aggressively clean
-#000000 — primary text, strokes, borders
-#A9A9A9 — grid crosshair markers, secondary UI chrome
+#95FF00 — Electric neon lime/green (primary accent, brand signature)
+#15171A / #0B0C0D — Near-black charcoal (primary background)
+#FFFFFF — White (typography, line elements)
+
 Secondary/Supporting Colors:
 
-#F2F2F2 — grid line color, subtle spatial dividers
-#CBCBCB — fill for decorative pixel/block elements
-Accent Colors (Project-specific, used as hover/overlay tints):
+#9542F4 — Electric purple (marquee stripe elements only)
+#A5CDFF — Soft blue (connector lines in the hero diagram, subtle highlights)
+#FF4500 — Reddit orange (CTA section, brand-specific)
+#7A7C7D — Mid-gray (secondary text, inactive icon states)
 
-#BCD4FD — soft periwinkle blue (Project 01)
-#E3C0A9 — muted terracotta (Project 02)
-#C9C1FF — lavender (Project 03)
-#E88150 — burnt orange (Project 04)
-#FFA796 — salmon (Project 05)
-#F9CCDD — blush pink (Project 06)
-#91B394 — sage green (Project 07)
-#59E7CA — aqua/teal (Project 08)
-#996B4A — warm brown (Project 09)
+Accent Colors:
+
+#95FF00 dominates all interactive and highlight moments
+Blue #A5CDFF used exclusively for the data-flow SVG lines (technical credibility)
+
 Background Layering Strategy:
 
-Pure white as the base field
-Semi-transparent white overlays on SVG diagram areas (opacity: 0.7) to create depth within a monochromatic system
-No dark mode — the lightness is a deliberate brand statement
-The page essentially uses whitespace as a material, not just negative space
-Light vs Dark Balance: Approximately 90% light / 10% dark — near-total white field with black as the sole structural color. Very high contrast, zero gray fog.
+Base: #15171A dark charcoal
+Overlay: radial gradient rgba(21,23,26,0) → rgba(21,23,26,1) (vignette technique)
+Grid pattern: rgba(255,255,255,0.1) lines at 45px intervals on dark backgrounds
+Multiple layered pseudo-depths using opacity stacking rather than color changes
 
-Gradient Usage: None. This is deliberate — gradients would soften the technical precision aesthetic.
+Light vs Dark Balance:
 
-Contrast Ratio Quality: Exceptional. Black on white everywhere for body text. The gray tones are used only for decorative/structural elements, never for readable text.
+90/10 dark-dominant — almost entirely dark with white text and neon accent punctuation
+Zero light mode consideration in codebase
+
+Gradient Usage:
+
+Radial blur "orb" gradients (lime → white, white → lime) as ambient light sources
+SVG-embedded radial gradients for the footer mask reveals
+filter: blur(6rem) on colored divs to simulate volumetric light (not CSS gradients per se)
+Text has text-shadow: 0px 0px 4.8px #95FF00 for neon glow on pricing
+
+Contrast Ratio Quality:
+
+#95FF00 on #15171A — excellent (passes WCAG AA and likely AAA)
+White on dark — excellent
+Gray #7A7C7D on dark — marginal, borderline AA for small text
+
 
 3. Typography System
-Font Categories:
+Fonts Used:
 
-Primary (functional/UI): A geometric uppercase sans-serif for navigation, labels, lists, metadata — referred to internally as font-main. Likely a mono-adjacent grotesque such as Space Grotesk, Aktiv Grotesk, or a custom variant.
-Secondary (expressive/body): A broader reality-font class used for large display headings and long-form body text — suggests a higher-contrast serif or a refined humanist sans with variable weight support.
-Heading Style and Hierarchy:
+Almarai — Primary UI font (Arabic-origin geometric sans-serif; weights 300–700)
+DM Mono — Monospace, used for technical/code-adjacent UI chrome text (version strings, serial numbers)
+Rock Salt — Irregular handwritten/graffiti style (used for "Not anymore!" overlay text)
 
-H1 ("Reality, By Design") is enormous — viewport-filling display text using text-xxl scaling
-H2s are still large but compositionally anchored — not just bigger text, but text that participates in layout
-No decorative heading underlines or dividers — whitespace alone creates hierarchy
+Heading Style & Hierarchy:
+
+H1: Uppercase, wide tracking, large scale, 2–3 word punchy statements
+H2: text-style-allcaps class — uppercase with letter-spacing
+H3: Section subheadings, lighter weight
+Visual hierarchy enforced through scale contrast, not font family switching
+
 Font Weight Usage:
 
-A --f-bold custom property is used for the brandmark and card titles
-Body text stays in a single weight range — no medium/semibold hedging
-Weight contrast is minimal — scale does the hierarchical work
-Line Height and Spacing Patterns:
+700 (Bold): Hero headings, pricing figure, CTAs
+400 (Regular): Body copy, nav links
+300 (Light): Supporting text, opacity-reduced secondary info
 
-Leading of 0.9 for the footer identity text signals deliberate tightness as a style choice
-leading-none and leading-[0.84em] for UI chrome elements
-Body text appears to use generous leading (approximately 1.5–1.6) for readability
---text-s--line-height as a custom property confirms a systematic approach
-Text Density: Maximally airy. The site breathes. Long paragraphs are short in absolute line count, and no text block crowds another. The layout treats text as a visual object with spatial mass.
+Line Height & Spacing:
+
+Generous line-height on headings (editorial feel)
+Body: standard 1.5–1.6
+.text-size-large, .text-size-medium, .text-size-tiny — custom scale classes
+opacity-7 class used extensively (likely opacity: 0.7) for hierarchy without color change
+
+Text Density:
+
+Very airy — short copy blocks, punchy headlines
+Lots of whitespace between sections
+Deliberately minimal paragraph length
+
 
 4. Layout & Grid Structure
-Container Width Style: Full-width with margin-based containment using --grid-margin as a CSS custom property. No fixed max-width container — the layout stretches to fill the viewport and uses proportional units.
+Container Width:
+
+.container-large — boxed, centered with margin: auto
+Full-bleed sections for stripe/marquee elements that break out of containers
+padding-global + padding-section-large as consistent section wrapper pattern
 
 Grid System:
 
-A custom responsive grid defined via CSS variables: --grid-margin, --grid-gutter
-Three distinct breakpoints: mobile (default), custom-tab (tablet, ~768px), custom-desktop (~1240px)
-Desktop uses a rough 12-column mental model expressed as fractional widths (w-2/12, w-8/12, w-4/12)
-The SVG background grids literally draw the column and row structure: mobile uses 3 columns, tablet uses 5, desktop uses 4 with 3 rows — the structural grid is made visible as a design element
+Custom flex-based layout (Webflow's layout engine)
+w-layout-hflex / w-layout-vflex — horizontal/vertical flex containers
+Card grid: 3-column on desktop, stacks on mobile
+Hero: vertical centered stack
+
 Spacing Rhythm:
 
-svh-based vertical spacing (mb-[3.73svh], pt-[7.46svh]) — tied to viewport height, not a fixed px system
-Horizontal spacing follows the --grid-margin and --grid-gutter variables
-This is not a strict 4px/8px system — it is a proportional, viewport-relative system designed to feel consistent across screen sizes
-Section Segmentation: Loose and narrative — sections flow into each other rather than being separated by obvious dividers. The SVG structural drawings function as invisible scaffolding.
+Gap classes: gap-2, gap-4, gap-6, gap-8, gap-10, gap-12, gap-16, gap-20, gap-22, gap-36, gap-38
+Appears to be a 4px base unit system (gap-2 = 8px, gap-4 = 16px, gap-6 = 24px etc.)
+spacer-xsmall, spacer-small, spacer-medium, spacer-large, spacer-xlarge, spacer-xxhuge — semantic spacer classes
 
-Content Alignment Patterns:
+Section Segmentation:
 
-Mobile: centered with full-width stacking
-Tablet/Desktop: asymmetric multi-column compositions that feel editorial rather than grid-locked
-Text and image elements frequently overlap or float, anchored by absolute positioning within relative containers
-Visual Hierarchy Structure: Size → Position → Weight. Color is not used for hierarchy — it is used for project identity. The eye is guided by scale and spatial placement, not colorblocking.
+Clear full-viewport sections with <section> tags
+Hero → animated scanner demo → marquee stripe → benefits swiper → how-to steps → persona cards → pricing → testimonials → FAQ → Reddit CTA → Footer
+Each section has distinct purpose and visual treatment
+
+Content Alignment:
+
+Center-alignment dominant for hero, pricing, testimonials
+Left-align for card content
+Flex align-center and items_center throughout
+
+Visual Hierarchy:
+
+Size → Weight → Color → Opacity — four-layer hierarchy system
+Neon green punctuates only the most critical elements
+
 
 5. Component Breakdown
 Navbar:
 
-fixed to top, full width, z-50
-Fully transparent background — no fill, no blur, no shadow
-Three-column layout: brand name (left), CTA pill (center), local time display (right)
-Typography-only — no icons, no hamburger on desktop
-The "Change Reality" button is a bordered pill with no fill and very small text
+Sticky (.nav_fixed)
+Dark background with slight transparency blending
+Logo left, nav links center (desktop), CTA button right
+Mobile: hamburger trigger → full-screen dropdown overlay with grid background animation
+Nav links are text-only, no borders/underlines on default state
+
 Hero Section:
 
-Compositionally the most complex element on the page
-Text ("Reality, By Design") uses the display font at maximum scale
-Animated SVG diagrams with connecting lines and dot markers orbit the main content
-A canvas element handles what appears to be a 3D or particle animation in the viewport center
-Blueprint-card aesthetic for the SUTÉRA identity box (bordered container with inner content)
+Full-viewport centered stack
+Star ratings + social proof line above headline
+Headline uses strikethrough + overlay text animation ("Deal with it" crossed out, "Not anymore!" overlaid in Rock Salt)
+Dual CTA buttons (App Store + Google Play) with SVG brand icons
+Free trial nudge below buttons
+
 Buttons:
 
-Exclusively outline/bordered style with rounded-pill border radius (rounded-[52px])
-No filled buttons exist on the page — this is a conscious tonal choice (assertive but not aggressive)
-Small text, minimal padding, high air ratio
-Example: border rounded-[52px] px-[0.57em] py-[0.15em]
+.button.is-secondary — outlined/ghost style, white border, neon text on dark
+.button.is-icon-2 — dark background with neon icon + label, square-ish border radius
+No pill shapes — corners are relatively sharp (low border-radius, ~4–6px estimated)
+Hover states swap background/text colors
+
 Cards:
 
-SVG-bordered containers with explicit crosshair/close decorations in corners
-Flat — no box shadows, no elevation
-White fill with black stroke — essentially technical diagram panels
-The "window" metaphor: close buttons drawn with SVG X marks in corner rectangles
-Forms & Inputs: No forms visible on the page — contact is handled via external links (LinkedIn, Instagram).
+.swiper_card — dark bordered cards with subtle corner bracket decorations (not full borders, just corner L-brackets in low opacity white)
+.card_container — image + text structure, image has a dark gradient overlay
+No drop shadows — elevation implied through border and background contrast
 
-Footer Structure:
+Forms & Inputs:
 
-Right-aligned content block (9/12 width on tablet, 7/12 on desktop)
-Two-column layout for speaking engagements and writing links
-Bottom strip: identity mark, location text, a small scroll-to-top control, and social links
-The animated GIF (Jennifer Aniston waving) is the footer's Easter egg personality moment
-Call-to-Action Patterns:
+None visible on the landing page (app downloads, no in-page forms)
 
-CTAs are underplayed — external links styled as bordered pills
-The most prominent CTA is the "Change Reality" nav element — which functions more as a modal trigger than a traditional conversion CTA
+Footer:
+
+Large "See the magic for yourself" heading
+Two large download link blocks with icon swap on hover
+Bottom row: Privacy policy | Legal text | Social icons (Reddit, LinkedIn)
+Masked reveal animation on scroll (radial gradient unmask)
+
+CTA Patterns:
+
+Every section ends with or contains App Store + Google Play buttons
+"Try it free for 14 days" consistently adjacent to download CTAs
+Reddit community CTA as secondary conversion path
+
+
 6. Depth, Effects & Visual Enhancements
-Shadows: None. Zero box shadows across the entire site. Depth is created entirely through layering, SVG structure, and opacity.
+Shadows:
 
-Border Radius System:
+SVG-embedded feGaussianBlur drop shadows on the report/document illustrations
+No traditional CSS box-shadow detected — depth through layering
+Hard-edged for UI chrome elements; soft diffuse for ambient light orbs
 
-Pill: rounded-[52px] for buttons and tags
-Subtle: rounded-[10px] for project images
-Sharp: rounded-[2px] for the nav CTA
-SVG diagrams themselves carry their own corner rounding logic
-Glassmorphism/Neumorphism: Neither. This is flat-technical — closer to a CAD interface or hardware documentation aesthetic than any current UI trend.
+Border Radius:
 
-Glow or Highlight Effects: None visible. The white-on-white with transparency is the only "soft" effect.
+Near-zero radius on most elements (cards, buttons: ~4px)
+Full circle on the ambient glow orb divs
+App store icon badges: rx="8" on SVGs
 
-Iconography Style:
+Glassmorphism / Neumorphism:
 
-Custom SVG throughout — no icon libraries
-Icons are drawn artifacts: globe SVG, geometric orbital diagram, pixel-grid bars, arrow chevrons
-The crosshair marker (rectangle with cross lines) used at grid intersections is the site's signature icon motif
-Illustration/Photography Style:
+Neither — the aesthetic is terminal UI / sci-fi chrome — hard edges, grid lines, corner brackets
+Corner bracket decorators on cards simulate precision measurement equipment
 
-Photography is absent from the main composition
-Imagery is confined to project thumbnails and Easter egg GIFs
-The dominant visual language is custom SVG illustration — technical, precise, and monochromatic
-GIFs function as personality injections: Tony Stark hologram, Jennifer Aniston, Jack Sparrow
+Glow & Highlight Effects:
+
+text-shadow: 0 0 4.8px #95FF00 on pricing text
+SVG feGaussianBlur + feColorMatrix for glowing connecting lines (blue)
+Blurred colored orb divs (filter: blur(6rem)) as ambient light sources
+Scanner animation line has a blurred twin behind it for glow effect
+
+Iconography:
+
+Custom SVG icons throughout — no icon library
+Flat, 1px stroke, minimal, geometric
+App Store and Google Play icons are custom-colored SVG (not official assets)
+
+Illustration Style:
+
+Flat SVG illustrations (receipt, bank statement mockups)
+Black and white photography for persona cards with CSS filter overlay
+Scanner animation is CSS/JS driven over SVG document mockups
+
+
 7. Interaction & Animation Style
 Hover Effects:
 
-Project images have an overflow-hidden container suggesting scale or reveal on hover
-The "dog-img-trigger" and similar elements trigger hidden image panels on hover
-Nav item "Change Reality" likely triggers a full-screen modal based on the fixed overlay structure
-The pointer-fine utility class gates hover effects to non-touch devices
+Button icon containers swap (.footer_link_block_large_icon vs _hover variant swap)
+Nav CTA button color invert on hover
+
 Scroll Animations:
 
-The SVG path elements (.main-path, .main-path-2, .main-path-3) with their sequential naming suggest staggered path draw animations on scroll
-The .main-dot elements animate in after the paths
-The loader system uses a grid of white <span> elements that tile-dissolve away
+GSAP ScrollTrigger driving most animations
+data-heading-reveal="true" — headings animate in on scroll (likely split text)
+data-reveal="true" on FAQ items
+Lenis smooth scroll (custom easing on all scroll behavior)
+The scanner line animation is CSS keyframe, infinite loop
+Section background masks reveal on scroll (radial gradient unmask technique)
+
 Microinteractions:
 
-Cursor: a custom white-square crosshair cursor replaces the system cursor, positioned via fixed and negative offsets
-The tooltip system (.from-text / .destination-text pattern) suggests a text-scramble or reveal animation on hover
-Easter eggs are hidden behind specific hover targets
-Transition Smoothness: Smooth and deliberate — nothing snaps. The motion personality is unhurried and precise, like watching technical equipment initialize.
+Loading bar animation in the digital grid section (receipt processing simulation)
+Swiper carousel with custom prev/next controls
+Mobile menu open/close with animated hamburger lines
 
-Motion Personality: Slow, intentional, architectural. Animations feel like systems coming online rather than UI elements showing off.
+Transition Smoothness:
+
+Lenis provides buttery smooth scroll momentum
+GSAP ensures spring-like or ease-out transitions
+Motion personality: dramatic and deliberate — slow reveals, purposeful movement
+
+Motion Personality: Cinematic/dramatic — not snappy. Animations are used to tell the product story (scan → extract → reconcile → report).
 
 8. Responsiveness Strategy
 Mobile Layout Behavior:
 
-Single-column stacking throughout
-The SVG grid background switches to a 3-column layout
-Hero text maintains its scale but the flanking SVG diagrams collapse or hide
-Project grid collapses to 2-column (w-(--item-w) at 50% - gutter)
-Navbar Collapse Pattern: No hamburger menu. The three-column navbar simplifies on mobile — the local time display hides (hidden custom-tab:flex). Navigation appears to be entirely within the "Change Reality" overlay.
+mobile_col class: flex direction switches to column
+hide-tablet, hide-desktop, hide-mobile utility classes for selective visibility
+Navigation collapses to hamburger + full overlay menu
+Swiper carousels replace multi-column grids on mobile
 
-Font Scaling Logic:
+Navbar Collapse Pattern:
 
-text-xxl, text-xl, text-l, text-m, text-s, text-xs, text-xxs — a custom scale using CSS variables
-Sizes are likely clamp()-based or use viewport units to scale smoothly
-The custom-tab:text-s pattern shows explicit breakpoint overrides for typographic comfort
-Content Stacking Structure:
+Desktop: inline nav links + CTA button
+Mobile: icon-only download button + hamburger → full-screen overlay with gradient grid background
 
-Mobile: full-width, vertically stacked, center-aligned
-Tablet: multi-column with absolute-positioned SVG accents appearing
-Desktop: full editorial composition with overlapping elements, floating diagrams, and wide text blocks
+Font Scaling:
+
+@media (min-aspect-ratio: 2) sets html { font-size: 14px } for ultrawide
+Heading classes scale with viewport via Webflow's responsive breakpoints
+text-size-large, text-size-medium etc. are likely custom clamp-based scales
+
+Content Stacking:
+
+Hero: already centered vertical stack (no change needed)
+How-to section: mobile_col switches side-by-side to stacked
+Card grid: 3-col → 1-col via swiper on mobile
+Testimonials: masonry/grid → swiper
+
+
 9. Technical Estimation
-Frontend Framework: Nuxt 3 (Vue 3) — confirmed by id="__nuxt", __NUXT__ global, and the SSR data blob. Built on Nuxt with server-side rendering enabled.
-
-CMS: Prismic — confirmed by the prismic.min.js script, prismic.cdn URLs, and the extensive __NUXT_DATA__ Prismic document structure.
-
+Frontend Framework: Webflow (confirmed — data-wf-site, w-nav-brand, Webflow CDN assets, .w-dyn-items CMS lists)
 CSS Methodology:
 
-Tailwind CSS — confirmed by utility class patterns (flex, items-center, w-full, z-50, custom-tab: prefix breakpoints)
-Custom Tailwind config extends the default with custom-tab, custom-desktop breakpoints and a full custom spacing/sizing vocabulary
-CSS custom properties extensively used for design tokens alongside Tailwind
-Animation Libraries: Likely GSAP (GreenSock) — the sequential path animations, loader tile system, and scroll-based SVG draws are characteristic of GSAP ScrollTrigger. The canvas element suggests Three.js or a custom WebGL/2D canvas renderer.
+Webflow's utility class system (BEM-adjacent but not strict BEM)
+Custom utility classes layered on top: gap-N, spacer-*, text-size-*, opacity-7
+Likely 4px spacing scale throughout
+
+Animation Libraries:
+
+GSAP 3.12.5 + ScrollTrigger (explicitly imported)
+Swiper 11 (carousel)
+Lenis 1.3.4 (smooth scroll)
+SplitType (text splitting for character/word animations)
 
 Performance Considerations:
 
-Images use Prismic's responsive image pipeline with srcset at multiple breakpoints
-loading="lazy" on all below-fold images
-Canvas-based animation may be performance-intensive on lower-end devices
-The pointer-fine media query gates expensive hover interactions to desktop
+will-change: transform, opacity on .digital_grid_section (GPU promotion)
+translateZ(0) + backface-visibility: hidden for compositing optimization
+.avif image format used throughout (excellent compression)
+Videos use poster images for instant visual feedback
+Multiple deferred/lazy loaded assets
+
+
 10. Rebuild Blueprint
-Design Principles to Carry Forward
-White as material, black as structure
-Custom SVG over icon libraries
-No shadows — depth through layering
-Viewport-relative spacing
-Pill buttons, outline only
-Grid as visible artifact
+Design Principles to Extract:
+
+Near-black background with single neon accent
+Grid line overlay at low opacity
+Corner bracket UI chrome on containers
+Ambient glow orbs (blurred colored divs)
+Uppercase tracked headings
+Monospace secondary text for technical feel
+Scanner/processing animation as hero storytelling
+
+
 Plain HTML/CSS Hero
-html
-<!DOCTYPE html>
+html<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sutéra-style Hero</title>
+<title>Magic Receipt AI – Hero</title>
 <style>
-  :root {
-    --margin: clamp(16px, 4vw, 64px);
-    --color-black: #000000;
-    --color-white: #ffffff;
-    --color-grid: #f2f2f2;
-    --color-mark: #a9a9a9;
-    --font-display: 'Space Grotesk', sans-serif;
-  }
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@300;400;600;700&display=swap');
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+  :root {
+    --neon: #95FF00;
+    --bg: #15171A;
+    --bg-2: #0B0C0D;
+    --white: #ffffff;
+    --muted: rgba(255,255,255,0.5);
+    --grid-line: rgba(255,255,255,0.07);
+    --radius: 4px;
+  }
+
   body {
-    font-family: var(--font-display);
-    background: var(--color-white);
-    color: var(--color-black);
-    text-transform: uppercase;
-    letter-spacing: -0.02em;
+    background: var(--bg);
+    color: var(--white);
+    font-family: 'Space Grotesk', sans-serif;
+    min-height: 100vh;
     overflow-x: hidden;
   }
 
@@ -256,526 +346,430 @@ html
   .grid-bg {
     position: fixed;
     inset: 0;
+    background-image:
+      linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
+    background-size: 45px 45px;
     pointer-events: none;
     z-index: 0;
-    background-image:
-      linear-gradient(var(--color-grid) 1px, transparent 1px),
-      linear-gradient(90deg, var(--color-grid) 1px, transparent 1px);
-    background-size: 33.33vw 33.33vh;
   }
 
-  /* Navbar */
+  /* Ambient glow orb */
+  .orb {
+    position: fixed;
+    top: 20%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, rgba(149,255,0,0.15) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+    filter: blur(40px);
+  }
+
+  /* Nav */
   nav {
     position: fixed;
     top: 0; left: 0; right: 0;
+    z-index: 100;
+    padding: 20px 40px;
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
-    padding: 20px var(--margin);
-    z-index: 50;
+    align-items: center;
+    background: rgba(21,23,26,0.8);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
   }
 
-  .nav-brand {
-    font-size: clamp(14px, 1.5vw, 18px);
-    font-weight: 700;
-    letter-spacing: 0.05em;
-  }
-
-  .nav-cta {
-    border: 1px solid var(--color-black);
-    border-radius: 2px;
-    padding: 0.25em 0.5em 0.18em;
-    font-size: clamp(10px, 1vw, 13px);
-    cursor: pointer;
-    background: transparent;
+  .logo {
+    font-family: 'DM Mono', monospace;
+    font-size: 14px;
+    letter-spacing: 0.1em;
+    color: var(--neon);
     text-transform: uppercase;
-    letter-spacing: 0.03em;
+  }
+
+  .nav-links { display: flex; gap: 32px; list-style: none; }
+  .nav-links a {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 14px;
+    letter-spacing: 0.05em;
+    transition: color 0.2s;
+  }
+  .nav-links a:hover { color: var(--white); }
+
+  .btn-primary {
+    background: transparent;
+    border: 1px solid var(--neon);
+    color: var(--neon);
+    padding: 10px 20px;
+    font-size: 13px;
+    font-family: inherit;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    border-radius: var(--radius);
+    cursor: pointer;
     transition: background 0.2s, color 0.2s;
   }
-
-  .nav-cta:hover {
-    background: var(--color-black);
-    color: var(--color-white);
-  }
-
-  .nav-meta {
-    font-size: 11px;
-    text-align: right;
-    line-height: 1.4;
-    color: var(--color-mark);
-  }
-
-  .nav-meta span { color: var(--color-black); }
+  .btn-primary:hover { background: var(--neon); color: var(--bg); }
 
   /* Hero */
   .hero {
     position: relative;
-    min-height: 100svh;
+    z-index: 1;
+    min-height: 100vh;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
-    padding: 12vh var(--margin) var(--margin);
-    z-index: 1;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 120px 24px 80px;
+    gap: 24px;
   }
 
-  .hero-title {
-    font-size: clamp(56px, 11vw, 160px);
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 6px 14px;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 2px;
+  }
+  .badge-dot {
+    width: 6px; height: 6px;
+    background: var(--neon);
+    border-radius: 50%;
+  }
+
+  .hero-heading {
+    font-size: clamp(40px, 7vw, 96px);
     font-weight: 700;
-    line-height: 0.9;
-    letter-spacing: -0.04em;
+    line-height: 1.0;
+    letter-spacing: -0.03em;
+    text-transform: uppercase;
+    max-width: 900px;
   }
 
-  /* Blueprint card */
-  .blueprint-card {
+  .hero-heading em {
+    font-style: normal;
+    color: var(--neon);
+    text-shadow: 0 0 30px rgba(149,255,0,0.4);
+  }
+
+  .hero-sub {
+    font-size: clamp(16px, 2vw, 20px);
+    color: var(--muted);
+    max-width: 560px;
+    line-height: 1.6;
+    font-weight: 300;
+  }
+
+  .hero-ctas {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .btn-store {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg-2);
+    border: 1px solid rgba(255,255,255,0.12);
+    color: var(--white);
+    padding: 12px 20px;
+    border-radius: var(--radius);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .btn-store:hover { border-color: var(--neon); background: rgba(149,255,0,0.05); }
+  .btn-store svg { flex-shrink: 0; }
+
+  .trial-note {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+  }
+
+  /* Corner bracket card */
+  .corner-card {
     position: relative;
-    border: 1px solid var(--color-black);
-    padding: 1em;
-    width: clamp(240px, 30vw, 380px);
-    background: var(--color-white);
-    margin-top: 6vh;
+    margin-top: 40px;
+    padding: 32px;
+    max-width: 480px;
+    width: 100%;
   }
-
-  .blueprint-card::before {
+  .corner-card::before, .corner-card::after,
+  .corner-card .corner-br, .corner-card .corner-bl {
     content: '';
     position: absolute;
-    top: -1px; right: -1px;
-    width: 17px; height: 17px;
-    background: var(--color-white);
-    border-left: 1px solid var(--color-black);
-    border-bottom: 1px solid var(--color-black);
+    width: 16px; height: 16px;
   }
-
-  /* X marker via pseudo */
-  .blueprint-card::after {
-    content: '×';
-    position: absolute;
-    top: -6px; right: 1px;
-    font-size: 12px;
-    line-height: 1;
+  .corner-card::before {
+    top: 0; left: 0;
+    border-top: 1px solid var(--white);
+    border-left: 1px solid var(--white);
+    opacity: 0.3;
   }
-
-  .card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding-bottom: 0.6em;
-    margin-bottom: 0.6em;
-    border-bottom: 1px solid #cbcbcb;
+  .corner-card::after {
+    top: 0; right: 0;
+    border-top: 1px solid var(--white);
+    border-right: 1px solid var(--white);
+    opacity: 0.3;
   }
-
-  .card-brand-name {
-    font-size: clamp(12px, 2vw, 20px);
-    font-weight: 700;
-    line-height: 0.85;
+  .corner-card .corner-br {
+    bottom: 0; right: 0;
+    border-bottom: 1px solid var(--white);
+    border-right: 1px solid var(--white);
+    opacity: 0.3;
   }
-
-  .card-year { font-size: 10px; }
-
-  .card-body {
+  .corner-card .corner-bl {
+    bottom: 0; left: 0;
+    border-bottom: 1px solid var(--white);
+    border-left: 1px solid var(--white);
+    opacity: 0.3;
+  }
+  .scan-label {
+    font-family: 'DM Mono', monospace;
     font-size: 10px;
-    text-transform: none;
-    line-height: 1.5;
-    color: #333;
+    color: var(--neon);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .scan-bar {
+    height: 2px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 1px;
+    overflow: hidden;
+  }
+  .scan-bar-fill {
+    height: 100%;
+    background: var(--neon);
+    box-shadow: 0 0 8px var(--neon);
+    animation: scan 2.4s ease-in-out infinite;
+    width: 40%;
+  }
+  @keyframes scan {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(350%); }
   }
 
-  /* Hero bottom row */
-  .hero-bottom {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-    flex-wrap: wrap;
-    gap: 1em;
-  }
-
-  .hero-descriptor {
-    font-size: clamp(10px, 1.1vw, 13px);
-    max-width: 300px;
-    text-transform: none;
-    line-height: 1.6;
-    letter-spacing: 0;
-  }
-
-  .pill-links {
-    display: flex;
-    gap: 0.5em;
-  }
-
-  .pill {
-    border: 1px solid var(--color-black);
-    border-radius: 52px;
-    padding: 0.15em 0.57em;
-    font-size: 11px;
-    text-decoration: none;
-    color: var(--color-black);
-    line-height: 1;
-    transition: background 0.2s, color 0.2s;
-  }
-
-  .pill:hover {
-    background: var(--color-black);
-    color: var(--color-white);
-  }
-
-  /* Core threads list */
-  .core-list {
-    font-size: 11px;
-    list-style: none;
-    min-width: 220px;
-  }
-
-  .core-list li {
-    padding: 0.6em 0;
-    border-bottom: 1px solid #f2f2f2;
-    display: flex;
-    gap: 0.5em;
-  }
-
-  .core-list li:last-child { border-bottom: none; }
-
-  .tag-num {
-    color: var(--color-mark);
-    flex-shrink: 0;
+  @media (max-width: 768px) {
+    nav { padding: 16px 20px; }
+    .nav-links { display: none; }
+    .hero { padding: 100px 20px 60px; }
   }
 </style>
 </head>
 <body>
 
 <div class="grid-bg"></div>
+<div class="orb"></div>
 
 <nav>
-  <div class="nav-brand">Sutéra</div>
-  <button class="nav-cta">Change Reality</button>
-  <div class="nav-meta">
-    Local Time<br>
-    <span>ZUR 14:32</span>
-  </div>
+  <div class="logo">Magic Receipt <span style="color:white">AI</span></div>
+  <ul class="nav-links">
+    <li><a href="#">Benefits</a></li>
+    <li><a href="#">How to use</a></li>
+    <li><a href="#">Pricing</a></li>
+  </ul>
+  <button class="btn-primary">Download Now</button>
 </nav>
 
 <section class="hero">
-
-  <div>
-    <h1 class="hero-title">
-      Reality,<br>By Design
-    </h1>
-
-    <div class="blueprint-card">
-      <div class="card-header">
-        <div class="card-brand-name">SUTÉRA</div>
-        <div class="card-year">/25</div>
-      </div>
-      <div class="card-body">
-        su (underneath) + tera (earth)<br><br>
-        → underneath the earth
-      </div>
-    </div>
+  <div class="badge">
+    <span class="badge-dot"></span>
+    Used by smart professionals
   </div>
 
-  <div class="hero-bottom">
-    <div>
-      <p class="hero-descriptor">
-        I design systems that shape how humans and machines connect.
-        From robotic extensions to perceptual interfaces.
-      </p>
-      <ul class="core-list" style="margin-top: 1.5em;">
-        <li><span class="tag-num">01.</span> Perceptual Interfaces</li>
-        <li><span class="tag-num">02.</span> Embodiment</li>
-        <li><span class="tag-num">03.</span> IA & AI</li>
-        <li><span class="tag-num">04.</span> Systems and Tools</li>
-      </ul>
-    </div>
+  <h1 class="hero-heading">
+    Receipts are a<br><em>nightmare</em>
+  </h1>
 
-    <div class="pill-links">
-      <a href="#" class="pill">LinkedIn</a>
-      <a href="#" class="pill">Medium</a>
-      <a href="#" class="pill">Instagram</a>
-    </div>
+  <p class="hero-sub">
+    Forget juggling receipts and reconciling statements.
+    Magic Receipt AI takes care of it all — fast, seamless, and stress-free.
+  </p>
+
+  <div class="hero-ctas">
+    <a href="#" class="btn-store">
+      <svg width="16" height="20" viewBox="0 0 18 23" fill="none">
+        <path d="M15.05 12.48C15.06 11.65 15.28 10.83 15.69 10.1C16.1 9.38 16.69 8.77 17.4 8.33C16.95 7.68 16.36 7.15 15.66 6.78C14.97 6.4 14.2 6.2 13.41 6.17C11.73 6 10.1 7.18 9.25 7.18C8.38 7.18 7.06 6.19 5.64 6.22C4.72 6.25 3.83 6.51 3.04 6.99C2.26 7.47 1.61 8.14 1.17 8.95C-0.77 12.29 0.68 17.22 2.53 19.92C3.46 21.25 4.54 22.73 5.96 22.68C7.34 22.62 7.86 21.79 9.54 21.79C11.2 21.79 11.68 22.68 13.13 22.64C14.62 22.62 15.55 21.31 16.45 19.97C17.11 19.03 17.63 17.99 17.97 16.88C17.1 16.52 16.36 15.9 15.84 15.12C15.33 14.34 15.05 13.42 15.05 12.48Z" fill="#95FF00"/>
+        <path d="M12.32 4.39C13.13 3.42 13.53 2.17 13.43 0.9C12.19 1.03 11.04 1.62 10.22 2.56C9.82 3.02 9.51 3.55 9.32 4.13C9.12 4.7 9.04 5.31 9.08 5.92C9.7 5.93 10.31 5.79 10.87 5.53C11.43 5.26 11.93 4.88 12.32 4.39Z" fill="#95FF00"/>
+      </svg>
+      App Store
+    </a>
+    <a href="#" class="btn-store">
+      <svg width="18" height="20" viewBox="0 0 22 24" fill="none">
+        <path d="M11.15 11.9L15.62 16.37L5.73 22.73C5.41 22.92 5.04 23.04 4.66 23.09L2.18 22.28L10.45 11.9L11.15 11.9Z" fill="#95FF00"/>
+        <path d="M15.55 7.39L19.76 9.82C20.6 10.31 21.19 11.17 21.25 12.13C21.19 13.09 20.6 13.95 19.76 14.44L15.51 16.83L10.45 11.9L15.55 7.39Z" fill="#95FF00"/>
+        <path d="M2.39 3.27L10.45 11.9L2.39 21.26C1.87 20.97 1.47 20.48 1.56 19.93V4.21C1.47 3.73 1.87 3.56 2.39 3.27Z" fill="#95FF00"/>
+        <path d="M5.78 1.8L15.55 7.39L10.45 11.9L1.69 3.97C2.26 3.19 3.42 1.7 5.78 1.8Z" fill="#95FF00"/>
+      </svg>
+      Google Play
+    </a>
   </div>
 
+  <p class="trial-note">Try it free for 14 days — no credit card required</p>
+
+  <div class="corner-card">
+    <div class="corner-br"></div>
+    <div class="corner-bl"></div>
+    <div class="scan-label">AI scanning in progress</div>
+    <div class="scan-bar">
+      <div class="scan-bar-fill"></div>
+    </div>
+  </div>
 </section>
 
 </body>
 </html>
-Tailwind CSS Version
-html
-<!-- Requires Tailwind CDN or config with custom theme -->
-<body class="bg-white text-black uppercase tracking-tight font-sans overflow-x-hidden">
 
-  <!-- Grid background -->
-  <div class="fixed inset-0 pointer-events-none z-0"
-       style="background-image: linear-gradient(#f2f2f2 1px, transparent 1px),
-              linear-gradient(90deg, #f2f2f2 1px, transparent 1px);
-              background-size: 33.33vw 33.33vh;">
-  </div>
+Tailwind CSS Hero (React-ready classes)
+jsx// Install: npx create-react-app . && npm install
+// Add to tailwind.config.js: extend colors with neon: '#95FF00'
 
-  <!-- Navbar -->
-  <nav class="fixed top-0 left-0 right-0 z-50 flex justify-between
-              items-start px-8 md:px-16 pt-5">
-    <span class="text-sm font-bold tracking-widest">Sutéra</span>
-
-    <button class="border border-black rounded-sm px-2 py-0.5
-                   text-[11px] hover:bg-black hover:text-white
-                   transition-colors duration-200">
-      Change Reality
-    </button>
-
-    <div class="text-[11px] text-right leading-snug hidden md:block">
-      <span class="text-gray-400">Local Time</span><br>
-      <span>ZUR 14:32</span>
-    </div>
-  </nav>
-
-  <!-- Hero -->
-  <section class="relative min-h-screen flex flex-col justify-between
-                  px-8 md:px-16 pt-[12vh] pb-8 z-10">
-
-    <div>
-      <!-- Display title -->
-      <h1 class="text-[clamp(56px,11vw,160px)] font-bold leading-none
-                 tracking-[-0.04em] normal-case">
-        Reality,<br>By Design
-      </h1>
-
-      <!-- Blueprint card -->
-      <div class="relative border border-black bg-white p-4
-                  w-[clamp(240px,30vw,380px)] mt-[6vh]">
-        <!-- Corner X decoration -->
-        <div class="absolute -top-px -right-px w-4 h-4 bg-white
-                    border-l border-b border-black flex items-center
-                    justify-center text-[10px]">×</div>
-
-        <div class="flex justify-between items-center pb-2 mb-2
-                    border-b border-gray-300">
-          <span class="text-[clamp(12px,2vw,20px)] font-bold
-                       leading-none tracking-wider">SUTÉRA</span>
-          <span class="text-[10px]">/25</span>
-        </div>
-
-        <p class="text-[10px] normal-case leading-relaxed text-gray-600">
-          su (underneath) + tera (earth)<br><br>
-          → underneath the earth
-        </p>
-      </div>
-    </div>
-
-    <!-- Bottom row -->
-    <div class="flex flex-wrap justify-between items-end gap-4">
-
-      <div>
-        <p class="text-[clamp(10px,1.1vw,13px)] normal-case
-                  leading-relaxed max-w-xs tracking-normal">
-          I design systems that shape how humans and machines connect.
-        </p>
-
-        <ul class="mt-6 text-[11px] min-w-[220px]">
-          <li class="flex gap-2 py-2 border-b border-gray-100">
-            <span class="text-gray-400">01.</span> Perceptual Interfaces
-          </li>
-          <li class="flex gap-2 py-2 border-b border-gray-100">
-            <span class="text-gray-400">02.</span> Embodiment
-          </li>
-          <li class="flex gap-2 py-2 border-b border-gray-100">
-            <span class="text-gray-400">03.</span> IA & AI
-          </li>
-          <li class="flex gap-2 py-2">
-            <span class="text-gray-400">04.</span> Systems and Tools
-          </li>
-        </ul>
-      </div>
-
-      <div class="flex gap-2">
-        <a href="#" class="border border-black rounded-full
-                           px-3 py-0.5 text-[11px] leading-none
-                           hover:bg-black hover:text-white
-                           transition-colors duration-200 no-underline
-                           text-black">LinkedIn</a>
-        <a href="#" class="border border-black rounded-full
-                           px-3 py-0.5 text-[11px] leading-none
-                           hover:bg-black hover:text-white
-                           transition-colors duration-200 no-underline
-                           text-black">Medium</a>
-      </div>
-
-    </div>
-  </section>
-
-</body>
-React Component Version
-jsx
-import { useState, useEffect } from "react";
-
-const GridBackground = () => (
-  <div
-    className="fixed inset-0 pointer-events-none z-0"
-    style={{
-      backgroundImage: `
-        linear-gradient(#f2f2f2 1px, transparent 1px),
-        linear-gradient(90deg, #f2f2f2 1px, transparent 1px)
-      `,
-      backgroundSize: "33.33vw 33.33vh",
-    }}
-  />
-);
-
-const BlueprintCard = ({ brandName, year, subtitle, body }) => (
-  <div
-    className="relative border border-black bg-white p-4 mt-12"
-    style={{ width: "clamp(240px, 30vw, 380px)" }}
-  >
-    {/* Corner decoration */}
-    <div className="absolute -top-px -right-px w-4 h-4 bg-white
-                    border-l border-b border-black flex items-center
-                    justify-center text-[10px]">
-      ×
-    </div>
-    <div className="flex justify-between items-center pb-2 mb-2
-                    border-b border-gray-300">
-      <span className="font-bold leading-none tracking-wider"
-            style={{ fontSize: "clamp(12px, 2vw, 20px)" }}>
-        {brandName}
-      </span>
-      <span className="text-[10px]">{year}</span>
-    </div>
-    <p className="text-[10px] leading-relaxed text-gray-600 normal-case">
-      {body}
-    </p>
-  </div>
-);
-
-const PillLink = ({ href, children }) => (
-  
-    href={href}
-    className="border border-black rounded-full px-3 py-0.5
-               text-[11px] leading-none no-underline text-black
-               hover:bg-black hover:text-white transition-colors
-               duration-200 uppercase tracking-tight"
-  >
-    {children}
-  </a>
-);
-
-const coreThreads = [
-  { num: "01.", label: "Perceptual Interfaces" },
-  { num: "02.", label: "Embodiment" },
-  { num: "03.", label: "IA & AI" },
-  { num: "04.", label: "Systems and Tools" },
-];
-
-export default function SuteraHero() {
-  const [time, setTime] = useState("");
-
-  useEffect(() => {
-    const update = () => {
-      setTime(
-        new Date().toLocaleTimeString("en-CH", {
-          timeZone: "Europe/Zurich",
-          hour: "2-digit",
-          minute: "2-digit",
-        })
-      );
-    };
-    update();
-    const id = setInterval(update, 1000);
-    return () => clearInterval(id);
-  }, []);
-
+export default function Hero() {
   return (
-    <div className="bg-white text-black uppercase tracking-tight
-                    font-sans overflow-x-hidden min-h-screen">
-      <GridBackground />
+    <div className="relative min-h-screen bg-[#15171A] text-white overflow-hidden">
+
+      {/* Grid background */}
+      <div
+        className="fixed inset-0 pointer-events-none"
+        style={{
+          backgroundImage: `
+            linear-gradient(to right, rgba(255,255,255,0.06) 1px, transparent 1px),
+            linear-gradient(to bottom, rgba(255,255,255,0.06) 1px, transparent 1px)
+          `,
+          backgroundSize: '45px 45px'
+        }}
+      />
+
+      {/* Ambient orb */}
+      <div
+        className="fixed top-1/4 left-1/2 -translate-x-1/2 w-96 h-96 pointer-events-none"
+        style={{
+          background: 'radial-gradient(circle, rgba(149,255,0,0.12) 0%, transparent 70%)',
+          filter: 'blur(40px)'
+        }}
+      />
 
       {/* Navbar */}
-      <nav className="fixed top-0 left-0 right-0 z-50 flex
-                      justify-between items-start px-8 md:px-16 pt-5">
-        <span className="text-sm font-bold tracking-widest">Sutéra</span>
-
-        <button className="border border-black rounded-sm px-2 py-0.5
-                           text-[11px] hover:bg-black hover:text-white
-                           transition-colors duration-200">
-          Change Reality
+      <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-10 py-5 bg-[rgba(21,23,26,0.85)] backdrop-blur-md border-b border-white/5">
+        <span className="font-mono text-sm tracking-widest uppercase text-[#95FF00]">
+          Magic Receipt <span className="text-white">AI</span>
+        </span>
+        <ul className="hidden md:flex gap-8 list-none">
+          {['Benefits', 'How to use', 'Pricing'].map(link => (
+            <li key={link}>
+              <a href="#" className="text-white/50 text-sm tracking-wide hover:text-white transition-colors">
+                {link}
+              </a>
+            </li>
+          ))}
+        </ul>
+        <button className="border border-[#95FF00] text-[#95FF00] px-5 py-2 text-xs font-semibold uppercase tracking-widest rounded-[4px] hover:bg-[#95FF00] hover:text-[#15171A] transition-all">
+          Download Now
         </button>
-
-        <div className="text-[11px] text-right leading-snug hidden md:block">
-          <span className="text-gray-400">Local Time</span>
-          <br />
-          <span>ZUR {time}</span>
-        </div>
       </nav>
 
-      {/* Hero */}
-      <section
-        className="relative flex flex-col justify-between
-                   px-8 md:px-16 pt-[12vh] pb-8 z-10 min-h-screen"
-      >
-        <div>
-          <h1
-            className="font-bold leading-none tracking-[-0.04em]
-                       normal-case"
-            style={{ fontSize: "clamp(56px, 11vw, 160px)" }}
-          >
-            Reality,
-            <br />
-            By Design
-          </h1>
+      {/* Hero content */}
+      <section className="relative z-10 min-h-screen flex flex-col items-center justify-center text-center px-6 pt-28 pb-20 gap-6">
 
-          <BlueprintCard
-            brandName="SUTÉRA"
-            year="/25"
-            body={
-              <>
-                su (underneath) + tera (earth)
-                <br /><br />
-                → underneath the earth
-              </>
-            }
-          />
+        {/* Badge */}
+        <div className="inline-flex items-center gap-2 border border-white/10 px-4 py-1.5 rounded-[2px] font-mono text-[11px] uppercase tracking-widest text-white/50">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#95FF00]" />
+          Used by smart professionals
         </div>
 
-        {/* Bottom row */}
-        <div className="flex flex-wrap justify-between items-end gap-4">
-          <div>
-            <p
-              className="normal-case leading-relaxed max-w-xs
-                         tracking-normal"
-              style={{ fontSize: "clamp(10px, 1.1vw, 13px)" }}
+        {/* Heading */}
+        <h1 className="text-6xl md:text-8xl font-bold uppercase tracking-tight leading-none max-w-4xl">
+          Receipts are a{' '}
+          <em
+            className="not-italic text-[#95FF00]"
+            style={{ textShadow: '0 0 30px rgba(149,255,0,0.35)' }}
+          >
+            nightmare
+          </em>
+        </h1>
+
+        {/* Subtext */}
+        <p className="text-white/50 text-lg max-w-xl leading-relaxed font-light">
+          Forget juggling receipts and reconciling statements.
+          Magic Receipt AI takes care of it all — fast, seamless, and stress-free.
+        </p>
+
+        {/* CTAs */}
+        <div className="flex gap-3 flex-wrap justify-center mt-2">
+          {['App Store', 'Google Play'].map(store => (
+            
+              key={store}
+              href="#"
+              className="flex items-center gap-2 bg-[#0B0C0D] border border-white/10 text-white px-5 py-3 rounded-[4px] text-sm font-semibold hover:border-[#95FF00] hover:bg-[rgba(149,255,0,0.05)] transition-all"
             >
-              I design systems that shape how humans and machines
-              connect. From robotic extensions to perceptual interfaces.
-            </p>
+              {store}
+            </a>
+          ))}
+        </div>
 
-            <ul className="mt-6 text-[11px] min-w-[220px]">
-              {coreThreads.map(({ num, label }) => (
-                <li
-                  key={num}
-                  className="flex gap-2 py-2 border-b
-                             border-gray-100 last:border-0"
-                >
-                  <span className="text-gray-400">{num}</span>
-                  {label}
-                </li>
-              ))}
-            </ul>
-          </div>
+        <p className="font-mono text-xs text-white/40 tracking-wide">
+          Try it free for 14 days
+        </p>
 
-          <div className="flex gap-2">
-            <PillLink href="#">LinkedIn</PillLink>
-            <PillLink href="#">Medium</PillLink>
-            <PillLink href="#">Instagram</PillLink>
+        {/* Scanner card with corner brackets */}
+        <div className="relative mt-8 p-8 w-full max-w-md">
+          {/* Corner brackets */}
+          {[
+            'top-0 left-0 border-t border-l',
+            'top-0 right-0 border-t border-r',
+            'bottom-0 left-0 border-b border-l',
+            'bottom-0 right-0 border-b border-r',
+          ].map((pos, i) => (
+            <span
+              key={i}
+              className={`absolute ${pos} w-4 h-4 border-white/25`}
+            />
+          ))}
+          <p className="font-mono text-[10px] uppercase tracking-[0.15em] text-[#95FF00] mb-3">
+            AI scanning in progress
+          </p>
+          <div className="h-0.5 bg-white/8 rounded-full overflow-hidden">
+            <div
+              className="h-full w-2/5 rounded-full"
+              style={{
+                background: '#95FF00',
+                boxShadow: '0 0 8px #95FF00',
+                animation: 'scan 2.4s ease-in-out infinite'
+              }}
+            />
           </div>
+          <style>{`
+            @keyframes scan {
+              0% { transform: translateX(-100%); }
+              100% { transform: translateX(350%); }
+            }
+          `}</style>
         </div>
       </section>
     </div>
   );
 }
-Summary: Core Design DNA to Replicate
-Principle	Implementation
-White as material	Pure #fff background, no color fills
-Black as structure	All borders, text, and SVG strokes in #000
-Grid as aesthetic	Visible CSS grid background, structural guides
-Outline-only buttons	border + border-radius: 52px, no fill
-Blueprint cards	SVG-bordered panels with corner X markers
-Viewport-relative spacing	svh, clamp(), custom CSS properties
-No shadows anywhere	Depth via layering and opacity only
-Project accent colors	Muted pastels applied per-project, not globally
-Custom SVG over icons	All iconography drawn inline
-Typography as scale	Hierarchy through size, not weight or color
 
+Key Principles Summary for Rebuilding This Aesthetic
+PrincipleImplementationNear-black base#15171A / #0B0C0DSingle neon accent#95FF00 — use sparinglyGrid overlay45px CSS background-image lines at 6–8% opacityCorner bracketsPseudo-elements or absolute spans, not full bordersGlow texttext-shadow: 0 0 20-30px rgba(149,255,0,0.4)Ambient lightBlurred colored div, filter: blur(40px)TypographyUppercase, tight tracking on headings; mono for technical chromeMotionGSAP ScrollTrigger + Lenis — avoid CSS-only scrollPhotographyDesaturated/B&W with dark overlayDepthLayering + opacity, not shadows

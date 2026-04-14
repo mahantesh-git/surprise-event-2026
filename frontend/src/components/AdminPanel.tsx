@@ -1,21 +1,23 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import {
-  adminLogin,
-  createAdminQuestion,
-  createAdminTeam,
-  deleteAllAdminQuestions,
-  deleteAllAdminTeams,
-  deleteAdminQuestion,
-  deleteAdminTeam,
-  getAdminQuestions,
-  getAdminTeams,
-  type RoundQuestion,
-  updateAdminQuestion,
-  wipeAdminDatabase,
+import { useState, useEffect, useMemo } from 'react';
+import { Lock, LogOut, Plus, Trash2, Edit3, Save, X, Database, ShieldAlert, ChevronLeft, Terminal } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { 
+    adminLogin, 
+    getAdminTeams, 
+    createAdminTeam, 
+    deleteAdminTeam, 
+    deleteAllAdminTeams,
+    getAdminQuestions, 
+    createAdminQuestion, 
+    updateAdminQuestion, 
+    deleteAdminQuestion, 
+    deleteAllAdminQuestions,
+    wipeAdminDatabase, 
+    type RoundQuestion 
 } from '@/lib/api';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 const ADMIN_SESSION_KEY = 'quest-admin-session';
 
@@ -200,156 +202,365 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
 
   if (!token) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-zinc-50 dark:bg-zinc-950">
-        <Card className="max-w-md w-full">
-          <CardHeader>
-            <CardTitle>Admin Login</CardTitle>
-            <CardDescription>Sign in to manage teams and questions.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Input placeholder="Admin email" value={email} onChange={(event) => setEmail(event.target.value)} />
-            <Input placeholder="Admin password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} onKeyDown={(event) => event.key === 'Enter' && handleAdminLogin()} />
-            {error && <div className="rounded-md bg-red-50 text-red-700 p-3 text-sm">{error}</div>}
-            <div className="flex gap-2">
-              <Button variant="outline" className="flex-1" onClick={onBack}>Back</Button>
-              <Button className="flex-1" onClick={handleAdminLogin}>Login</Button>
+      <div className="min-h-screen flex items-center justify-center px-4 sm:px-6 relative overflow-hidden bg-[#15171A]">
+        {/* Decorative background number */}
+        <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none select-none">
+          <span className="text-[40vw] font-black leading-none">00</span>
+        </div>
+
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="w-full max-w-md z-10"
+        >
+          <div className="corner-card border-[#95FF00]/20 bg-black/40 backdrop-blur-xl p-8">
+            <div className="text-center space-y-6">
+              <div className="w-16 h-16 bg-[#95FF00]/5 border border-[#95FF00]/20 flex items-center justify-center mx-auto mb-2 relative group">
+                <div className="absolute -inset-2 bg-[#95FF00]/10 blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                <Lock className="text-[#95FF00] w-8 h-8 relative z-10" />
+              </div>
+              <div className="space-y-2">
+                <h1 className="text-[#95FF00] tracking-[0.3em] font-black uppercase text-2xl">
+                  Admin_Auth
+                </h1>
+                <div className="flex items-center gap-2 justify-center">
+                  <div className="h-[1px] w-8 bg-[#95FF00]/30" />
+                  <span className="uppercase tracking-[0.4em] text-[8px] text-white/40">
+                    Secured_Access_Node
+                  </span>
+                  <div className="h-[1px] w-8 bg-[#95FF00]/30" />
+                </div>
+              </div>
             </div>
-          </CardContent>
-        </Card>
+            <div className="space-y-4 pt-4">
+              <div className="space-y-4">
+                <div className="relative group">
+                  <Input 
+                    placeholder="Admin Email" 
+                    value={email} 
+                    onChange={(event) => setEmail(event.target.value)}
+                    className="bg-black/50 border-white/10 group-focus-within:border-[#95FF00]/50 transition-colors uppercase text-[10px] tracking-widest h-12"
+                  />
+                </div>
+                <div className="relative group">
+                  <Input 
+                    placeholder="Security Key" 
+                    type="password" 
+                    value={password} 
+                    onChange={(event) => setPassword(event.target.value)} 
+                    onKeyDown={(event) => event.key === 'Enter' && handleAdminLogin()}
+                    className="bg-black/50 border-white/10 group-focus-within:border-[#95FF00]/50 transition-colors uppercase text-[10px] tracking-widest h-12"
+                  />
+                </div>
+              </div>
+
+              {error && (
+                <div className="border border-red-500/50 bg-red-500/10 p-3 text-[10px] uppercase tracking-widest text-red-400 font-mono">
+                  ERROR: {error}
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-4">
+                <Button 
+                  variant="ink" 
+                  className="flex-1 font-bold uppercase tracking-[0.2em] h-12" 
+                  onClick={onBack}
+                >
+                  <ChevronLeft className="mr-2 h-4 w-4" />
+                  Terminal
+                </Button>
+                <Button 
+                  variant="sage" 
+                  className="flex-1 font-bold uppercase tracking-[0.2em] h-12" 
+                  onClick={handleAdminLogin}
+                >
+                  Authenticate
+                </Button>
+              </div>
+            </div>
+          </div>
+        </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 p-4 md:p-8">
-      <div className="max-w-6xl mx-auto space-y-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">Admin Panel</h1>
+    <div className="min-h-screen bg-[#15171A] text-white px-4 sm:px-6 py-12 relative overflow-hidden">
+      {/* Background Decorative Element */}
+      <div className="fixed top-0 right-0 p-12 opacity-[0.02] pointer-events-none select-none">
+        <span className="text-[20vw] font-black leading-none uppercase">Admin</span>
+      </div>
+
+      <div className="max-w-6xl mx-auto space-y-12 relative z-10">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-white/5 pb-8 relative">
+          <div className="absolute -left-12 top-0 h-full w-[1px] bg-gradient-to-b from-transparent via-[#95FF00]/20 to-transparent hidden xl:block" />
+          <div className="space-y-2">
+            <div className="flex items-center gap-3 text-[#95FF00]">
+              <Database className="w-4 h-4" />
+              <div className="h-[1px] w-8 bg-[#95FF00]/50" />
+              <span className="text-[8px] uppercase font-mono tracking-[0.4em] text-[#95FF00]/60">v2.0.4.sys_admin</span>
+            </div>
+            <h1 className="text-4xl md:text-6xl font-black uppercase tracking-tighter leading-none">
+              Control<span className="text-[#95FF00]">_</span>Center
+            </h1>
+          </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={onBack}>Back</Button>
-            <Button variant="outline" onClick={handleAdminLogout}>Logout</Button>
+            <Button variant="ink" className="font-bold uppercase tracking-[0.2em] h-10 px-6 border-white/5 bg-white/[0.02] text-[10px]" onClick={onBack}>
+              Terminal_Exit
+            </Button>
+            <Button variant="ghost" className="font-bold uppercase tracking-[0.2em] h-10 px-6 border-red-500/10 text-red-500/60 hover:text-red-400 hover:bg-red-500/5 text-[10px]" onClick={handleAdminLogout}>
+              <LogOut className="mr-2 h-3 w-3" />
+              Disconnect
+            </Button>
           </div>
         </div>
 
-        {error && <div className="rounded-md bg-red-50 text-red-700 p-3 text-sm">{error}</div>}
+        {error && (
+          <motion.div 
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="border border-red-500/50 bg-red-500/10 p-4 text-xs uppercase tracking-widest text-red-400 font-mono flex items-center gap-3"
+          >
+            <ShieldAlert className="w-4 h-4" />
+            SYSTEM_ERROR: {error}
+          </motion.div>
+        )}
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Create Team</CardTitle>
-            <CardDescription>Add a team with email and password.</CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-3 md:grid-cols-4">
-            <Input placeholder="Team name" value={teamName} onChange={(event) => setTeamName(event.target.value)} />
-            <Input placeholder="Team email" value={teamEmail} onChange={(event) => setTeamEmail(event.target.value)} />
-            <Input placeholder="Team password" type="password" value={teamPassword} onChange={(event) => setTeamPassword(event.target.value)} />
-            <Button onClick={handleCreateTeam}>Create Team</Button>
-          </CardContent>
-        </Card>
+        {/* Create Team Section */}
+        <section className="space-y-4">
+          <div className="flex items-center gap-4">
+            <Plus className="text-[#95FF00] w-3 h-3" />
+            <h2 className="text-[9px] font-mono uppercase tracking-[0.5em] text-white/30">Register_New_Operative</h2>
+          </div>
+          <div className="corner-card border-white/5 bg-white/[0.01] p-4 flex flex-col md:flex-row gap-4">
+            <Input placeholder="OP_NAME" value={teamName} onChange={(event) => setTeamName(event.target.value)} className="bg-black/40 border-white/5 text-[10px] uppercase tracking-widest h-11 flex-1" />
+            <Input placeholder="REGISTRY_EMAIL" value={teamEmail} onChange={(event) => setTeamEmail(event.target.value)} className="bg-black/40 border-white/5 text-[10px] uppercase tracking-widest h-11 flex-1" />
+            <Input placeholder="PASSKEY" type="password" value={teamPassword} onChange={(event) => setTeamPassword(event.target.value)} className="bg-black/40 border-white/5 text-[10px] uppercase tracking-widest h-11 flex-1" />
+            <Button variant="sage" className="font-bold uppercase tracking-[0.3em] h-11 px-8" onClick={handleCreateTeam}>
+              Register
+            </Button>
+          </div>
+        </section>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Teams</CardTitle>
-            <CardDescription>Current teams in the system.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="flex justify-end">
-              <Button className="bg-red-600 text-white hover:bg-red-700" onClick={handleDeleteAllTeams}>Delete All Teams</Button>
-            </div>
-            {teams.map((team) => (
-              <div key={team.id} className="flex flex-col md:flex-row md:items-center md:justify-between rounded-md border border-zinc-200 dark:border-zinc-800 p-3 gap-2">
-                <div>
-                  <div className="font-semibold">{team.name}</div>
-                  <div className="text-xs text-zinc-500">{team.email || 'No email'}</div>
+        {/* Main Workspace Layout */}
+        <div className="grid lg:grid-cols-3 gap-12">
+          
+          {/* Left Column: Team Management */}
+          <div className="space-y-8">
+            <section className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <Terminal className="text-[#95FF00] w-4 h-4" />
+                  <h2 className="text-xs font-mono uppercase tracking-[0.4em] text-white/40">Active_Nodes</h2>
                 </div>
-                <Button variant="outline" onClick={() => handleDeleteTeam(team.id)}>Delete</Button>
+                {teams.length > 0 && (
+                  <Button variant="ink" className="text-red-400 p-0 h-auto text-[9px] uppercase tracking-widest bg-transparent border-none hover:bg-transparent" onClick={handleDeleteAllTeams}>
+                    Wipe All
+                  </Button>
+                )}
               </div>
-            ))}
-            {!teams.length && !loading && <div className="text-sm text-zinc-500">No teams yet.</div>}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>{editingQuestionId ? 'Edit Question' : 'Add Question'}</CardTitle>
-            <CardDescription>Manage puzzle, answer, hint, location and metadata.</CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-3 md:grid-cols-2">
-            <Input placeholder="Round" type="number" value={draftQuestion.round} onChange={(event) => setDraftQuestion({ ...draftQuestion, round: Number(event.target.value) })} />
-            <Input placeholder="QR Passkey" value={draftQuestion.qrPasskey} onChange={(event) => setDraftQuestion({ ...draftQuestion, qrPasskey: event.target.value })} />
-
-            <Input placeholder="P1 Title" value={draftQuestion.p1.title} onChange={(event) => setDraftQuestion({ ...draftQuestion, p1: { ...draftQuestion.p1, title: event.target.value } })} />
-            <Input placeholder="P1 Answer" value={draftQuestion.p1.ans} onChange={(event) => setDraftQuestion({ ...draftQuestion, p1: { ...draftQuestion.p1, ans: event.target.value } })} />
-            <Input placeholder="P1 Code" value={draftQuestion.p1.code} onChange={(event) => setDraftQuestion({ ...draftQuestion, p1: { ...draftQuestion.p1, code: event.target.value } })} />
-            <Input placeholder="P1 Hint" value={draftQuestion.p1.hint} onChange={(event) => setDraftQuestion({ ...draftQuestion, p1: { ...draftQuestion.p1, hint: event.target.value } })} />
-
-            <Input placeholder="P2 Title" value={draftQuestion.p2.title} onChange={(event) => setDraftQuestion({ ...draftQuestion, p2: { ...draftQuestion.p2, title: event.target.value } })} />
-            <Input placeholder="P2 Answer" value={draftQuestion.p2.ans} onChange={(event) => setDraftQuestion({ ...draftQuestion, p2: { ...draftQuestion.p2, ans: event.target.value } })} />
-            <Input placeholder="P2 Code" value={draftQuestion.p2.code} onChange={(event) => setDraftQuestion({ ...draftQuestion, p2: { ...draftQuestion.p2, code: event.target.value } })} />
-            <Input placeholder="P2 Hint" value={draftQuestion.p2.hint} onChange={(event) => setDraftQuestion({ ...draftQuestion, p2: { ...draftQuestion.p2, hint: event.target.value } })} />
-
-            <Input placeholder="Latitude" value={draftQuestion.coord.lat} onChange={(event) => setDraftQuestion({ ...draftQuestion, coord: { ...draftQuestion.coord, lat: event.target.value } })} />
-            <Input placeholder="Longitude" value={draftQuestion.coord.lng} onChange={(event) => setDraftQuestion({ ...draftQuestion, coord: { ...draftQuestion.coord, lng: event.target.value } })} />
-            <Input placeholder="Place" value={draftQuestion.coord.place} onChange={(event) => setDraftQuestion({ ...draftQuestion, coord: { ...draftQuestion.coord, place: event.target.value } })} />
-            <Input placeholder="Volunteer Name" value={draftQuestion.volunteer.name} onChange={(event) => setDraftQuestion({ ...draftQuestion, volunteer: { ...draftQuestion.volunteer, name: event.target.value } })} />
-
-            <Input placeholder="Volunteer Initials" value={draftQuestion.volunteer.initials} onChange={(event) => setDraftQuestion({ ...draftQuestion, volunteer: { ...draftQuestion.volunteer, initials: event.target.value } })} />
-            <Input placeholder="Volunteer BG class" value={draftQuestion.volunteer.bg} onChange={(event) => setDraftQuestion({ ...draftQuestion, volunteer: { ...draftQuestion.volunteer, bg: event.target.value } })} />
-            <Input placeholder="Volunteer color class" value={draftQuestion.volunteer.color} onChange={(event) => setDraftQuestion({ ...draftQuestion, volunteer: { ...draftQuestion.volunteer, color: event.target.value } })} />
-            <Input placeholder="Map X (0..1)" type="number" step="0.01" value={draftQuestion.cx} onChange={(event) => setDraftQuestion({ ...draftQuestion, cx: Number(event.target.value) })} />
-            <Input placeholder="Map Y (0..1)" type="number" step="0.01" value={draftQuestion.cy} onChange={(event) => setDraftQuestion({ ...draftQuestion, cy: Number(event.target.value) })} />
-
-            <div className="md:col-span-2 flex gap-2">
-              <Button onClick={handleSaveQuestion}>{editingQuestionId ? 'Update Question' : 'Add Question'}</Button>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setEditingQuestionId(null);
-                  setDraftQuestion(createEmptyQuestion(nextRoundNumber));
-                }}
-              >
-                Clear
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Questions</CardTitle>
-            <CardDescription>Add, edit, remove rounds.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="flex justify-end">
-              <Button className="bg-red-600 text-white hover:bg-red-700" onClick={handleDeleteAllQuestions}>Delete All Questions</Button>
-            </div>
-            {questions
-              .slice()
-              .sort((a, b) => a.round - b.round)
-              .map((question) => (
-                <div key={question.id || question.round} className="rounded-md border border-zinc-200 dark:border-zinc-800 p-3 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-                  <div>
-                    <div className="font-semibold">Round {question.round}: {question.p1.title}</div>
-                    <div className="text-xs text-zinc-500">Hint: {question.p1.hint}</div>
+              <div className="space-y-3">
+                {teams.map((team) => (
+                  <motion.div 
+                    layout
+                    key={team.id} 
+                    className="corner-card p-4 flex items-center justify-between bg-white/[0.02] hover:bg-white/[0.05] transition-colors"
+                  >
+                    <div>
+                      <div className="text-[10px] text-[#95FF00] font-mono mb-1">{team.id.slice(-6).toUpperCase()}</div>
+                      <div className="font-bold uppercase tracking-widest text-sm">{team.name}</div>
+                      <div className="text-[9px] text-white/40 font-mono tracking-tighter italic">{team.email || 'NO_IDENTIFIER'}</div>
+                    </div>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="text-white/20 hover:text-red-400 hover:bg-red-500/10"
+                      onClick={() => handleDeleteTeam(team.id)}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </motion.div>
+                ))}
+                {!teams.length && !loading && (
+                  <div className="text-[10px] uppercase tracking-widest text-white/20 border border-white/5 p-8 text-center bg-black/20">
+                    No nodes prioritized
                   </div>
-                  <div className="flex gap-2">
-                    <Button variant="outline" onClick={() => handleEditQuestion(question)}>Edit</Button>
-                    <Button variant="outline" onClick={() => handleDeleteQuestion(question.id)}>Delete</Button>
+                )}
+              </div>
+            </section>
+          </div>
+
+          {/* Right Columns: Question Management */}
+          <div className="lg:col-span-2 space-y-12">
+            
+            {/* Editor */}
+            <section className="space-y-4">
+              <div className="flex items-center gap-4">
+                <Edit3 className="text-[#95FF00] w-3 h-3" />
+                <h2 className="text-[9px] font-mono uppercase tracking-[0.5em] text-white/30">
+                  {editingQuestionId ? 'Modify_Simulation_Data' : 'Initialize_New_Simulation'}
+                </h2>
+              </div>
+              <div className="corner-card border-[#95FF00]/10 bg-black/40 backdrop-blur-md p-8 pt-10 relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-4 font-mono text-[8px] text-[#95FF00]/20 uppercase tracking-widest">
+                  sys.editor.active
+                </div>
+                <div className="space-y-8">
+                  <div className="grid md:grid-cols-3 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-[8px] uppercase tracking-[0.3em] text-white/30 ml-1">Sequence_ID</label>
+                      <Input type="number" value={draftQuestion.round} onChange={(event) => setDraftQuestion({ ...draftQuestion, round: Number(event.target.value) })} className="bg-white/[0.02] border-white/5 h-11 font-mono text-xs focus:border-[#95FF00]/30 transition-colors" />
+                    </div>
+                    <div className="md:col-span-2 space-y-2">
+                      <label className="text-[8px] uppercase tracking-[0.3em] text-white/30 ml-1">Secure_Passkey_Vector</label>
+                      <Input placeholder="SCAN_KEY_00X" value={draftQuestion.qrPasskey} onChange={(event) => setDraftQuestion({ ...draftQuestion, qrPasskey: event.target.value })} className="bg-white/[0.02] border-white/5 h-11 font-mono text-xs uppercase tracking-widest focus:border-[#95FF00]/30 transition-colors" />
+                    </div>
+                  </div>
+
+                  {/* Component A & B */}
+                  <div className="grid md:grid-cols-2 gap-8 pt-4">
+                    {/* Solver Side */}
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 text-[10px] text-[#95FF00] uppercase tracking-widest mb-2">
+                        <div className="w-1 h-1 bg-[#95FF00]" /> Node_Alpha
+                      </div>
+                      <Input placeholder="Objective Title" value={draftQuestion.p1.title} onChange={(event) => setDraftQuestion({ ...draftQuestion, p1: { ...draftQuestion.p1, title: event.target.value } })} className="bg-white/5 border-white/10" />
+                      <Input placeholder="Expected Output" value={draftQuestion.p1.ans} onChange={(event) => setDraftQuestion({ ...draftQuestion, p1: { ...draftQuestion.p1, ans: event.target.value } })} className="bg-white/5 border-white/10 font-mono text-xs" />
+                      <textarea 
+                        placeholder="Simulation Matrix (Code)" 
+                        value={draftQuestion.p1.code} 
+                        onChange={(event) => setDraftQuestion({ ...draftQuestion, p1: { ...draftQuestion.p1, code: event.target.value } })} 
+                        className="w-full bg-white/5 border border-white/10 rounded-none p-3 font-mono text-xs min-h-[120px] focus:outline-none focus:border-[#95FF00]/50 transition-colors"
+                      />
+                      <Input placeholder="Intel Hint" value={draftQuestion.p1.hint} onChange={(event) => setDraftQuestion({ ...draftQuestion, p1: { ...draftQuestion.p1, hint: event.target.value } })} className="bg-white/5 border-white/10 text-xs italic" />
+                    </div>
+
+                    {/* Runner Side */}
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 text-[10px] text-white/40 uppercase tracking-widest mb-2">
+                        <div className="w-1 h-1 bg-white/40" /> Node_Beta
+                      </div>
+                      <Input placeholder="Vector Destination" value={draftQuestion.coord.place} onChange={(event) => setDraftQuestion({ ...draftQuestion, coord: { ...draftQuestion.coord, place: event.target.value } })} className="bg-white/5 border-white/10" />
+                      <div className="grid grid-cols-2 gap-2">
+                        <Input placeholder="Lat" value={draftQuestion.coord.lat} onChange={(event) => setDraftQuestion({ ...draftQuestion, coord: { ...draftQuestion.coord, lat: event.target.value } })} className="bg-white/5 border-white/10 font-mono text-[10px]" />
+                        <Input placeholder="Lng" value={draftQuestion.coord.lng} onChange={(event) => setDraftQuestion({ ...draftQuestion, coord: { ...draftQuestion.coord, lng: event.target.value } })} className="bg-white/5 border-white/10 font-mono text-[10px]" />
+                      </div>
+                      <Input placeholder="Field Operative" value={draftQuestion.volunteer.name} onChange={(event) => setDraftQuestion({ ...draftQuestion, volunteer: { ...draftQuestion.volunteer, name: event.target.value } })} className="bg-white/5 border-white/10" />
+                      <div className="flex gap-2">
+                        <Input placeholder="Initials" value={draftQuestion.volunteer.initials} onChange={(event) => setDraftQuestion({ ...draftQuestion, volunteer: { ...draftQuestion.volunteer, initials: event.target.value } })} className="bg-white/5 border-white/10 w-24" />
+                        <Input placeholder="Accent_Color (HEX)" value={draftQuestion.volunteer.color} onChange={(event) => setDraftQuestion({ ...draftQuestion, volunteer: { ...draftQuestion.volunteer, color: event.target.value } })} className="bg-white/5 border-white/10 flex-1" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 pt-6 border-t border-white/5">
+                    <Button 
+                      variant="sage" 
+                      className="flex-1 font-bold uppercase tracking-[0.2em] h-12" 
+                      onClick={handleSaveQuestion}
+                    >
+                      <Save className="mr-2 h-4 w-4" />
+                      {editingQuestionId ? 'Finalize_Update' : 'Commit_To_Database'}
+                    </Button>
+                    <Button 
+                      variant="ink" 
+                      className="font-bold uppercase tracking-[0.2em] h-12 px-6"
+                      onClick={() => {
+                        setEditingQuestionId(null);
+                        setDraftQuestion(createEmptyQuestion(nextRoundNumber));
+                      }}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
-              ))}
-            {!questions.length && !loading && <div className="text-sm text-zinc-500">No questions yet.</div>}
-          </CardContent>
-        </Card>
+              </div>
+            </section>
 
-        <Card className="border-red-200 dark:border-red-900/40">
-          <CardHeader>
-            <CardTitle>Danger Zone</CardTitle>
-            <CardDescription>Remove all collections from database in one action.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button className="bg-red-700 text-white hover:bg-red-800" onClick={handleWipeDatabase}>Delete All Data From DB</Button>
-          </CardContent>
-        </Card>
+            {/* List */}
+            <section className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <Terminal className="text-[#95FF00] w-4 h-4" />
+                  <h2 className="text-xs font-mono uppercase tracking-[0.4em] text-white/40">Active_Simulation_Sequences</h2>
+                </div>
+                <Button variant="ink" className="text-red-400 p-0 h-auto text-[9px] uppercase tracking-widest bg-transparent border-none hover:bg-transparent" onClick={handleDeleteAllQuestions}>
+                  Purge All
+                </Button>
+              </div>
+              <div className="grid gap-3">
+                {questions
+                  .slice()
+                  .sort((a, b) => a.round - b.round)
+                  .map((question) => (
+                    <motion.div 
+                      key={question.id || question.round} 
+                      className="corner-card p-6 flex flex-col md:flex-row md:items-center justify-between gap-6 border-white/5 bg-white/[0.01]"
+                    >
+                      <div className="flex gap-6 items-center">
+                        <div className="w-12 h-12 bg-white/5 border border-white/10 flex items-center justify-center font-black text-xl">
+                          {question.round}
+                        </div>
+                        <div>
+                          <div className="font-bold uppercase tracking-widest mb-1">{question.p1.title}</div>
+                          <div className="text-[10px] text-white/30 font-mono flex gap-4 uppercase">
+                            <span>Target: {question.coord.place}</span>
+                            <span>Key: {question.qrPasskey}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button 
+                          variant="ink" 
+                          size="sm" 
+                          className="font-mono text-[9px] uppercase tracking-widest border-white/5 h-10 px-4"
+                          onClick={() => handleEditQuestion(question)}
+                        >
+                          Modify
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="text-white/20 hover:text-red-400 hover:bg-red-500/10 h-10 w-10 p-0"
+                          onClick={() => handleDeleteQuestion(question.id)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </motion.div>
+                  ))
+                }
+                {!questions.length && !loading && (
+                  <div className="text-[10px] uppercase tracking-widest text-white/20 border border-white/5 p-12 text-center bg-black/10">
+                    No simulation data detected
+                  </div>
+                )}
+              </div>
+            </section>
+
+            {/* Final Danger Zone */}
+            <section className="pt-12">
+              <div className="border border-red-500/20 bg-red-500/[0.02] p-8 space-y-4">
+                <div className="flex items-center gap-3 text-red-500">
+                  <ShieldAlert className="w-5 h-5" />
+                  <h3 className="font-black uppercase tracking-tight">Level_0_Protocol</h3>
+                </div>
+                <p className="text-[10px] uppercase tracking-widest text-[#95FF00]/40 max-w-md">
+                  Immediate termination of all database records including Operative accounts and Simulation data. This action is irreversible.
+                </p>
+                <Button 
+                  variant="ink" 
+                  className="bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20 font-bold uppercase tracking-[0.2em] h-12 w-full"
+                  onClick={handleWipeDatabase}
+                >
+                  Authorize_Nuke
+                </Button>
+              </div>
+            </section>
+          </div>
+
+        </div>
       </div>
     </div>
   );
