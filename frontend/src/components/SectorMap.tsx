@@ -119,20 +119,23 @@ export function SectorMap({ rounds, currentRound, stage }: SectorMapProps) {
 
     if (hasTarget && targetLat !== null && targetLng !== null) {
       const icon = L.divIcon({
-        className: '',
-        html: `<div style="
-          width:28px;height:28px;
+        className: 'target-marker',
+        html: `<div class="animate-pulse" style="
+          width:32px;height:32px;
           background:#95FF00;
-          border:3px solid #000;
+          border:4px solid #000;
           border-radius:50% 50% 50% 0;
           transform:rotate(-45deg);
-          box-shadow:0 0 14px #95FF00,0 0 28px #95FF0055;
-        "></div>`,
-        iconSize: [28, 28],
-        iconAnchor: [14, 28],
+          box-shadow:0 0 20px #95FF00, 0 0 40px rgba(149, 255, 0, 0.4);
+          display:flex;align-items:center;justify-content:center;
+        ">
+          <div style="width:8px;height:8px;background:black;border-radius:50%;transform:rotate(45deg);"></div>
+        </div>`,
+        iconSize: [32, 32],
+        iconAnchor: [16, 32],
       });
 
-      targetMarkerRef.current = L.marker([targetLat, targetLng], { icon })
+      targetMarkerRef.current = L.marker([targetLat, targetLng], { icon, zIndexOffset: 500 })
         .addTo(map)
         .bindPopup(`<b>${current?.coord?.place || 'Target'}</b>`);
 
@@ -152,14 +155,16 @@ export function SectorMap({ rounds, currentRound, stage }: SectorMapProps) {
 
     // Accurate GPS < 100m → bright cyan; IP-based / poor → dimmer
     const isAccurate = accuracy <= 100;
-    const dotColor   = isAccurate ? '#00BFFF' : '#6699CC';
+    const dotColor   = isAccurate ? '#00BFFF' : '#4D8076';
     const ringRadius = Math.min(accuracy, 500); // cap display radius at 500m
 
     if (runnerMarkerRef.current) {
       runnerMarkerRef.current.setLatLng([lat, lng]);
       const el = runnerMarkerRef.current.getElement();
       if (el) {
-        el.innerHTML = `<div class="w-4 h-4 rounded-full border-2 border-black" style="background-color: ${dotColor}; box-shadow: 0 0 15px ${dotColor}"></div>`;
+        el.innerHTML = `<div class="w-5 h-5 rounded-full border-2 border-white shadow-[0_0_15px_${dotColor}] relative" style="background-color: ${dotColor}">
+                          <div class="absolute inset-0 rounded-full animate-ping bg-${isAccurate ? 'cyan-400' : 'slate-400'} opacity-40"></div>
+                        </div>`;
       }
       runnerRingRef.current?.setLatLng([lat, lng]);
       runnerRingRef.current?.setRadius(ringRadius);
@@ -167,11 +172,11 @@ export function SectorMap({ rounds, currentRound, stage }: SectorMapProps) {
       // Create a solid HTML marker for the runner
       const runnerIcon = L.divIcon({
         className: 'runner-location-marker',
-        html: `<div class="w-4 h-4 rounded-full border-2 border-black relative" style="background-color: ${dotColor}; box-shadow: 0 0 15px ${dotColor}">
+        html: `<div class="w-5 h-5 rounded-full border-2 border-white shadow-[0_0_15px_${dotColor}] relative" style="background-color: ${dotColor}">
                 <div class="absolute inset-0 rounded-full animate-ping" style="background-color: ${dotColor}; opacity: 0.5;"></div>
                </div>`,
-        iconSize: [16, 16],
-        iconAnchor: [8, 8],
+        iconSize: [20, 20],
+        iconAnchor: [10, 10],
       });
 
       runnerMarkerRef.current = L.marker([lat, lng], { icon: runnerIcon, zIndexOffset: 1000 })
@@ -183,9 +188,9 @@ export function SectorMap({ rounds, currentRound, stage }: SectorMapProps) {
         radius: ringRadius,
         color: dotColor,
         fillColor: dotColor,
-        fillOpacity: 0.08,
-        weight: 1,
-        dashArray: isAccurate ? undefined : '4,4',
+        fillOpacity: 0.1,
+        weight: 1.5,
+        dashArray: isAccurate ? undefined : '5, 5',
       }).addTo(map);
     }
 
@@ -238,9 +243,9 @@ export function SectorMap({ rounds, currentRound, stage }: SectorMapProps) {
         if (coords.length > 0) {
           routeLayerRef.current = L.polyline(coords, {
             color: '#95FF00',
-            weight: 4,
-            opacity: 0.85,
-            dashArray: '10, 6',
+            weight: 5,
+            opacity: 0.9,
+            dashArray: '12, 8',
           }).addTo(mapRef.current);
         }
       })
@@ -251,21 +256,21 @@ export function SectorMap({ rounds, currentRound, stage }: SectorMapProps) {
         if (routeLayerRef.current) { map.removeLayer(routeLayerRef.current); }
         routeLayerRef.current = L.polyline(
           [[rLat, rLng], [targetLat!, targetLng!]],
-          { color: '#95FF00', weight: 3, opacity: 0.6, dashArray: '6, 8' }
+          { color: '#95FF00', weight: 4, opacity: 0.7, dashArray: '8, 10' }
         ).addTo(map);
       });
   }, [runnerCoords, hasTarget, targetLat, targetLng]);
 
   const navUrl = hasTarget
     ? runnerCoords
-      ? `https://www.google.com/maps/dir/?api=1&origin=${runnerCoords[0]},${runnerCoords[1]}&destination=${targetLat},${targetLng}&travelmode=walking`
-      : `https://www.google.com/maps/search/?api=1&query=${targetLat},${targetLng}`
+    ? `https://www.google.com/maps/dir/?api=1&origin=${runnerCoords[0]},${runnerCoords[1]}&destination=${targetLat},${targetLng}&travelmode=walking`
+    : `https://www.google.com/maps/search/?api=1&query=${targetLat},${targetLng}`
     : null;
 
   return (
     <div className="space-y-3">
       {/* Map */}
-      <div className="relative w-full border border-[#95FF00]/20 bg-[#15171A] corner-card overflow-hidden" style={{ height: 300 }}>
+      <div className="relative w-full border border-[#95FF00]/40 bg-[#15171A] corner-card overflow-hidden shadow-[0_0_30px_rgba(149,255,0,0.1)]" style={{ height: 320 }}>
         <div ref={mapContainerRef} className="absolute inset-0 w-full h-full" />
 
         {/* Status badges */}
@@ -277,8 +282,8 @@ export function SectorMap({ rounds, currentRound, stage }: SectorMapProps) {
             const label = isGood ? `GPS ±${Math.round(acc)}m` : `Approx ±${Math.round(acc)}m`;
             return (
               <div
-                className="bg-black/80 px-2 py-1 flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-widest border"
-                style={{ borderColor: `${color}66`, color }}
+                className="bg-black/90 px-2 py-1 flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-widest border backdrop-blur-sm"
+                style={{ borderColor: `${color}88`, color }}
               >
                 <LocateFixed className="h-3 w-3 animate-pulse" />
                 {label}
@@ -286,7 +291,7 @@ export function SectorMap({ rounds, currentRound, stage }: SectorMapProps) {
             );
           })()}
           {hasTarget && (
-            <div className="bg-black/80 border border-[#95FF00]/40 px-2 py-1 flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-widest text-[#95FF00]">
+            <div className="bg-black/90 border border-[#95FF00]/60 px-2 py-1 flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-widest text-[#95FF00] backdrop-blur-sm shadow-[0_0_10px_rgba(149,255,0,0.2)]">
               <Navigation className="h-3 w-3" />
               Target Locked
             </div>
@@ -313,16 +318,16 @@ export function SectorMap({ rounds, currentRound, stage }: SectorMapProps) {
                 }
               }
             }}
-            className="absolute bottom-3 right-3 z-[1000] bg-black/80 border border-[#00BFFF]/40 px-3 py-2 flex items-center gap-2 font-mono text-[9px] uppercase tracking-widest text-[#00BFFF] hover:bg-[#00BFFF]/10 transition-colors pointer-events-auto"
+            className="absolute bottom-3 right-3 z-[1000] bg-black/90 border border-[#00BFFF]/60 px-3 py-2 flex items-center gap-2 font-mono text-[9px] uppercase tracking-widest text-[#00BFFF] hover:bg-[#00BFFF]/20 transition-all pointer-events-auto backdrop-blur-sm shadow-[0_0_15px_rgba(0,191,255,0.2)] active:scale-95"
           >
-            <LocateFixed className="h-3 w-3" />
+            <LocateFixed className="h-4 w-4" />
             {geoStatus === 'watching' ? 'Recenter' : 'Locate Me'}
           </button>
         )}
 
         {/* Geo error */}
         {(geoStatus === 'denied' || geoStatus === 'unavailable') && (
-          <div className="absolute bottom-3 left-3 z-[1000] bg-black/80 border border-red-500/40 px-2 py-1 flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-widest text-red-400 pointer-events-none">
+          <div className="absolute bottom-3 left-3 z-[1000] bg-black/90 border border-red-500/60 px-2 py-1 flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-widest text-red-400 pointer-events-none backdrop-blur-sm">
             <AlertCircle className="h-3 w-3" />
             {geoStatus === 'denied' ? 'Location denied — enable in browser' : 'GPS unavailable'}
           </div>
@@ -335,11 +340,11 @@ export function SectorMap({ rounds, currentRound, stage }: SectorMapProps) {
           href={navUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center justify-center gap-2 w-full py-3 border border-[#95FF00]/40 bg-[#95FF00]/10 text-[#95FF00] font-mono text-[11px] uppercase tracking-[0.2em] hover:bg-[#95FF00]/20 transition-colors"
+          className="flex items-center justify-center gap-3 w-full py-4 border-2 border-[#95FF00]/40 bg-[#95FF00]/5 text-[#95FF00] font-mono text-xs uppercase tracking-[0.25em] hover:bg-[#95FF00]/20 hover:border-[#95FF00] transition-all duration-300 shadow-[0_0_20px_rgba(149,255,0,0.05)] active:scale-[0.98]"
         >
           <Navigation className="h-4 w-4" />
-          {runnerCoords ? 'Navigate to Target' : 'Open in Maps'}
-          <ExternalLink className="h-3 w-3 opacity-50" />
+          {runnerCoords ? 'Navigate to Target' : 'Explore Target Site'}
+          <ExternalLink className="h-3.5 w-3.5 opacity-60" />
         </a>
       )}
 

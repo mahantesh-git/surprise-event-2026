@@ -547,14 +547,20 @@ export default function App() {
                             </div>
 
                             {/* Volunteer card */}
-                            <div className={cn("corner-card flex items-center gap-3 p-4 border border-white/5", currentRound.volunteer.bg)}>
-                              <div className={cn("w-10 h-10 rounded-none border border-[rgba(255,255,255,0.1)] flex items-center justify-center font-bold text-sm", currentRound.volunteer.color)}>
+                            <div className={cn("corner-card flex items-center gap-3 p-4 border border-white/5 transition-all duration-500", currentRound.volunteer.bg)}>
+                              <div className={cn("w-10 h-10 rounded-none border border-white/10 flex items-center justify-center font-bold text-sm", currentRound.volunteer.color)}>
                                 {currentRound.volunteer.initials}
                               </div>
-                              <div className="flex-1">
-                                <div className="font-bold text-s uppercase tracking-wider">{currentRound.volunteer.name}</div>
-                                <div className="text-[10px] text-white/40 uppercase tracking-widest">{currentRound.coord.place}</div>
+                              <div className="flex flex-col">
+                                <div className={cn("font-bold text-lg uppercase tracking-wider", currentRound.volunteer.color)}>
+                                  {currentRound.volunteer.name}
+                                </div>
+                                <div className="text-[10px] text-white/60 uppercase tracking-widest font-mono">
+                                  {currentRound.coord.place}
+                                </div>
                               </div>
+                              <div className="corner-br opacity-50"></div>
+                              <div className="corner-bl opacity-50"></div>
                             </div>
 
                             {/* QR/Passkey buttons */}
