@@ -12,6 +12,11 @@ export interface TeamSession {
   gameState: GameState;
 }
 
+export interface AdminSession {
+  token: string;
+  email: string;
+}
+
 export interface TeamProfile {
   team: {
     id: string;
@@ -83,27 +88,69 @@ export async function resetGameState(token: string) {
   }, token);
 }
 
-export async function compilePython(token: string, code: string) {
-  return requestJson<{ ok: boolean; stdout: string; stderr: string; timedOut: boolean }>('/game/compile', {
+export async function compileCode(token: string, questionId: string, code: string, language: string = 'python') {
+  return requestJson<CompileResult>('/game/compile', {
     method: 'POST',
-    body: JSON.stringify({ code }),
+    body: JSON.stringify({ questionId, code, language }),
   }, token);
 }
 
+/** @deprecated use compileCode */
+export const compilePython = (token: string, questionId: string, code: string) => compileCode(token, questionId, code, 'python');
+
+export type QuestionLanguage = 'python' | 'javascript' | 'typescript' | 'java' | 'c' | 'cpp' | 'go';
+
+export interface TestCase {
+  input: string;
+  output: string;
+}
+
+export interface PuzzlePart {
+  title: string;
+  code: string;
+  hint: string;
+  ans: string;
+  output: string;
+  language: string;
+  testCases?: TestCase[];
+}
+
 export interface RoundQuestion {
-  id?: string;
+  id: string;
   round: number;
-  p1: { title: string; code: string; hint: string; ans: string; output: string };
-  coord: { lat: string; lng: string; place: string };
-  volunteer: { name: string; initials: string; bg: string; color: string };
+  p1: PuzzlePart;
+  coord: {
+    lat: string;
+    lng: string;
+    place: string;
+  };
+  volunteer: {
+    name: string;
+    initials: string;
+    bg: string;
+    color: string;
+  };
   qrPasskey: string;
   cx: number;
   cy: number;
 }
 
-export interface AdminSession {
-  token: string;
-  email: string;
+export interface TestResult {
+  passed: boolean;
+  input: string;
+  stdout: string;
+  stderr: string;
+  timedOut?: boolean;
+}
+
+export interface CompileResult {
+  ok: boolean;
+  matched: boolean;
+  testResults: TestResult[];
+  stdout: string;
+  stderr: string;
+  error?: string;
+  timedOut?: boolean;
 }
 
 export async function getQuestions() {

@@ -40,7 +40,7 @@ export function useRunnerGps(token: string | null, stage: string | null) {
           lng: pos.coords.longitude,
         };
       },
-      (err) => console.warn('[GPS]', err.message),
+      () => {},
       { enableHighAccuracy: true, maximumAge: 3000, timeout: 10000 }
     );
 

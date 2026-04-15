@@ -65,7 +65,6 @@ export function SectorMap({ rounds, currentRound, stage }: SectorMapProps) {
         setRunnerCoords([pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy]);
       },
       (err) => {
-        console.warn('Geo error:', err.message);
         setGeoStatus(err.code === 1 ? 'denied' : 'unavailable');
       },
       { enableHighAccuracy: true, maximumAge: 3000, timeout: 15000 }

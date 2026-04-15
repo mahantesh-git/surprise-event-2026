@@ -24,16 +24,14 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
       { fps: 10, qrbox: { width: 240, height: 240 } },
       (decodedText) => { onScan(decodedText); },
       () => { /* ignore per-frame errors */ }
-    ).catch((err) => {
-      console.warn('QR environment camera failed, trying user camera:', err);
+    ).catch(() => {
       // Fallback to 'user' facing camera if 'environment' fails (e.g. laptop webcam)
       qr.start(
         { facingMode: 'user' },
         { fps: 10, qrbox: { width: 240, height: 240 } },
         (decodedText) => { onScan(decodedText); },
         () => { /* ignore per-frame errors */ }
-      ).catch((fallbackErr) => {
-        console.error('QR absolute start error:', fallbackErr);
+      ).catch(() => {
         setErrorMsg('Camera access denied or camera is currently in use by another app.');
       });
     });

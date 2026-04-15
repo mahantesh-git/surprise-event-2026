@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Zap, 
@@ -17,12 +17,13 @@ import { AdminPanel } from '@/components/AdminPanel';
 import { RoleSelection } from '@/components/RoleSelection';
 import { useGameState, Role } from '@/hooks/useGameState';
 import { useRunnerGps } from '@/hooks/useRunnerGps';
-import { getQuestions, compilePython, RoundQuestion } from '@/lib/api';
+import { getQuestions, compileCode, RoundQuestion } from '@/lib/api';
+import type { SupportedLanguage } from '@/components/CodeEditor';
+import { CodeEditor, LANGUAGE_TEMPLATES } from '@/components/CodeEditor';
 import { PersistentProgress } from '@/components/PersistentProgress';
 import { SectorMap } from '@/components/SectorMap';
 import { RunnerGame } from '@/components/RunnerGame';
 import { Leaderboard } from '@/components/Leaderboard';
-import { highlightCode } from '@/lib/syntax';
 
 export default function App() {
   const [pathname, setPathname] = useState(() => window.location.pathname);
@@ -34,9 +35,17 @@ export default function App() {
   const [rounds, setRounds] = useState<RoundQuestion[]>([]);
   const [roundsLoading, setRoundsLoading] = useState(false);
   const [roundsError, setRoundsError] = useState<string | null>(null);
-  const [p1Input, setP1Input] = useState('');
-  const [showHint, setShowHint] = useState(false);
+  const [p1Code, setP1Code] = useState('');
+  const [selectedLanguage, setSelectedLanguage] = useState<SupportedLanguage>('python');
+  const [isRunning, setIsRunning] = useState(false);
+  const [consoleOutput, setConsoleOutput] = useState<{ 
+    stdout: string; 
+    stderr: string; 
+    matched: boolean;
+    testResults?: Array<{ input: string; passed: boolean; stdout: string; stderr: string }> 
+  } | null>(null);
   const [feedback, setFeedback] = useState<{ type: 'ok' | 'err', msg: string } | null>(null);
+
   const [devMode, setDevMode] = useState(false);
 
   // Stream runner GPS to backend while in field stages
@@ -52,16 +61,35 @@ export default function App() {
 
     setRoundsLoading(true);
     getQuestions()
-      .then((response: { questions: RoundQuestion[] }) => {
-        const sorted = response.questions.slice().sort((a: RoundQuestion, b: RoundQuestion) => a.round - b.round);
+      .then((response: any) => {
+        const questionsArray = response?.questions || (Array.isArray(response) ? response : []);
+        const sorted = [...questionsArray].sort((a: RoundQuestion, b: RoundQuestion) => (a.round || 0) - (b.round || 0));
         setRounds(sorted);
         setRoundsError(null);
       })
       .catch((error: Error) => {
+        setRounds(prev => prev.length > 0 ? prev : []);
         setRoundsError(error instanceof Error ? error.message : 'Failed to load questions');
       })
       .finally(() => setRoundsLoading(false));
   }, [role, session?.team.id]);
+
+  const previousRoundRef = useRef(gameState?.round);
+  useEffect(() => {
+    if (gameState && gameState.round !== previousRoundRef.current) {
+      if (gameState.stage === 'p1_solve') {
+        const round = rounds[Math.min(gameState.round, rounds.length - 1)];
+        if (round) {
+          const defaultLang = (round.p1.language ?? 'python') as SupportedLanguage;
+          setSelectedLanguage(defaultLang);
+          setP1Code(LANGUAGE_TEMPLATES[defaultLang]);
+          setConsoleOutput(null);
+          setFeedback(null);
+        }
+      }
+      previousRoundRef.current = gameState.round;
+    }
+  }, [gameState?.round, gameState?.stage, rounds]);
 
   if (pathname === '/admin') {
     return (
@@ -201,36 +229,52 @@ export default function App() {
 
   const currentRound = rounds[Math.min(gameState!.round, rounds.length - 1)];
 
-  const normalizeAnswer = (value: string) => value.replace(/\s+/g, ' ').trim().toLowerCase();
+  const initEditorForRound = (round: typeof currentRound) => {
+    const defaultLang = (round.p1.language ?? 'python') as SupportedLanguage;
+    setSelectedLanguage(defaultLang);
+    setP1Code(LANGUAGE_TEMPLATES[defaultLang]);
+    setConsoleOutput(null);
+    setFeedback(null);
+  };
 
-  const checkP1 = async () => {
-    if (!session?.token) return;
+  const normalizeAnswer = (value: string) => value.replace(/\r\n/g, '\n').trim();
 
+  const runCode = async () => {
+    if (!session?.token || !p1Code.trim() || isRunning) return;
+    setIsRunning(true);
+    setConsoleOutput(null);
     try {
-      const result = await compilePython(session.token, currentRound.p1.code);
-      if (!result.ok) {
-        const msg = result.timedOut ? 'Execution timed out. Try again.' : (result.stderr || 'Compilation failed');
-        setFeedback({ type: 'err', msg });
+      const result = await compileCode(session.token, currentRound.id, p1Code, selectedLanguage);
+
+      if (result.timedOut) {
+        setConsoleOutput({ stdout: '', stderr: 'Execution timed out (10s limit exceeded).', matched: false });
         return;
       }
 
-      const actualOutput = result.stdout.trim();
-      const expectedOutput = currentRound.p1.ans.trim();
-      const userAnswer = p1Input.trim();
+      if (!result.ok && !result.testResults?.length) {
+        setConsoleOutput({ stdout: '', stderr: 'Compilation or initialization error.', matched: false });
+        return;
+      }
 
-      if (userAnswer && normalizeAnswer(userAnswer) === normalizeAnswer(actualOutput) && normalizeAnswer(actualOutput) === normalizeAnswer(expectedOutput)) {
-        setFeedback({ type: 'ok', msg: `Correct! ${currentRound.p1.output}` });
+      const allPassed = result.testResults?.every(r => r.passed) ?? false;
+
+      setConsoleOutput({ 
+        stdout: result.testResults?.[result.testResults.length - 1]?.stdout || '', 
+        stderr: result.testResults?.[result.testResults.length - 1]?.stderr || '', 
+        matched: allPassed,
+        testResults: result.testResults 
+      });
+
+      if (allPassed) {
         setTimeout(() => {
           updateState({ stage: 'p1_solved' });
-          setFeedback(null);
-          setP1Input('');
-          setShowHint(false);
-        }, 1000);
-      } else {
-        setFeedback({ type: 'err', msg: 'Incorrect output. Try again!' });
+          setConsoleOutput(null);
+        }, 1500);
       }
     } catch (error) {
-      setFeedback({ type: 'err', msg: error instanceof Error ? error.message : 'Compilation failed' });
+      setConsoleOutput({ stdout: '', stderr: error instanceof Error ? error.message : 'Execution failed', matched: false });
+    } finally {
+      setIsRunning(false);
     }
   };
 
@@ -242,9 +286,9 @@ export default function App() {
 
   const reset = async () => {
     await resetGame();
-    setFeedback(null);
-    setP1Input('');
-    setShowHint(false);
+    setConsoleOutput(null);
+    setIsRunning(false);
+    if (rounds.length) initEditorForRound(rounds[0]);
   };
 
   const isMyTurn = (role === 'solver' && ['p1_solve', 'p1_solved'].includes(gameState!.stage)) ||
@@ -305,115 +349,145 @@ export default function App() {
                   </div>
                 ) : (
                   <>
-                    {/* P1 Solve - Solver's turn to code */}
                     {gameState!.stage === 'p1_solve' && (
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-                        {/* Left: Code Puzzle */}
+                        {/* Left: Problem Statement */}
                         <div className="corner-card bg-black/40 backdrop-blur-xl p-8 border border-white/5 relative h-full">
                           <div className="corner-br" /> <div className="corner-bl" />
                           <div className="space-y-6">
                             <div className="flex flex-col gap-2">
-                              <span className="label-technical text-[#95FF00]">Local Node Objective</span>
+                              <span className="label-technical text-[#95FF00]">Mission Objective</span>
                               <h2 className="text-xl font-bold tracking-widest uppercase">{currentRound.p1.title}</h2>
                             </div>
-                            
-                            <div className="relative group">
-                              <div className="absolute -top-3 left-4 px-2 bg-[#15171A] border border-white/10 font-mono text-[9px] uppercase tracking-widest text-white/40 z-10">
-                                core_logic.py
+
+                            {/* Problem Description */}
+                            <div className="p-4 border border-white/10 bg-white/[0.02] space-y-2">
+                              <div className="flex justify-between items-center mb-2">
+                                <span className="label-technical block text-white/40 uppercase">Problem Statement</span>
                               </div>
-                              <div className="code-display min-h-[300px] border-[#95FF00]/10 transition-colors group-hover:border-[#95FF00]/30">
-                                {highlightCode(currentRound.p1.code)}
-                              </div>
+                              <p className="text-sm leading-relaxed text-white/70 font-mono whitespace-pre-wrap">
+                                {currentRound.p1.hint}
+                              </p>
                             </div>
 
-                            <div className="space-y-4">
-                              <div className="flex items-center justify-between">
-                                <span className="label-technical">Intelligence Hint</span>
-                                <button 
-                                  onClick={() => setShowHint(!showHint)}
-                                  className="text-[10px] font-mono uppercase tracking-widest text-[#95FF00]/60 hover:text-[#95FF00] transition-colors flex items-center gap-1"
-                                >
-                                  {showHint ? "CLOSE_DECRYPT" : "DECRYPT_HINT"}
-                                </button>
-                              </div>
-                              
-                              <AnimatePresence>
-                                {showHint && (
-                                  <motion.div 
-                                    initial={{ height: 0, opacity: 0 }}
-                                    animate={{ height: 'auto', opacity: 1 }}
-                                    exit={{ height: 0, opacity: 0 }}
-                                    className="overflow-hidden"
-                                  >
-                                    <div className="p-4 border border-[#95FF00]/20 bg-[#95FF00]/5 text-[11px] font-mono leading-relaxed text-white/70 uppercase tracking-tight">
-                                      {currentRound.p1.hint}
-                                    </div>
-                                  </motion.div>
-                                )}
-                              </AnimatePresence>
-                            </div>
                           </div>
                         </div>
 
-                        {/* Right: Input & Trace */}
-                        <div className="space-y-6">
-                          <div className="corner-card bg-black/40 backdrop-blur-xl p-8 border border-white/5 relative">
-                            <div className="corner-tr" /> <div className="corner-bl" />
-                            <div className="space-y-6">
-                              <div className="space-y-4">
-                                <span className="label-technical">Input Extraction</span>
-                                <div className="relative">
-                                  <input 
-                                    placeholder="ENTER OUTPUT..." 
-                                    className="w-full high-clearance-input" 
-                                    value={p1Input} 
-                                    onChange={(e) => setP1Input(e.target.value)} 
-                                    onKeyDown={(e) => e.key === 'Enter' && checkP1()} 
-                                    autoFocus
-                                    autoComplete="off"
-                                    spellCheck="false"
-                                  />
-                                  {feedback && (
-                                    <div className={cn(
-                                      "absolute -bottom-[2px] left-0 right-0 h-[2px]",
-                                      feedback.type === 'ok' ? "bg-[#95FF00]" : "bg-rose-500"
-                                    )} />
-                                  )}
-                                </div>
-                              </div>
-
-                              <div className="flex gap-2">
-                                <Button className="flex-1 font-bold uppercase tracking-[0.2em] h-14" variant="sage" size="md" onClick={checkP1}>
-                                  EXECUTE_TRACE
-                                </Button>
-                                {devMode && (
-                                  <Button variant="secondary" className="w-14 h-14 border-white/10" size="sm" onClick={() => setP1Input(currentRound.p1.ans)}>
-                                    <Zap className="h-4 w-4" />
-                                  </Button>
-                                )}
-                              </div>
-                            </div>
+                        {/* Right: Code Editor + Console */}
+                        <div className="space-y-4">
+                          {/* File label */}
+                          <div className="flex items-center justify-between px-1">
+                            <span className="label-technical text-[#95FF00]">Solution Editor</span>
+                            {devMode && (
+                              <button
+                                className="text-[9px] font-mono uppercase tracking-widest text-white/30 hover:text-[#95FF00] transition-colors"
+                                onClick={() => setP1Code(currentRound.p1.ans)}
+                              >
+                                [DEV: autofill]
+                              </button>
+                            )}
                           </div>
 
-                          {/* Trace Console */}
-                          <div className="corner-card bg-[#0B0C0D] border-white/5 p-6 h-[240px] flex flex-col">
-                            <span className="label-technical mb-4 block text-[#95FF00]/60">Execution Trace Console</span>
-                            <div className="font-mono text-[11px] space-y-2 flex-1 overflow-y-auto pr-2 custom-scrollbar">
-                              {feedback ? (
-                                <div className={cn(
-                                  "p-3 border-l-2 bg-white/[0.02]",
-                                  feedback.type === 'ok' ? "border-[#95FF00] text-[#95FF00]" : "border-rose-500 text-rose-500"
-                                )}>
-                                  <div className="text-[9px] uppercase tracking-widest opacity-50 mb-1">
-                                    {feedback.type === 'err' ? "Runtime Error" : "Success Payload"}
-                                  </div>
-                                  {feedback.msg}
+                          {/* Monaco Editor */}
+                          <CodeEditor
+                            value={p1Code || LANGUAGE_TEMPLATES[selectedLanguage]}
+                            onChange={setP1Code}
+                            language={selectedLanguage}
+                            onLanguageChange={(lang, starter) => {
+                              setSelectedLanguage(lang);
+                              setP1Code(starter);
+                              setConsoleOutput(null);
+                            }}
+                            onRun={runCode}
+                            height="340px"
+                            defaultLanguage={(currentRound.p1.language ?? 'python') as SupportedLanguage}
+                            defaultCode={currentRound.p1.code}
+                          />
+
+                          {/* Run Button */}
+                          <Button
+                            className="w-full font-bold uppercase tracking-[0.2em] h-14"
+                            variant="sage"
+                            size="md"
+                            onClick={runCode}
+                            disabled={isRunning}
+                          >
+                            {isRunning ? (
+                              <span className="flex items-center gap-2">
+                                <span className="w-3 h-3 border border-black/50 border-t-transparent rounded-full animate-spin" />
+                                EXECUTING...
+                              </span>
+                            ) : '▶  RUN CODE'}
+                          </Button>
+
+                          {/* Console Output */}
+                          <div className="corner-card bg-[#0B0C0D] border-white/5 p-5 min-h-[140px] flex flex-col">
+                            <span className="label-technical mb-3 block text-[#95FF00]/60">Execution Console</span>
+                            <div className="font-mono text-[11px] flex-1 overflow-y-auto custom-scrollbar space-y-1">
+                              {!consoleOutput && !isRunning && (
+                                <div className="text-white/20 flex items-center gap-2">
+                                  <span className="w-1 h-3 bg-white/20 animate-pulse" />
+                                  AWAITING EXECUTION...
                                 </div>
-                              ) : (
-                                <div className="text-white/20 animate-pulse flex items-center gap-2">
-                                  <div className="w-1 h-3 bg-white/20 animate-blink" />
-                                  AWAITING EXECUTION COMMAND...
+                              )}
+                              {isRunning && (
+                                <div className="text-[#95FF00]/60 flex items-center gap-2 animate-pulse">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-[#95FF00]" />
+                                  Running on Piston sandbox...
                                 </div>
+                              )}
+                              {consoleOutput && (
+                                <>
+                                  {consoleOutput.testResults && (
+                                    <div className="mb-4 space-y-2">
+                                      <div className="text-[10px] font-mono uppercase tracking-widest text-white/40 mb-2 underline decoration-[#95FF00]/20">Test Suite Execution</div>
+                                      <div className="grid grid-cols-1 gap-1">
+                                        {consoleOutput.testResults.map((tr, idx) => (
+                                          <div key={idx} className={cn(
+                                            "flex items-center justify-between p-2 rounded-sm font-mono text-[10px]",
+                                            tr.passed ? "bg-[#95FF00]/10 border border-[#95FF00]/20" : "bg-rose-500/10 border border-rose-500/20"
+                                          )}>
+                                            <div className="flex items-center gap-2">
+                                              <span className={tr.passed ? "text-[#95FF00]" : "text-rose-500"}>
+                                                {tr.passed ? "●" : "×"}
+                                              </span>
+                                              <span className="text-white/60">CASE_{idx + 1}</span>
+                                              <span className="text-white/20 whitespace-nowrap">INPUT: "{tr.input}"</span>
+                                            </div>
+                                            <div className="font-bold">
+                                              {tr.passed ? (
+                                                <span className="text-[#95FF00]">PASSED</span>
+                                              ) : (
+                                                <span className="text-rose-500">FAILED</span>
+                                              )}
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {consoleOutput.matched && (
+                                    <div className="text-[#95FF00] font-bold text-[10px] uppercase tracking-widest mb-2 flex items-center gap-2">
+                                      <CheckCircle2 className="h-3 w-3" />
+                                      ALL TESTS PASSED — UPLOADING DATA...
+                                    </div>
+                                  )}
+                                  {consoleOutput.stdout && (
+                                    <div className="space-y-1">
+                                      <div className="text-[9px] font-mono uppercase tracking-widest text-white/20">Standard Output (Last Case)</div>
+                                      <pre className={cn('p-3 bg-black/40 border border-white/5 text-[11px] whitespace-pre-wrap break-all', consoleOutput.matched ? 'text-[#95FF00]/80' : 'text-white/70')}>{consoleOutput.stdout}</pre>
+                                    </div>
+                                  )}
+                                  {consoleOutput.stderr && (
+                                    <pre className="text-rose-400 text-[11px] whitespace-pre-wrap break-all mt-1">{consoleOutput.stderr}</pre>
+                                  )}
+                                  {!consoleOutput.matched && !consoleOutput.stderr && consoleOutput.stdout && (
+                                    <div className="text-rose-400 text-[10px] mt-2 uppercase tracking-widest">
+                                      Verification Failed: Logic mismatch detected.
+                                    </div>
+                                  )}
+                                </>
                               )}
                             </div>
                           </div>

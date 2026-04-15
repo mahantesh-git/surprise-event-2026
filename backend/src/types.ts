@@ -28,6 +28,7 @@ export interface TeamDocument {
   email?: string;
   passwordHash: string;
   gameState: GameState;
+  executionAttempts?: number[];
   createdAt: Date;
   updatedAt: Date;
   lastLoginAt?: Date;
@@ -53,12 +54,19 @@ export interface AdminTokenPayload {
 
 export type AuthTokenPayload = TeamTokenPayload | AdminTokenPayload;
 
+export interface TestCase {
+  input: string;
+  output: string;
+}
+
 export interface PuzzlePart {
   title: string;
   code: string;
   hint: string;
   ans: string;
   output: string;
+  language: string;
+  testCases: TestCase[];
 }
 
 export interface CoordinateInfo {

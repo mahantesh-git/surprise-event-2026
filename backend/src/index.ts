@@ -9,7 +9,6 @@ import { requireAdmin, requireAuth, signAdminToken, signToken, normalizeRole, ty
 import { createTeam, findTeamByName, verifyTeamPassword, findTeamById } from './team-service';
 import { createInitialGameState, normalizeGameState, sanitizeGameStateUpdate } from './game';
 import { DEFAULT_QUESTIONS } from './defaultQuestions';
-import { runPythonCode } from './pythonRunner';
 
 const envPath = path.resolve(__dirname, '../.env');
 const fallbackEnvPath = path.resolve(__dirname, '../.env.example');
@@ -209,6 +208,17 @@ app.post('/api/game/reset', requireAuth, async (request: AuthedRequest, response
   response.json({ gameState: nextState });
 });
 
+// Language → Piston runtime config
+const PISTON_CONFIG: Record<string, { language: string; version: string; fileName: string }> = {
+  python:     { language: 'python',     version: '3.10.0',  fileName: 'solution.py'  },
+  javascript: { language: 'javascript', version: '18.15.0', fileName: 'solution.js'  },
+  typescript: { language: 'typescript', version: '5.0.3',   fileName: 'solution.ts'  },
+  java:       { language: 'java',       version: '15.0.2',  fileName: 'Main.java'     },
+  c:          { language: 'c',          version: '10.2.0',  fileName: 'solution.c'   },
+  cpp:        { language: 'c++',        version: '10.2.0',  fileName: 'solution.cpp' },
+  go:         { language: 'go',         version: '1.16.2',  fileName: 'solution.go'  },
+};
+
 app.post('/api/game/compile', requireAuth, async (request: AuthedRequest, response) => {
   const auth = request.auth;
   if (!auth) {
@@ -217,33 +227,151 @@ app.post('/api/game/compile', requireAuth, async (request: AuthedRequest, respon
   }
 
   if (auth.role !== 'solver') {
-    response.status(403).json({ error: 'Only solver can compile questions' });
+    response.status(403).json({ error: 'Only solver can compile code' });
     return;
   }
 
-  const code = typeof request.body?.code === 'string' ? request.body.code : '';
-  if (!code.trim()) {
+  const { code, questionId } = request.body;
+  const langKey = typeof request.body?.language === 'string' ? request.body.language : 'python';
+
+  if (!code?.trim()) {
     response.status(400).json({ error: 'code is required' });
     return;
   }
 
-  if (code.length > 4000) {
-    response.status(400).json({ error: 'Code is too large' });
+  if (code.length > 8000) {
+    response.status(400).json({ error: 'Code is too large (max 8000 chars)' });
     return;
   }
 
+  if (!questionId || !ObjectId.isValid(questionId)) {
+    response.status(400).json({ error: 'valid questionId is required' });
+    return;
+  }
+
+  const pistonCfg = PISTON_CONFIG[langKey];
+  if (!pistonCfg) {
+    response.status(400).json({ error: `Unsupported language: ${langKey}` });
+    return;
+  }
+
+  // 1. Rate Limiting (10 attempts per minute)
+  const teams = await getTeamsCollection();
+  const team = await teams.findOne({ _id: new ObjectId(auth.teamId) });
+  if (!team) {
+    response.status(404).json({ error: 'Team not found' });
+    return;
+  }
+
+  const now = Date.now();
+  const minuteAgo = now - 60000;
+  const recentAttempts = (team.executionAttempts || []).filter((ts: number) => ts > minuteAgo);
+
+  if (recentAttempts.length >= 10) {
+    response.status(429).json({ error: 'Rate limit exceeded: 10 attempts per minute. Please wait.' });
+    return;
+  }
+
+  // Update team execution attempts
+  await teams.updateOne(
+    { _id: team._id },
+    { $set: { executionAttempts: [...recentAttempts, now] } }
+  );
+
+  // 2. Fetch Question for Verification
+  const questions = await getQuestionsCollection();
+  const question = await questions.findOne({ _id: new ObjectId(questionId) });
+  if (!question) {
+    response.status(404).json({ error: 'Question not found' });
+    return;
+  }
+
+  const testCases = question.p1.testCases || [];
+  if (testCases.length === 0) {
+    // Fallback for legacy questions without test cases (though we should migrate them)
+    testCases.push({ input: '', output: question.p1.ans });
+  }
+
   try {
-    const result = await runPythonCode(code);
-    response.json(result);
-  } catch {
-    response.status(500).json({ error: 'Python runtime is not available on server' });
+    const pistonUrl = process.env.PISTON_API_URL || 'http://127.0.0.1:2000/api/v2/execute';
+    const testResults = [];
+    let allPassed = true;
+
+    for (const tc of testCases) {
+      const pistonRes = await fetch(pistonUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          language: pistonCfg.language,
+          version: pistonCfg.version,
+          files: [{ name: pistonCfg.fileName, content: code }],
+          stdin: tc.input || '',
+          args: [],
+          run_timeout: 5000,
+          compile_timeout: 5000,
+        }),
+      });
+
+      if (!pistonRes.ok) {
+        throw new Error(`Piston API error: ${await pistonRes.text()}`);
+      }
+
+      const data = await pistonRes.json() as any;
+      const run = data.run ?? { stdout: '', stderr: '', code: 0 };
+      const compile = data.compile ?? { code: 0, stderr: '' };
+      
+      const stdout = (run.stdout || '').trim();
+      const stderr = (run.stderr || compile.stderr || '').trim();
+      const passed = stdout === (tc.output || '').trim() && (run.code === 0 && compile.code === 0);
+
+      testResults.push({
+        input: tc.input,
+        passed,
+        stdout: stdout,
+        stderr: stderr,
+        timedOut: run.code === 124,
+      });
+
+      if (!passed) allPassed = false;
+    }
+
+    response.json({
+      ok: allPassed,
+      testResults,
+    });
+  } catch (err) {
+    console.error('Execution failed:', err);
+    response.status(502).json({ error: 'Code execution failed. Please check your logic or try again later.' });
   }
 });
 
 app.get('/api/questions', async (_request, response) => {
-  const questions = await getQuestionsCollection();
-  const docs = await questions.find({}, { sort: { round: 1 } }).toArray();
-  response.json({ questions: docs.map(({ _id, ...rest }) => ({ id: _id.toString(), ...rest })) });
+  try {
+    const questions = await getQuestionsCollection();
+    const docs = await questions.find({}).sort({ round: 1 }).toArray();
+    
+    // Mask sensitive fields for non-privileged players
+    const masked = docs.map(({ _id, ...rest }) => {
+      const q = rest as any;
+      const p1 = q.p1 || {};
+      return { 
+        id: _id.toString(), 
+        ...q,
+        p1: {
+          title: p1.title || 'Untitled',
+          language: p1.language || 'python',
+          code: p1.code || '',
+          hint: p1.hint || '',
+          // Hide ans, output, and testCases for security
+        }
+      };
+    });
+
+    response.json({ questions: masked });
+  } catch (error: any) {
+    console.error('Questions error:', error);
+    response.status(500).json({ error: 'Failed to fetch questions', details: error.message });
+  }
 });
 
 // Runner verifies the QR passkey to unlock their minigame
@@ -475,9 +603,14 @@ app.delete('/api/admin/teams', requireAdmin, async (_request: AdminAuthedRequest
 });
 
 app.get('/api/admin/questions', requireAdmin, async (_request: AdminAuthedRequest, response) => {
-  const questions = await getQuestionsCollection();
-  const docs = await questions.find({}, { sort: { round: 1 } }).toArray();
-  response.json({ questions: docs.map(({ _id, ...rest }) => ({ id: _id.toString(), ...rest })) });
+  try {
+    const questions = await getQuestionsCollection();
+    const docs = await questions.find({}).sort({ round: 1 }).toArray();
+    response.json({ questions: docs.map(({ _id, ...rest }) => ({ id: _id.toString(), ...rest })) });
+  } catch (error: any) {
+    console.error('Admin questions error:', error);
+    response.status(500).json({ error: 'Failed to fetch questions', details: error.message });
+  }
 });
 
 app.post('/api/admin/questions', requireAdmin, async (request: AdminAuthedRequest, response) => {
@@ -543,10 +676,9 @@ app.delete('/api/admin/database', requireAdmin, async (_request: AdminAuthedRequ
   });
 });
 
-app.use((error: unknown, _request: express.Request, response: express.Response, _next: express.NextFunction) => {
-  const message = error instanceof Error ? error.message : 'Internal server error';
+app.use((error: any, _request: express.Request, response: express.Response, _next: express.NextFunction) => {
   console.error('API error:', error);
-  response.status(500).json({ error: message });
+  response.status(500).json({ error: 'Internal server error' });
 });
 
 app.use((_request, response) => {

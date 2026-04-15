@@ -157,9 +157,9 @@ export function Leaderboard() {
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
-      rootRef.current?.requestFullscreen().catch(err => console.error(err));
+      rootRef.current?.requestFullscreen().catch(() => {});
     } else {
-      document.exitFullscreen().catch(err => console.error(err));
+      document.exitFullscreen().catch(() => {});
     }
   };
 
@@ -170,29 +170,36 @@ export function Leaderboard() {
 
   const fetchBoard = async () => {
     try {
-      const [ldbRes, qRes] = await Promise.all([getLeaderboard(), getQuestions()]);
+      const [ldbRes, qRes] = await Promise.all([
+        getLeaderboard().catch(() => ({ leaderboard: [] })), 
+        getQuestions().catch(() => ({ questions: [] }))
+      ]);
       
+      const boardArr = ldbRes?.leaderboard || [];
+      const questionsArray = qRes?.questions || (Array.isArray(qRes) ? qRes : []);
+
       // Sort logic explicitly mapping: solved count DESC, then time taken ASC
-      const now = Date.now();
-      const sorted = [...ldbRes.leaderboard].sort((a, b) => {
+      const currentNow = Date.now();
+      const sorted = [...boardArr].sort((a, b) => {
         if (a.solvedCount !== b.solvedCount) return b.solvedCount - a.solvedCount;
         
         // Handle runtime
-        const aStart = a.startTime ? new Date(a.startTime).getTime() : now;
-        const aEnd = a.finishTime ? new Date(a.finishTime).getTime() : now;
+        const aStart = a.startTime ? new Date(a.startTime).getTime() : currentNow;
+        const aEnd = a.finishTime ? new Date(a.finishTime).getTime() : currentNow;
         const aElapsed = aEnd - aStart;
         
-        const bStart = b.startTime ? new Date(b.startTime).getTime() : now;
-        const bEnd = b.finishTime ? new Date(b.finishTime).getTime() : now;
+        const bStart = b.startTime ? new Date(b.startTime).getTime() : currentNow;
+        const bEnd = b.finishTime ? new Date(b.finishTime).getTime() : currentNow;
         const bElapsed = bEnd - bStart;
 
         return aElapsed - bElapsed;
       });
 
       setTeams(sorted);
-      setQuestions(qRes.questions);
-    } catch (e) {
-      console.error(e);
+      setQuestions(questionsArray);
+    } catch {
+      setTeams([]);
+      setQuestions([]);
     } finally {
       setLoading(false);
     }

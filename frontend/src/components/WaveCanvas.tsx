@@ -267,7 +267,6 @@ function compileShader(gl: WebGLRenderingContext, type: number, src: string): We
   gl.shaderSource(s, src);
   gl.compileShader(s);
   if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
-    console.error('Shader compile error:', gl.getShaderInfoLog(s));
     gl.deleteShader(s);
     return null;
   }

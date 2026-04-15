@@ -252,8 +252,8 @@ export function RunnerGame({ token, currentRoundIndex, totalRounds, onRoundCompl
       const data = await verifyRunnerPasskey(token, passkey.trim());
       setGameType(data.gameType as GameType);
       setScreen('game');
-    } catch {
-      setError('Network error. Check your connection.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Network error. Check your connection.');
     } finally {
       setVerifying(false);
     }

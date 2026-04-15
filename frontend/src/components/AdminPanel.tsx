@@ -21,13 +21,16 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { LANGUAGE_OPTIONS } from '@/components/CodeEditor';
+import type { QuestionLanguage } from '@/lib/api';
 
 const ADMIN_SESSION_KEY = 'quest-admin-session';
 
 function createEmptyQuestion(nextRound: number): RoundQuestion {
   return {
+    id: '',
     round: nextRound,
-    p1: { title: '', code: '', hint: '', ans: '', output: '' },
+    p1: { title: '', code: '', hint: '', ans: '', output: '', language: 'python', testCases: [] },
     coord: { lat: '', lng: '', place: '' },
     volunteer: { name: '', initials: '', bg: 'bg-indigo-100', color: 'text-indigo-700' },
     qrPasskey: '',
@@ -64,24 +67,28 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
   }, [questions]);
 
   const refreshData = async (sessionToken: string) => {
-    const [teamsResponse, questionsResponse, configResponse] = await Promise.all([
-      getAdminTeams(sessionToken),
-      getAdminQuestions(sessionToken),
-      getAdminConfig(sessionToken),
-    ]);
-    setTeams(teamsResponse.teams);
-    setQuestions(questionsResponse.questions);
-    setLoginEnabled(!!configResponse.loginEnabled);
+    try {
+      const [teamsResponse, questionsResponse, configResponse] = await Promise.all([
+        getAdminTeams(sessionToken).catch(() => ({ teams: [] })),
+        getAdminQuestions(sessionToken).catch(() => ({ questions: [] })),
+        getAdminConfig(sessionToken).catch(() => ({ loginEnabled: false })),
+      ]);
+      
+      setTeams(teamsResponse?.teams || []);
+      const qArr = questionsResponse?.questions || (Array.isArray(questionsResponse) ? questionsResponse : []);
+      const sorted = [...qArr].sort((a, b) => (a.round || 0) - (b.round || 0));
+      setQuestions(sorted);
+      setLoginEnabled(!!configResponse?.loginEnabled);
+      setError(null);
+    } catch {
+      setError('Failed to refresh data from server');
+    }
   };
 
   useEffect(() => {
     if (!token) return;
     setLoading(true);
-    refreshData(token)
-      .catch((refreshError) => {
-        setError(refreshError instanceof Error ? refreshError.message : 'Failed to load admin data');
-      })
-      .finally(() => setLoading(false));
+    refreshData(token).finally(() => setLoading(false));
   }, [token]);
 
   const handleAdminLogin = async () => {
@@ -506,13 +513,91 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                         <div className="w-1 h-1 bg-[#95FF00]" /> Node_Alpha
                       </div>
                       <Input placeholder="Objective Title" value={draftQuestion.p1.title} onChange={(event) => setDraftQuestion({ ...draftQuestion, p1: { ...draftQuestion.p1, title: event.target.value } })} className="bg-white/5 border-white/10" />
-                      <Input placeholder="Expected Output" value={draftQuestion.p1.ans} onChange={(event) => setDraftQuestion({ ...draftQuestion, p1: { ...draftQuestion.p1, ans: event.target.value } })} className="bg-white/5 border-white/10 font-mono text-xs" />
+                      
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="relative">
+                          <select 
+                            value={draftQuestion.p1.language || 'python'}
+                            onChange={(e) => setDraftQuestion({ ...draftQuestion, p1: { ...draftQuestion.p1, language: e.target.value } })}
+                            className="w-full bg-white/5 border border-white/10 h-10 px-3 font-mono text-[10px] text-white focus:outline-none focus:border-[#95FF00]/50 transition-colors uppercase appearance-none"
+                          >
+                            {LANGUAGE_OPTIONS.map(opt => (
+                              <option key={opt.id} value={opt.id} className="bg-[#15171A] text-white">
+                                {opt.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <Input placeholder="Expected Output" value={draftQuestion.p1.ans} onChange={(event) => setDraftQuestion({ ...draftQuestion, p1: { ...draftQuestion.p1, ans: event.target.value } })} className="bg-white/5 border-white/10 font-mono text-[10px]" />
+                      </div>
                       <textarea 
                         placeholder="Simulation Matrix (Code)" 
                         value={draftQuestion.p1.code} 
                         onChange={(event) => setDraftQuestion({ ...draftQuestion, p1: { ...draftQuestion.p1, code: event.target.value } })} 
                         className="w-full bg-white/5 border border-white/10 rounded-none p-3 font-mono text-xs min-h-[120px] focus:outline-none focus:border-[#95FF00]/50 transition-colors"
                       />
+                      
+                      {/* Test Cases Section */}
+                      <div className="space-y-3 pt-4 border-t border-white/5">
+                        <div className="flex items-center justify-between">
+                          <label className="text-[10px] uppercase tracking-widest text-[#95FF00]/60">Verification_Test_Suite</label>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-6 px-2 text-[8px] uppercase tracking-widest text-[#95FF00] hover:bg-[#95FF00]/10 border border-[#95FF00]/20"
+                            onClick={() => {
+                              const existing = draftQuestion.p1.testCases || [];
+                              setDraftQuestion({
+                                ...draftQuestion,
+                                p1: {
+                                  ...draftQuestion.p1,
+                                  testCases: [...existing, { input: '', output: '' }]
+                                }
+                              });
+                            }}
+                          >
+                            <Plus className="w-3 h-3 mr-1" /> Add Case
+                          </Button>
+                        </div>
+                        <div className="space-y-2 max-h-[200px] overflow-y-auto custom-scrollbar pr-2">
+                          {(draftQuestion.p1.testCases || []).map((tc, idx) => (
+                            <div key={idx} className="grid grid-cols-12 gap-2">
+                              <Input 
+                                placeholder="Input" 
+                                value={tc.input} 
+                                onChange={(e) => {
+                                  const cases = [...(draftQuestion.p1.testCases || [])];
+                                  cases[idx].input = e.target.value;
+                                  setDraftQuestion({ ...draftQuestion, p1: { ...draftQuestion.p1, testCases: cases } });
+                                }}
+                                className="col-span-11 bg-white/5 border-white/5 h-8 font-mono text-[9px]"
+                              />
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="col-span-1 p-0 h-8 text-rose-500 hover:bg-rose-500/10"
+                                onClick={() => {
+                                  const cases = (draftQuestion.p1.testCases || []).filter((_, i) => i !== idx);
+                                  setDraftQuestion({ ...draftQuestion, p1: { ...draftQuestion.p1, testCases: cases } });
+                                }}
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
+                              <Input 
+                                placeholder="Expected Output" 
+                                value={tc.output} 
+                                onChange={(e) => {
+                                  const cases = [...(draftQuestion.p1.testCases || [])];
+                                  cases[idx].output = e.target.value;
+                                  setDraftQuestion({ ...draftQuestion, p1: { ...draftQuestion.p1, testCases: cases } });
+                                }}
+                                className="col-span-12 bg-[#95FF00]/5 border-[#95FF00]/10 h-8 font-mono text-[9px] text-[#95FF00]"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
                       <Input placeholder="Intel Hint" value={draftQuestion.p1.hint} onChange={(event) => setDraftQuestion({ ...draftQuestion, p1: { ...draftQuestion.p1, hint: event.target.value } })} className="bg-white/5 border-white/10 text-xs italic" />
                     </div>
 
