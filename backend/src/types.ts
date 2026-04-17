@@ -88,6 +88,7 @@ export interface QuestionDocument {
   coord: CoordinateInfo;
   volunteer: VolunteerInfo;
   qrPasskey: string;
+  locationQrCode: string;
   cx: number;
   cy: number;
   createdAt: Date;

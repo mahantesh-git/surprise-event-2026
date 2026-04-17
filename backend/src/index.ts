@@ -2,8 +2,9 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import express from 'express';
 import path from 'path';
+import { spawn } from 'child_process';
 import { ObjectId } from 'mongodb';
-import type { LoginPayload, GameState } from './types';
+import type { LoginPayload, GameState, QuestionDocument } from './types';
 import { ensureIndexes, getQuestionsCollection, getTeamsCollection, getConfigCollection } from './db';
 import { requireAdmin, requireAuth, signAdminToken, signToken, normalizeRole, type AdminAuthedRequest, type AuthedRequest } from './auth';
 import { createTeam, findTeamByName, verifyTeamPassword, findTeamById } from './team-service';
@@ -19,6 +20,116 @@ if (envLoad.error) {
 
 const app = express();
 const port = Number(process.env.PORT || 4000);
+const eventQrCodesDir = path.resolve(__dirname, '../../event_qr_codes');
+const questionQrScriptPath = path.resolve(__dirname, '../scripts/generate_question_qr.py');
+
+function buildLocationQrCode(round: number) {
+  return `QUEST-LOC-R${Math.max(1, Math.trunc(round))}`;
+}
+
+function resolveQuestionLocationQrCode(question: Partial<QuestionDocument> & { round: number }) {
+  const savedCode = typeof question.locationQrCode === 'string' ? question.locationQrCode.trim() : '';
+  return savedCode || buildLocationQrCode(question.round);
+}
+
+async function generateQuestionQrAsset(question: Pick<QuestionDocument, 'round' | 'coord' | 'locationQrCode'>) {
+  const place = typeof question.coord?.place === 'string' && question.coord.place.trim()
+    ? question.coord.place.trim()
+    : `Location ${question.round}`;
+  const payload = resolveQuestionLocationQrCode(question);
+
+  await new Promise<string>((resolve, reject) => {
+    const child = spawn('python', [
+      questionQrScriptPath,
+      eventQrCodesDir,
+      String(question.round),
+      place,
+      payload,
+    ], {
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+
+    let stdout = '';
+    let stderr = '';
+
+    child.stdout.on('data', (chunk) => {
+      stdout += String(chunk);
+    });
+
+    child.stderr.on('data', (chunk) => {
+      stderr += String(chunk);
+    });
+
+    child.on('error', (error) => {
+      reject(error);
+    });
+
+    child.on('close', (code) => {
+      if (code === 0) {
+        resolve(stdout.trim());
+        return;
+      }
+
+      reject(new Error(stderr.trim() || `QR generation exited with code ${code}`));
+    });
+  });
+}
+
+function createQuestionPayload(input: any, existing?: Partial<QuestionDocument>): Omit<QuestionDocument, 'createdAt' | 'updatedAt'> {
+  const round = Number(input?.round);
+  const qrPasskey = typeof input?.qrPasskey === 'string' ? input.qrPasskey.trim() : '';
+  const locationQrCodeInput = typeof input?.locationQrCode === 'string' ? input.locationQrCode.trim() : '';
+  const p1 = input?.p1 || {};
+  const coord = input?.coord || {};
+  const volunteer = input?.volunteer || {};
+  const cx = Number(input?.cx ?? existing?.cx ?? 0.5);
+  const cy = Number(input?.cy ?? existing?.cy ?? 0.5);
+
+  if (!Number.isInteger(round) || round < 1) {
+    throw new Error('round must be a positive integer');
+  }
+
+  if (!qrPasskey) {
+    throw new Error('qrPasskey is required');
+  }
+
+  if (typeof p1.title !== 'string' || !p1.title.trim()) {
+    throw new Error('p1.title is required');
+  }
+
+  return {
+    round,
+    p1: {
+      title: p1.title.trim(),
+      code: typeof p1.code === 'string' ? p1.code : '',
+      hint: typeof p1.hint === 'string' ? p1.hint : '',
+      ans: typeof p1.ans === 'string' ? p1.ans : '',
+      output: typeof p1.output === 'string' ? p1.output : '',
+      language: typeof p1.language === 'string' && p1.language.trim() ? p1.language.trim() : 'python',
+      testCases: Array.isArray(p1.testCases)
+        ? p1.testCases.map((testCase: any) => ({
+          input: typeof testCase?.input === 'string' ? testCase.input : '',
+          output: typeof testCase?.output === 'string' ? testCase.output : '',
+        }))
+        : [],
+    },
+    coord: {
+      lat: typeof coord.lat === 'string' ? coord.lat : '',
+      lng: typeof coord.lng === 'string' ? coord.lng : '',
+      place: typeof coord.place === 'string' ? coord.place : '',
+    },
+    volunteer: {
+      name: typeof volunteer.name === 'string' ? volunteer.name : '',
+      initials: typeof volunteer.initials === 'string' ? volunteer.initials : '',
+      bg: typeof volunteer.bg === 'string' ? volunteer.bg : '',
+      color: typeof volunteer.color === 'string' ? volunteer.color : '',
+    },
+    qrPasskey,
+    locationQrCode: locationQrCodeInput || existing?.locationQrCode || buildLocationQrCode(round),
+    cx: Number.isFinite(cx) ? cx : 0.5,
+    cy: Number.isFinite(cy) ? cy : 0.5,
+  };
+}
 
 function getAdminEmail() {
   return process.env.ADMIN_EMAIL || 'admin@quest.local';
@@ -40,6 +151,9 @@ async function seedQuestionsIfEmpty() {
   if (count > 0) return;
 
   const now = new Date();
+  for (const question of DEFAULT_QUESTIONS) {
+    await generateQuestionQrAsset(question);
+  }
   await questions.insertMany(DEFAULT_QUESTIONS.map(question => ({ ...question, createdAt: now, updatedAt: now })));
 }
 
@@ -210,13 +324,13 @@ app.post('/api/game/reset', requireAuth, async (request: AuthedRequest, response
 
 // Language → Piston runtime config
 const PISTON_CONFIG: Record<string, { language: string; version: string; fileName: string }> = {
-  python:     { language: 'python',     version: '3.10.0',  fileName: 'solution.py'  },
-  javascript: { language: 'javascript', version: '18.15.0', fileName: 'solution.js'  },
-  typescript: { language: 'typescript', version: '5.0.3',   fileName: 'solution.ts'  },
-  java:       { language: 'java',       version: '15.0.2',  fileName: 'Main.java'     },
-  c:          { language: 'c',          version: '10.2.0',  fileName: 'solution.c'   },
-  cpp:        { language: 'c++',        version: '10.2.0',  fileName: 'solution.cpp' },
-  go:         { language: 'go',         version: '1.16.2',  fileName: 'solution.go'  },
+  python: { language: 'python', version: '3.10.0', fileName: 'solution.py' },
+  javascript: { language: 'javascript', version: '18.15.0', fileName: 'solution.js' },
+  typescript: { language: 'typescript', version: '5.0.3', fileName: 'solution.ts' },
+  java: { language: 'java', version: '15.0.2', fileName: 'Main.java' },
+  c: { language: 'c', version: '10.2.0', fileName: 'solution.c' },
+  cpp: { language: 'c++', version: '10.2.0', fileName: 'solution.cpp' },
+  go: { language: 'go', version: '1.16.2', fileName: 'solution.go' },
 };
 
 app.post('/api/game/compile', requireAuth, async (request: AuthedRequest, response) => {
@@ -319,7 +433,7 @@ app.post('/api/game/compile', requireAuth, async (request: AuthedRequest, respon
       const data = await pistonRes.json() as any;
       const run = data.run ?? { stdout: '', stderr: '', code: 0 };
       const compile = data.compile ?? { code: 0, stderr: '' };
-      
+
       const stdout = (run.stdout || '').trim();
       const stderr = (run.stderr || compile.stderr || '').trim();
       const passed = stdout === (tc.output || '').trim() && (run.code === 0 && compile.code === 0);
@@ -349,14 +463,15 @@ app.get('/api/questions', async (_request, response) => {
   try {
     const questions = await getQuestionsCollection();
     const docs = await questions.find({}).sort({ round: 1 }).toArray();
-    
+
     // Mask sensitive fields for non-privileged players
     const masked = docs.map(({ _id, ...rest }) => {
       const q = rest as any;
       const p1 = q.p1 || {};
-      return { 
-        id: _id.toString(), 
+      return {
+        id: _id.toString(),
         ...q,
+        locationQrCode: undefined,
         p1: {
           title: p1.title || 'Untitled',
           language: p1.language || 'python',
@@ -372,6 +487,41 @@ app.get('/api/questions', async (_request, response) => {
     console.error('Questions error:', error);
     response.status(500).json({ error: 'Failed to fetch questions', details: error.message });
   }
+});
+
+app.post('/api/runner/verify-location-qr', requireAuth, async (request: AuthedRequest, response) => {
+  const auth = request.auth;
+  if (!auth || auth.role !== 'runner') {
+    response.status(403).json({ error: 'Only runners can verify location QR codes' });
+    return;
+  }
+
+  const { qrCode } = request.body as { qrCode?: string };
+  if (!qrCode?.trim()) {
+    response.status(400).json({ error: 'qrCode is required' });
+    return;
+  }
+
+  const team = await findTeamById(auth.teamId);
+  if (!team) {
+    response.status(404).json({ error: 'Team not found' });
+    return;
+  }
+
+  const questions = await getQuestionsCollection();
+  const question = await questions.findOne({ round: team.gameState.round + 1 });
+  if (!question) {
+    response.status(404).json({ error: 'No question found for this round' });
+    return;
+  }
+
+  const expectedQrCode = resolveQuestionLocationQrCode(question);
+  if (expectedQrCode.trim().toUpperCase() !== qrCode.trim().toUpperCase()) {
+    response.status(401).json({ error: 'Invalid location QR' });
+    return;
+  }
+
+  response.json({ ok: true });
 });
 
 // Runner verifies the QR passkey to unlock their minigame
@@ -492,7 +642,7 @@ app.put('/api/runner/location', requireAuth, async (request: AuthedRequest, resp
 app.get('/api/leaderboard', async (_request, response) => {
   const teams = await getTeamsCollection();
   const docs = await teams.find({}, { sort: { 'gameState.round': -1, 'gameState.startTime': 1 } }).toArray();
-  
+
   const leaderboard = docs.map(team => {
     const solvedCount = team.gameState.roundsDone.filter(Boolean).length;
     return {
@@ -507,7 +657,7 @@ app.get('/api/leaderboard', async (_request, response) => {
       currentLng: team.gameState.currentLng ?? null,
     };
   });
-  
+
   response.json({ leaderboard });
 });
 
@@ -606,7 +756,13 @@ app.get('/api/admin/questions', requireAdmin, async (_request: AdminAuthedReques
   try {
     const questions = await getQuestionsCollection();
     const docs = await questions.find({}).sort({ round: 1 }).toArray();
-    response.json({ questions: docs.map(({ _id, ...rest }) => ({ id: _id.toString(), ...rest })) });
+    response.json({
+      questions: docs.map(({ _id, ...rest }) => ({
+        id: _id.toString(),
+        ...rest,
+        locationQrCode: resolveQuestionLocationQrCode(rest as QuestionDocument),
+      })),
+    });
   } catch (error: any) {
     console.error('Admin questions error:', error);
     response.status(500).json({ error: 'Failed to fetch questions', details: error.message });
@@ -614,13 +770,14 @@ app.get('/api/admin/questions', requireAdmin, async (_request: AdminAuthedReques
 });
 
 app.post('/api/admin/questions', requireAdmin, async (request: AdminAuthedRequest, response) => {
-  const payload = request.body;
+  const payload = createQuestionPayload(request.body);
   const now = new Date();
   const questions = await getQuestionsCollection();
   try {
+    await generateQuestionQrAsset(payload);
     const result = await questions.insertOne({ ...payload, createdAt: now, updatedAt: now });
-    response.status(201).json({ id: result.insertedId.toString() });
-  } catch {
+    response.status(201).json({ id: result.insertedId.toString(), locationQrCode: payload.locationQrCode });
+  } catch (error) {
     response.status(400).json({ error: 'Invalid question payload or duplicate round number' });
   }
 });
@@ -632,9 +789,16 @@ app.put('/api/admin/questions/:id', requireAdmin, async (request: AdminAuthedReq
     return;
   }
 
-  const payload = request.body;
   const questions = await getQuestionsCollection();
   try {
+    const existing = await questions.findOne({ _id: new ObjectId(questionId) });
+    if (!existing) {
+      response.status(404).json({ error: 'Question not found' });
+      return;
+    }
+
+    const payload = createQuestionPayload(request.body, existing);
+    await generateQuestionQrAsset(payload);
     await questions.updateOne({ _id: new ObjectId(questionId) }, { $set: { ...payload, updatedAt: new Date() } });
     response.json({ ok: true });
   } catch {
@@ -689,7 +853,7 @@ async function main() {
   await ensureIndexes();
   await seedQuestionsIfEmpty();
 
-  const server = app.listen(port, '0.0.0.0',() => {
+  const server = app.listen(port, '0.0.0.0', () => {
     console.log(`Backend listening on http://localhost:${port}`);
   });
 

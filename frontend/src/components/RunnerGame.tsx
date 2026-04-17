@@ -5,7 +5,7 @@ import {
   Star, Fingerprint, QrCode, Shield, ChevronRight, AlertCircle, Sparkles,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { verifyRunnerPasskey, completeRunnerGame } from '@/lib/api';
+import { verifyRunnerLocationQr, verifyRunnerPasskey, completeRunnerGame } from '@/lib/api';
 import { QRScanner } from '@/components/QRScanner';
 import { MapPin } from 'lucide-react';
 
@@ -236,6 +236,7 @@ export function RunnerGame({ token, currentRoundIndex, totalRounds, onRoundCompl
   const [gameType, setGameType] = useState<GameType>('tap');
   const [error, setError] = useState<string | null>(null);
   const [verifying, setVerifying] = useState(false);
+  const [verifyingLocationQr, setVerifyingLocationQr] = useState(false);
   const [completing, setCompleting] = useState(false);
 
   const gameInfo: Record<GameType, { title: string; icon: React.ReactNode; color: string }> = {
@@ -318,13 +319,19 @@ export function RunnerGame({ token, currentRoundIndex, totalRounds, onRoundCompl
       {screen === 'qr_scanner' && (
         <motion.div key="qr_scanner" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="max-w-md mx-auto">
           <QRScanner
-            onScan={(text) => {
-              if (text.trim() === "QUEST-AUTHORIZED-LOCATION") {
+            onScan={async (text) => {
+              if (verifyingLocationQr) return;
+
+              setVerifyingLocationQr(true);
+              try {
+                await verifyRunnerLocationQr(token, text.trim());
                 setError(null);
                 setScreen('passkey');
-              } else {
-                setError('Invalid Location QR. Area Restricted.');
+              } catch (err) {
+                setError(err instanceof Error ? err.message : 'Invalid Location QR. Area Restricted.');
                 setScreen('location');
+              } finally {
+                setVerifyingLocationQr(false);
               }
             }}
             onClose={() => setScreen('location')}

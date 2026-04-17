@@ -54,7 +54,12 @@ export default function App() {
     role === 'runner' ? (gameState?.stage ?? null) : null
   );
 
-  // Use sync scroll for code/trace if needed in future
+  // Sync top-level location changes on popstate
+  useEffect(() => {
+    const handlePopState = () => setPathname(window.location.pathname);
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   useEffect(() => {
     if (!role) return;
@@ -282,13 +287,6 @@ export default function App() {
     if (gameState!.round < rounds.length - 1) {
       updateState({ round: gameState!.round + 1, stage: 'p1_solve', handoff: null });
     } else updateState({ stage: 'complete' });
-  };
-
-  const reset = async () => {
-    await resetGame();
-    setConsoleOutput(null);
-    setIsRunning(false);
-    if (rounds.length) initEditorForRound(rounds[0]);
   };
 
   const isMyTurn = (role === 'solver' && ['p1_solve', 'p1_solved'].includes(gameState!.stage)) ||
@@ -658,10 +656,6 @@ export default function App() {
                             ))}
                           </div>
                           
-                          <Button variant="ink" className="w-full font-bold uppercase tracking-[0.2em] h-12" onClick={reset}>
-                            <RefreshCw className="mr-2 h-4 w-4" />
-                            Restart Session
-                          </Button>
                         </div>
                       </div>
                     )}

@@ -26,6 +26,10 @@ import type { QuestionLanguage } from '@/lib/api';
 
 const ADMIN_SESSION_KEY = 'quest-admin-session';
 
+function buildLocationQrCode(round: number) {
+  return `QUEST-LOC-R${Math.max(1, Math.trunc(round || 1))}`;
+}
+
 function createEmptyQuestion(nextRound: number): RoundQuestion {
   return {
     id: '',
@@ -34,6 +38,7 @@ function createEmptyQuestion(nextRound: number): RoundQuestion {
     coord: { lat: '', lng: '', place: '' },
     volunteer: { name: '', initials: '', bg: 'bg-indigo-100', color: 'text-indigo-700' },
     qrPasskey: '',
+    locationQrCode: '',
     cx: 0.5,
     cy: 0.5,
   };
@@ -161,7 +166,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
 
   const handleEditQuestion = (question: RoundQuestion) => {
     setEditingQuestionId(question.id || null);
-    setDraftQuestion(question);
+    setDraftQuestion({ ...question, locationQrCode: question.locationQrCode || buildLocationQrCode(question.round) });
   };
 
   const handleSaveQuestion = async () => {
@@ -505,6 +510,18 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                     </div>
                   </div>
 
+                  <div className="space-y-2">
+                    <label className="text-[8px] uppercase tracking-[0.3em] text-white/30 ml-1">Location_QR_Payload</label>
+                    <Input
+                      readOnly
+                      value={draftQuestion.locationQrCode || buildLocationQrCode(draftQuestion.round)}
+                      className="bg-white/[0.02] border-white/5 h-11 font-mono text-xs uppercase tracking-widest text-[#95FF00] focus:border-[#95FF00]/30 transition-colors"
+                    />
+                    <p className="text-[9px] text-white/35 font-mono uppercase tracking-widest">
+                      Auto-generated per question. Print a QR with this exact value for the runner&apos;s location.
+                    </p>
+                  </div>
+
                   {/* Component A & B */}
                   <div className="grid md:grid-cols-2 gap-8 pt-4">
                     {/* Solver Side */}
@@ -672,6 +689,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                           <div className="text-[10px] text-white/30 font-mono flex gap-4 uppercase">
                             <span>Target: {question.coord.place}</span>
                             <span>Key: {question.qrPasskey}</span>
+                            <span>QR: {question.locationQrCode || buildLocationQrCode(question.round)}</span>
                           </div>
                         </div>
                       </div>

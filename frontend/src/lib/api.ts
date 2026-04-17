@@ -69,6 +69,14 @@ export async function updateGameState(token: string, updates: GameStateUpdate) {
     body: JSON.stringify(updates),
   }, token);
 }
+
+export async function verifyRunnerLocationQr(token: string, qrCode: string) {
+  return requestJson<{ ok: boolean }>('/runner/verify-location-qr', {
+    method: 'POST',
+    body: JSON.stringify({ qrCode }),
+  }, token);
+}
+
 export async function verifyRunnerPasskey(token: string, passkey: string) {
   return requestJson<{ ok: boolean; gameType: string }>('/runner/verify-passkey', {
     method: 'POST',
@@ -131,6 +139,7 @@ export interface RoundQuestion {
     color: string;
   };
   qrPasskey: string;
+  locationQrCode?: string;
   cx: number;
   cy: number;
 }
