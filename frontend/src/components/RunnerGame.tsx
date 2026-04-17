@@ -11,7 +11,7 @@ import { MapPin } from 'lucide-react';
 
 // ─── HAPTIC UTILITY ───────────────────────────────────────────
 function haptic(pattern: number | number[] = 50) {
-  try { navigator.vibrate(pattern); } catch {}
+  try { navigator.vibrate(pattern); } catch { }
 }
 
 // ─── TAP GAME ─────────────────────────────────────────────────
@@ -128,9 +128,8 @@ const MemoryGame = ({ onComplete }: { onComplete: () => void }) => {
             <motion.div
               key={i} whileTap={{ scale: 0.9 }}
               onClick={() => flipped.length < 2 && !isFlipped && !isSolved && (haptic(15), setFlipped((f) => [...f, i]))}
-              className={`h-20 rounded-xl flex items-center justify-center text-2xl cursor-pointer transition-all duration-200 select-none border ${
-                isFlipped || isSolved ? 'bg-[#95FF00]/20 border-[#95FF00]/40 text-white scale-105' : 'bg-zinc-900 border-zinc-800 hover:bg-zinc-800'
-              }`}
+              className={`h-20 rounded-xl flex items-center justify-center text-2xl cursor-pointer transition-all duration-200 select-none border ${isFlipped || isSolved ? 'bg-[#95FF00]/20 border-[#95FF00]/40 text-white scale-105' : 'bg-zinc-900 border-zinc-800 hover:bg-zinc-800'
+                }`}
             >
               {isFlipped || isSolved ? symbol : <span className="text-zinc-600 text-lg">?</span>}
             </motion.div>
@@ -240,9 +239,9 @@ export function RunnerGame({ token, currentRoundIndex, totalRounds, onRoundCompl
   const [completing, setCompleting] = useState(false);
 
   const gameInfo: Record<GameType, { title: string; icon: React.ReactNode; color: string }> = {
-    tap:     { title: 'TARGET LOCK',    icon: <Crosshair className="w-6 h-6 text-[#95FF00]" />,  color: 'text-[#95FF00]' },
-    memory:  { title: 'NEURAL DECODE',  icon: <Brain className="w-6 h-6 text-blue-400" />,        color: 'text-blue-400' },
-    pattern: { title: 'CIPHER CRACK',   icon: <LayoutGrid className="w-6 h-6 text-purple-400" />, color: 'text-purple-400' },
+    tap: { title: 'TARGET LOCK', icon: <Crosshair className="w-6 h-6 text-[#95FF00]" />, color: 'text-[#95FF00]' },
+    memory: { title: 'NEURAL DECODE', icon: <Brain className="w-6 h-6 text-blue-400" />, color: 'text-blue-400' },
+    pattern: { title: 'CIPHER CRACK', icon: <LayoutGrid className="w-6 h-6 text-purple-400" />, color: 'text-purple-400' },
   };
 
   const handleVerifyPasskey = async () => {

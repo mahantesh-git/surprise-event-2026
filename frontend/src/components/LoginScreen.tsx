@@ -49,7 +49,7 @@ export function LoginScreen({
   return (
     <div className="relative min-h-screen bg-[#15171A] text-white overflow-hidden flex flex-col justify-between p-8 md:p-16">
       <GridBackground />
-      
+
       {/* Top Section */}
       <div className="relative z-10">
         <LineMask delay={0.05}>
@@ -86,7 +86,7 @@ export function LoginScreen({
           className="corner-card w-full max-w-md bg-black/40 backdrop-blur-xl p-10 border border-white/5 relative"
         >
           <div className="corner-br" /> <div className="corner-bl" />
-          
+
           <div className="space-y-6">
             <div className="space-y-4">
               <div className="space-y-1.5">
@@ -98,7 +98,7 @@ export function LoginScreen({
                   className="rounded-none border-white/10 bg-black/20 text-white font-mono placeholder:text-white/10 h-12 focus:border-[#95FF00]/50 transition-all"
                 />
               </div>
-              
+
               <div className="space-y-1.5">
                 <label className="font-mono text-[9px] uppercase tracking-widest text-white/40 ml-1">Access_Key</label>
                 <Input
@@ -122,7 +122,7 @@ export function LoginScreen({
               </motion.div>
             )}
 
-            <Button 
+            <Button
               onClick={onLogin}
               className="w-full h-14 bg-[#95FF00] hover:bg-[#85e600] text-black font-bold uppercase tracking-[0.3em] rounded-none transition-all group relative overflow-hidden"
             >
@@ -150,7 +150,7 @@ export function LoginScreen({
             Node: Terminal_001 <span className="text-white/20 mx-1">/</span> Latency: 24ms
           </span>
         </div>
-        
+
         <button
           onClick={onAdminClick}
           className="font-mono text-[10px] text-white/40 hover:text-[#95FF00] uppercase tracking-[0.2em] transition-colors flex items-center gap-2"

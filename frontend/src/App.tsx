@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  Zap, 
-  CheckCircle2, 
-  MapPin, 
-  QrCode, 
-  RefreshCw 
+import {
+  Zap,
+  CheckCircle2,
+  MapPin,
+  QrCode,
+  RefreshCw
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -49,11 +49,11 @@ export default function App() {
   const [finalQrError, setFinalQrError] = useState<string | null>(null);
   const [finalQrScannerOpen, setFinalQrScannerOpen] = useState(false);
   const [isVerifyingFinalQr, setIsVerifyingFinalQr] = useState(false);
-  const [consoleOutput, setConsoleOutput] = useState<{ 
-    stdout: string; 
-    stderr: string; 
+  const [consoleOutput, setConsoleOutput] = useState<{
+    stdout: string;
+    stderr: string;
     matched: boolean;
-    testResults?: Array<{ input: string; passed: boolean; stdout: string; stderr: string }> 
+    testResults?: Array<{ input: string; passed: boolean; stdout: string; stderr: string }>
   } | null>(null);
   const [feedback, setFeedback] = useState<{ type: 'ok' | 'err', msg: string } | null>(null);
   const [notification, setNotification] = useState<{ id: number; message: string; tone: 'info' | 'success' } | null>(null);
@@ -355,7 +355,7 @@ export default function App() {
           window.history.pushState({}, '', '/admin');
           setPathname('/admin');
         }} />
-        
+
         <div className="min-h-screen flex items-center justify-center px-4 sm:px-6 pt-20 relative z-10 text-white bg-[#15171A] reveal-up">
           <div className="corner-card w-full max-w-md bg-black/40 backdrop-blur-xl p-8 border border-white/5">
             <div className="corner-br" /> <div className="corner-bl" />
@@ -367,7 +367,7 @@ export default function App() {
                     <span className="font-mono text-[10px] tracking-[0.3em] text-[#95FF00] uppercase">Authorized Access Only</span>
                   </div>
                   <h1 className="text-5xl font-bold uppercase tracking-tighter font-space-grotesk leading-none">
-                    <span className="text-white/20 line-through decoration-[#95FF00] decoration-[4px]">QUEST</span><br/>
+                    <span className="text-white/20 line-through decoration-[#95FF00] decoration-[4px]">QUEST</span><br />
                     <span className="text-white">LOGIN</span>
                   </h1>
                 </div>
@@ -377,20 +377,20 @@ export default function App() {
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              <input 
-                placeholder="TEAM_NAME" 
-                value={teamName} 
+              <input
+                placeholder="TEAM_NAME"
+                value={teamName}
                 onChange={(event) => setTeamName(event.target.value)}
                 className="w-full high-clearance-input text-center h-14"
                 autoComplete="off"
                 spellCheck="false"
                 disabled={isLoggingIn}
               />
-              <input 
-                placeholder="ACCESS_PASSWORD" 
-                type="password" 
-                value={password} 
-                onChange={(event) => setPassword(event.target.value)} 
+              <input
+                placeholder="ACCESS_PASSWORD"
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
                 onKeyDown={(event) => event.key === 'Enter' && !isLoggingIn && handleLogin()}
                 className="w-full high-clearance-input text-center h-14"
                 autoComplete="off"
@@ -401,7 +401,7 @@ export default function App() {
                   {loginError}
                 </div>
               )}
-              <Button 
+              <Button
                 className="w-full font-bold uppercase tracking-[0.2em] h-14 mt-4"
                 variant="sage"
                 size="md"
@@ -484,11 +484,11 @@ export default function App() {
 
       const allPassed = result.testResults?.every(r => r.passed) ?? false;
 
-      setConsoleOutput({ 
-        stdout: result.testResults?.[result.testResults.length - 1]?.stdout || '', 
-        stderr: result.testResults?.[result.testResults.length - 1]?.stderr || '', 
+      setConsoleOutput({
+        stdout: result.testResults?.[result.testResults.length - 1]?.stdout || '',
+        stderr: result.testResults?.[result.testResults.length - 1]?.stderr || '',
         matched: allPassed,
-        testResults: result.testResults 
+        testResults: result.testResults
       });
 
       if (allPassed) {
@@ -559,8 +559,8 @@ export default function App() {
   };
 
   const isMyTurn = (role === 'solver' && ['p1_solve', 'p1_solved'].includes(gameState!.stage)) ||
-                   (role === 'runner' && ['runner_travel', 'runner_game', 'runner_done'].includes(gameState!.stage))
-                   || gameState!.stage === 'final_qr';
+    (role === 'runner' && ['runner_travel', 'runner_game', 'runner_done'].includes(gameState!.stage))
+    || gameState!.stage === 'final_qr';
 
   return (
     <>
@@ -653,15 +653,15 @@ export default function App() {
 
       <PersistentProgress totalRounds={rounds.length} currentRound={gameState?.round ?? 0} roundsDone={gameState?.roundsDone ?? []} />
       <GridBackground />
-      <Navbar 
-        brandName="QUEST" 
+      <Navbar
+        brandName="QUEST"
         ctaText="SYSTEM"
         metaText={role?.toUpperCase()}
-        onMenuOpen={() => {}}
+        onMenuOpen={() => { }}
         startTime={gameState?.startTime}
         finishTime={gameState?.finishTime}
       />
-      
+
       <div className="min-h-screen pt-16 pb-8 px-4 sm:px-6 relative z-10 text-white bg-[#15171A] reveal-up overflow-x-hidden">
         <div className="w-full">
           {/* Header */}
@@ -686,422 +686,422 @@ export default function App() {
           {/* Main Content */}
           <AnimatePresence mode="wait">
             <motion.div key={gameState!.stage + gameState!.round} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-                {!isMyTurn && gameState!.stage !== 'complete' ? (
-                  <div className="corner-card border-[#95FF00]/20 bg-[#95FF00]/5 p-16 text-center space-y-6">
-                    <div className="corner-br" /> <div className="corner-bl" />
-                    <div className="relative w-20 h-20 mx-auto">
-                      <div className="absolute inset-0 border border-[#95FF00] animate-ping opacity-20" />
-                      <div className="w-full h-full bg-[#95FF00]/10 border border-[#95FF00]/40 flex items-center justify-center">
-                        {role === 'solver' ? <MapPin className="text-[#95FF00] animate-pulse" /> : <Zap className="text-[#95FF00] animate-pulse" />}
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <h2 className="text-[#95FF00] text-xl font-bold tracking-widest uppercase">AWAITING OPERATIVE</h2>
-                      <p className="uppercase tracking-[0.1em] text-[10px] text-white/40">
-                        Node 0{role === 'solver' ? '2' : '01'} is currently processing objective...
-                      </p>
+              {!isMyTurn && gameState!.stage !== 'complete' ? (
+                <div className="corner-card border-[#95FF00]/20 bg-[#95FF00]/5 p-16 text-center space-y-6">
+                  <div className="corner-br" /> <div className="corner-bl" />
+                  <div className="relative w-20 h-20 mx-auto">
+                    <div className="absolute inset-0 border border-[#95FF00] animate-ping opacity-20" />
+                    <div className="w-full h-full bg-[#95FF00]/10 border border-[#95FF00]/40 flex items-center justify-center">
+                      {role === 'solver' ? <MapPin className="text-[#95FF00] animate-pulse" /> : <Zap className="text-[#95FF00] animate-pulse" />}
                     </div>
                   </div>
-                ) : (
-                  <>
-                    {gameState!.stage === 'p1_solve' && (
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-                        {/* Left: Problem Statement */}
-                        <div className="corner-card bg-black/40 backdrop-blur-xl p-8 border border-white/5 relative h-full">
-                          <div className="corner-br" /> <div className="corner-bl" />
-                          <div className="space-y-6">
-                            <div className="flex flex-col gap-2">
-                              <span className="label-technical text-[#95FF00]">Mission Objective</span>
-                              <h2 className="text-xl font-bold tracking-widest uppercase">{currentRound.p1.title}</h2>
-                            </div>
-
-                            {/* Problem Description */}
-                            <div className="p-4 border border-white/10 bg-white/[0.02] space-y-2">
-                              <div className="flex justify-between items-center mb-2">
-                                <span className="label-technical block text-white/40 uppercase">Problem Statement</span>
-                              </div>
-                              <p className="text-sm leading-relaxed text-white/70 font-mono whitespace-pre-wrap">
-                                {currentRound.p1.hint}
-                              </p>
-                            </div>
-
+                  <div className="space-y-2">
+                    <h2 className="text-[#95FF00] text-xl font-bold tracking-widest uppercase">AWAITING OPERATIVE</h2>
+                    <p className="uppercase tracking-[0.1em] text-[10px] text-white/40">
+                      Node 0{role === 'solver' ? '2' : '01'} is currently processing objective...
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {gameState!.stage === 'p1_solve' && (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+                      {/* Left: Problem Statement */}
+                      <div className="corner-card bg-black/40 backdrop-blur-xl p-8 border border-white/5 relative h-full">
+                        <div className="corner-br" /> <div className="corner-bl" />
+                        <div className="space-y-6">
+                          <div className="flex flex-col gap-2">
+                            <span className="label-technical text-[#95FF00]">Mission Objective</span>
+                            <h2 className="text-xl font-bold tracking-widest uppercase">{currentRound.p1.title}</h2>
                           </div>
+
+                          {/* Problem Description */}
+                          <div className="p-4 border border-white/10 bg-white/[0.02] space-y-2">
+                            <div className="flex justify-between items-center mb-2">
+                              <span className="label-technical block text-white/40 uppercase">Problem Statement</span>
+                            </div>
+                            <p className="text-sm leading-relaxed text-white/70 font-mono whitespace-pre-wrap">
+                              {currentRound.p1.hint}
+                            </p>
+                          </div>
+
+                        </div>
+                      </div>
+
+                      {/* Right: Code Editor + Console */}
+                      <div className="space-y-4">
+                        {/* File label */}
+                        <div className="flex items-center justify-between px-1">
+                          <span className="label-technical text-[#95FF00]">Solution Editor</span>
+                          {devMode && (
+                            <button
+                              className="text-[9px] font-mono uppercase tracking-widest text-white/30 hover:text-[#95FF00] transition-colors"
+                              onClick={() => setP1Code(currentRound.p1.ans)}
+                            >
+                              [DEV: autofill]
+                            </button>
+                          )}
                         </div>
 
-                        {/* Right: Code Editor + Console */}
-                        <div className="space-y-4">
-                          {/* File label */}
-                          <div className="flex items-center justify-between px-1">
-                            <span className="label-technical text-[#95FF00]">Solution Editor</span>
-                            {devMode && (
-                              <button
-                                className="text-[9px] font-mono uppercase tracking-widest text-white/30 hover:text-[#95FF00] transition-colors"
-                                onClick={() => setP1Code(currentRound.p1.ans)}
-                              >
-                                [DEV: autofill]
-                              </button>
+                        {/* Monaco Editor */}
+                        <CodeEditor
+                          value={p1Code || LANGUAGE_TEMPLATES[selectedLanguage]}
+                          onChange={setP1Code}
+                          language={selectedLanguage}
+                          onLanguageChange={(lang, starter) => {
+                            setSelectedLanguage(lang);
+                            setP1Code(starter);
+                            setConsoleOutput(null);
+                          }}
+                          onRun={runCode}
+                          height="340px"
+                          defaultLanguage={(currentRound.p1.language ?? 'python') as SupportedLanguage}
+                          defaultCode={currentRound.p1.code}
+                        />
+
+                        {/* Run Button */}
+                        <Button
+                          className="w-full font-bold uppercase tracking-[0.2em] h-14"
+                          variant="sage"
+                          size="md"
+                          onClick={runCode}
+                          disabled={isRunning || !p1Code.trim()}
+                        >
+                          {isRunning ? (
+                            <span className="flex items-center gap-2">
+                              <span className="w-3 h-3 border border-black/50 border-t-transparent rounded-full animate-spin" />
+                              EXECUTING...
+                            </span>
+                          ) : '▶  RUN CODE'}
+                        </Button>
+
+                        {/* Console Output */}
+                        <div className="corner-card bg-[#0B0C0D] border-white/5 p-5 min-h-[140px] flex flex-col">
+                          <span className="label-technical mb-3 block text-[#95FF00]/60">Execution Console</span>
+                          <div className="font-mono text-[11px] flex-1 overflow-y-auto custom-scrollbar space-y-1">
+                            {!consoleOutput && !isRunning && (
+                              <div className="text-white/20 flex items-center gap-2">
+                                <span className="w-1 h-3 bg-white/20 animate-pulse" />
+                                AWAITING EXECUTION...
+                              </div>
                             )}
-                          </div>
-
-                          {/* Monaco Editor */}
-                          <CodeEditor
-                            value={p1Code || LANGUAGE_TEMPLATES[selectedLanguage]}
-                            onChange={setP1Code}
-                            language={selectedLanguage}
-                            onLanguageChange={(lang, starter) => {
-                              setSelectedLanguage(lang);
-                              setP1Code(starter);
-                              setConsoleOutput(null);
-                            }}
-                            onRun={runCode}
-                            height="340px"
-                            defaultLanguage={(currentRound.p1.language ?? 'python') as SupportedLanguage}
-                            defaultCode={currentRound.p1.code}
-                          />
-
-                          {/* Run Button */}
-                          <Button
-                            className="w-full font-bold uppercase tracking-[0.2em] h-14"
-                            variant="sage"
-                            size="md"
-                            onClick={runCode}
-                            disabled={isRunning || !p1Code.trim()}
-                          >
-                            {isRunning ? (
-                              <span className="flex items-center gap-2">
-                                <span className="w-3 h-3 border border-black/50 border-t-transparent rounded-full animate-spin" />
-                                EXECUTING...
-                              </span>
-                            ) : '▶  RUN CODE'}
-                          </Button>
-
-                          {/* Console Output */}
-                          <div className="corner-card bg-[#0B0C0D] border-white/5 p-5 min-h-[140px] flex flex-col">
-                            <span className="label-technical mb-3 block text-[#95FF00]/60">Execution Console</span>
-                            <div className="font-mono text-[11px] flex-1 overflow-y-auto custom-scrollbar space-y-1">
-                              {!consoleOutput && !isRunning && (
-                                <div className="text-white/20 flex items-center gap-2">
-                                  <span className="w-1 h-3 bg-white/20 animate-pulse" />
-                                  AWAITING EXECUTION...
-                                </div>
-                              )}
-                              {isRunning && (
-                                <div className="text-[#95FF00]/60 flex items-center gap-2 animate-pulse">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-[#95FF00]" />
-                                  Running on Piston sandbox...
-                                </div>
-                              )}
-                              {consoleOutput && (
-                                <>
-                                  {consoleOutput.testResults && (
-                                    <div className="mb-4 space-y-2">
-                                      <div className="text-[10px] font-mono uppercase tracking-widest text-white/40 mb-2 underline decoration-[#95FF00]/20">Test Suite Execution</div>
-                                      <div className="grid grid-cols-1 gap-1">
-                                        {consoleOutput.testResults.map((tr, idx) => (
-                                          <div key={idx} className={cn(
-                                            "flex items-center justify-between p-2 rounded-sm font-mono text-[10px]",
-                                            tr.passed ? "bg-[#95FF00]/10 border border-[#95FF00]/20" : "bg-rose-500/10 border border-rose-500/20"
-                                          )}>
-                                            <div className="flex items-center gap-2">
-                                              <span className={tr.passed ? "text-[#95FF00]" : "text-rose-500"}>
-                                                {tr.passed ? "●" : "×"}
-                                              </span>
-                                              <span className="text-white/60">CASE_{idx + 1}</span>
-                                              <span className="text-white/20 whitespace-nowrap">INPUT: "{tr.input}"</span>
-                                            </div>
-                                            <div className="font-bold">
-                                              {tr.passed ? (
-                                                <span className="text-[#95FF00]">PASSED</span>
-                                              ) : (
-                                                <span className="text-rose-500">FAILED</span>
-                                              )}
-                                            </div>
+                            {isRunning && (
+                              <div className="text-[#95FF00]/60 flex items-center gap-2 animate-pulse">
+                                <span className="w-1.5 h-1.5 rounded-full bg-[#95FF00]" />
+                                Running on Piston sandbox...
+                              </div>
+                            )}
+                            {consoleOutput && (
+                              <>
+                                {consoleOutput.testResults && (
+                                  <div className="mb-4 space-y-2">
+                                    <div className="text-[10px] font-mono uppercase tracking-widest text-white/40 mb-2 underline decoration-[#95FF00]/20">Test Suite Execution</div>
+                                    <div className="grid grid-cols-1 gap-1">
+                                      {consoleOutput.testResults.map((tr, idx) => (
+                                        <div key={idx} className={cn(
+                                          "flex items-center justify-between p-2 rounded-sm font-mono text-[10px]",
+                                          tr.passed ? "bg-[#95FF00]/10 border border-[#95FF00]/20" : "bg-rose-500/10 border border-rose-500/20"
+                                        )}>
+                                          <div className="flex items-center gap-2">
+                                            <span className={tr.passed ? "text-[#95FF00]" : "text-rose-500"}>
+                                              {tr.passed ? "●" : "×"}
+                                            </span>
+                                            <span className="text-white/60">CASE_{idx + 1}</span>
+                                            <span className="text-white/20 whitespace-nowrap">INPUT: "{tr.input}"</span>
                                           </div>
-                                        ))}
-                                      </div>
+                                          <div className="font-bold">
+                                            {tr.passed ? (
+                                              <span className="text-[#95FF00]">PASSED</span>
+                                            ) : (
+                                              <span className="text-rose-500">FAILED</span>
+                                            )}
+                                          </div>
+                                        </div>
+                                      ))}
                                     </div>
-                                  )}
+                                  </div>
+                                )}
 
-                                  {consoleOutput.matched && (
-                                    <div className="text-[#95FF00] font-bold text-[10px] uppercase tracking-widest mb-2 flex items-center gap-2">
-                                      <CheckCircle2 className="h-3 w-3" />
-                                      ALL TESTS PASSED — UPLOADING DATA...
-                                    </div>
-                                  )}
-                                  {consoleOutput.stdout && (
-                                    <div className="space-y-1">
-                                      <div className="text-[9px] font-mono uppercase tracking-widest text-white/20">Standard Output (Last Case)</div>
-                                      <pre className={cn('p-3 bg-black/40 border border-white/5 text-[11px] whitespace-pre-wrap break-all', consoleOutput.matched ? 'text-[#95FF00]/80' : 'text-white/70')}>{consoleOutput.stdout}</pre>
-                                    </div>
-                                  )}
-                                  {consoleOutput.stderr && (
-                                    <pre className="text-rose-400 text-[11px] whitespace-pre-wrap break-all mt-1">{consoleOutput.stderr}</pre>
-                                  )}
-                                  {!consoleOutput.matched && !consoleOutput.stderr && consoleOutput.stdout && (
-                                    <div className="text-rose-400 text-[10px] mt-2 uppercase tracking-widest">
-                                      Verification Failed: Logic mismatch detected.
-                                    </div>
-                                  )}
-                                </>
-                              )}
-                            </div>
+                                {consoleOutput.matched && (
+                                  <div className="text-[#95FF00] font-bold text-[10px] uppercase tracking-widest mb-2 flex items-center gap-2">
+                                    <CheckCircle2 className="h-3 w-3" />
+                                    ALL TESTS PASSED — UPLOADING DATA...
+                                  </div>
+                                )}
+                                {consoleOutput.stdout && (
+                                  <div className="space-y-1">
+                                    <div className="text-[9px] font-mono uppercase tracking-widest text-white/20">Standard Output (Last Case)</div>
+                                    <pre className={cn('p-3 bg-black/40 border border-white/5 text-[11px] whitespace-pre-wrap break-all', consoleOutput.matched ? 'text-[#95FF00]/80' : 'text-white/70')}>{consoleOutput.stdout}</pre>
+                                  </div>
+                                )}
+                                {consoleOutput.stderr && (
+                                  <pre className="text-rose-400 text-[11px] whitespace-pre-wrap break-all mt-1">{consoleOutput.stderr}</pre>
+                                )}
+                                {!consoleOutput.matched && !consoleOutput.stderr && consoleOutput.stdout && (
+                                  <div className="text-rose-400 text-[10px] mt-2 uppercase tracking-widest">
+                                    Verification Failed: Logic mismatch detected.
+                                  </div>
+                                )}
+                              </>
+                            )}
                           </div>
                         </div>
                       </div>
-                    )}
+                    </div>
+                  )}
 
-                    {/* P1 Solved - Show coordinates */}
-                    {gameState!.stage === 'p1_solved' && (
-                      <div className="corner-card bg-black/40 backdrop-blur-xl p-8 border border-white/5 relative overflow-hidden">
-                        <div className="corner-br" /> <div className="corner-bl" />
-                        <div className="space-y-6">
-                          <div className="text-center">
-                            <CheckCircle2 className="h-12 w-12 text-[#95FF00] mx-auto mb-4" />
-                            <h2 className="text-xl font-bold tracking-widest uppercase">Puzzle Solved!</h2>
-                            <p className="text-[10px] text-white/40 uppercase tracking-widest">Coordinates revealed for the Runner.</p>
+                  {/* P1 Solved - Show coordinates */}
+                  {gameState!.stage === 'p1_solved' && (
+                    <div className="corner-card bg-black/40 backdrop-blur-xl p-8 border border-white/5 relative overflow-hidden">
+                      <div className="corner-br" /> <div className="corner-bl" />
+                      <div className="space-y-6">
+                        <div className="text-center">
+                          <CheckCircle2 className="h-12 w-12 text-[#95FF00] mx-auto mb-4" />
+                          <h2 className="text-xl font-bold tracking-widest uppercase">Puzzle Solved!</h2>
+                          <p className="text-[10px] text-white/40 uppercase tracking-widest">Coordinates revealed for the Runner.</p>
+                        </div>
+
+                        <div className="space-y-4">
+                          {/* Coordinates Card */}
+                          <div className="corner-card bg-[#95FF00]/5 border border-[#95FF00]/20 p-4 relative">
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <span className="text-[10px] font-bold text-[#95FF00]/60 uppercase">Latitude</span>
+                                <div className="font-mono text-m text-white">{currentRound.coord.lat}</div>
+                              </div>
+                              <div>
+                                <span className="text-[10px] font-bold text-[#95FF00]/60 uppercase">Longitude</span>
+                                <div className="font-mono text-m text-white">{currentRound.coord.lng}</div>
+                              </div>
+                            </div>
+                            <div className="mt-4 pt-3 border-t border-[#95FF00]/20 flex items-start gap-3">
+                              <MapPin className="h-5 w-5 text-[#95FF00] flex-shrink-0 mt-0.5" />
+                              <div className="flex-1">
+                                <div className="font-bold text-s uppercase tracking-wider">{currentRound.coord.place}</div>
+                                <div className="text-[10px] text-white/40 uppercase">Target: {currentRound.volunteer.name}</div>
+                              </div>
+                            </div>
                           </div>
-                          
-                          <div className="space-y-4">
-                            {/* Coordinates Card */}
-                            <div className="corner-card bg-[#95FF00]/5 border border-[#95FF00]/20 p-4 relative">
-                              <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                  <span className="text-[10px] font-bold text-[#95FF00]/60 uppercase">Latitude</span>
-                                  <div className="font-mono text-m text-white">{currentRound.coord.lat}</div>
-                                </div>
-                                <div>
-                                  <span className="text-[10px] font-bold text-[#95FF00]/60 uppercase">Longitude</span>
-                                  <div className="font-mono text-m text-white">{currentRound.coord.lng}</div>
-                                </div>
+
+                          {/* Passkey */}
+                          <div className="corner-card bg-[#95FF00]/10 border border-[#95FF00] p-4 text-center">
+                            <div className="text-[10px] font-bold text-[#95FF00] uppercase tracking-[0.2em] mb-1">Passkey</div>
+                            <div className="font-mono text-base sm:text-xl font-bold tracking-[0.22em] sm:tracking-[0.4em] text-white break-all">{currentRound.qrPasskey}</div>
+                          </div>
+
+                          <Button
+                            className="w-full font-bold uppercase tracking-[0.2em] h-12"
+                            variant="emerald"
+                            size="md"
+                            onClick={handleSyncRunnerNode}
+                            disabled={isSyncingRunner}
+                          >
+                            {isSyncingRunner ? (
+                              <span className="flex items-center gap-2">
+                                <span className="w-3 h-3 border border-[#95FF00]/50 border-t-transparent rounded-full animate-spin" />
+                                Synchronizing...
+                              </span>
+                            ) : (
+                              'Synchronize Node 02'
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Runner Travel - Runner navigates to location */}
+                  {gameState!.stage === 'runner_travel' && (
+                    <div className="corner-card bg-black/40 backdrop-blur-xl p-8 border border-white/5 relative overflow-hidden">
+                      <div className="corner-br" /> <div className="corner-bl" />
+                      <div className="space-y-6">
+                        <div className="flex flex-col gap-2">
+                          <Badge className="w-fit mb-2 bg-[#95FF00]/10 text-white border border-[#95FF00] text-[10px] uppercase">Round {gameState!.round + 1}</Badge>
+                          <h2 className="text-xl font-bold tracking-widest uppercase">Travel to Location</h2>
+                          <p className="text-[10px] text-white/40 uppercase tracking-widest leading-relaxed">Find the volunteer at the coordinates provided below.</p>
+                        </div>
+
+                        <div className="space-y-4">
+                          {gameState!.handoff && (
+                            <div className="corner-card border-[#95FF00] bg-[#95FF00]/5 p-4 space-y-2 text-s relative">
+                              <div className="corner-tr" />
+                              <div><span className="text-[10px] uppercase text-[#95FF00]/60 font-bold mr-2">Volunteer:</span> {gameState!.handoff.volunteer}</div>
+                              <div><span className="text-[10px] uppercase text-[#95FF00]/60 font-bold mr-2">Passkey:</span> <span className="font-mono text-white tracking-widest">{gameState!.handoff.passkey}</span></div>
+                              <div><span className="text-[10px] uppercase text-[#95FF00]/60 font-bold mr-2">Target Node:</span> {gameState!.handoff.place}</div>
+                            </div>
+                          )}
+
+                          {/* Coordinates */}
+                          <div className="corner-card bg-[#15171A] grid grid-cols-2 gap-4 p-4 border border-white/5">
+                            <div>
+                              <span className="text-[10px] font-bold text-white/30 uppercase">Latitude</span>
+                              <div className="font-mono text-m text-white/80">{currentRound.coord.lat}</div>
+                            </div>
+                            <div>
+                              <span className="text-[10px] font-bold text-white/30 uppercase">Longitude</span>
+                              <div className="font-mono text-m text-white/80">{currentRound.coord.lng}</div>
+                            </div>
+                          </div>
+
+                          {/* Volunteer card */}
+                          <div className={cn("corner-card flex items-center gap-3 p-4 border border-white/5 transition-all duration-500", currentRound.volunteer.bg)}>
+                            <div className={cn("w-10 h-10 rounded-none border border-white/10 flex items-center justify-center font-bold text-sm", currentRound.volunteer.color)}>
+                              {currentRound.volunteer.initials}
+                            </div>
+                            <div className="flex flex-col">
+                              <div className={cn("font-bold text-lg uppercase tracking-wider", currentRound.volunteer.color)}>
+                                {currentRound.volunteer.name}
                               </div>
-                              <div className="mt-4 pt-3 border-t border-[#95FF00]/20 flex items-start gap-3">
-                                <MapPin className="h-5 w-5 text-[#95FF00] flex-shrink-0 mt-0.5" />
-                                <div className="flex-1">
-                                  <div className="font-bold text-s uppercase tracking-wider">{currentRound.coord.place}</div>
-                                  <div className="text-[10px] text-white/40 uppercase">Target: {currentRound.volunteer.name}</div>
-                                </div>
+                              <div className="text-[10px] text-white/60 uppercase tracking-widest font-mono">
+                                {currentRound.coord.place}
                               </div>
                             </div>
+                            <div className="corner-br opacity-50"></div>
+                            <div className="corner-bl opacity-50"></div>
+                          </div>
 
-                            {/* Passkey */}
-                            <div className="corner-card bg-[#95FF00]/10 border border-[#95FF00] p-4 text-center">
-                              <div className="text-[10px] font-bold text-[#95FF00] uppercase tracking-[0.2em] mb-1">Passkey</div>
-                              <div className="font-mono text-base sm:text-xl font-bold tracking-[0.22em] sm:tracking-[0.4em] text-white break-all">{currentRound.qrPasskey}</div>
-                            </div>
-
-                            <Button 
-                              className="w-full font-bold uppercase tracking-[0.2em] h-12"
-                              variant="emerald"
-                              size="md"
-                              onClick={handleSyncRunnerNode}
-                              disabled={isSyncingRunner}
-                            >
-                              {isSyncingRunner ? (
+                          {/* Arrived — open passkey + minigame */}
+                          <div className="pt-4 border-t border-white/5">
+                            <Button className="w-full font-bold uppercase tracking-[0.2em] h-14" variant="sage" size="md" onClick={handleArrivedAtLocation} disabled={isEnteringRunnerGame}>
+                              {isEnteringRunnerGame ? (
                                 <span className="flex items-center gap-2">
-                                  <span className="w-3 h-3 border border-[#95FF00]/50 border-t-transparent rounded-full animate-spin" />
-                                  Synchronizing...
+                                  <span className="w-3 h-3 border border-black/50 border-t-transparent rounded-full animate-spin" />
+                                  VERIFYING LOCATION...
                                 </span>
                               ) : (
-                                'Synchronize Node 02'
+                                <>
+                                  <QrCode className="mr-3 h-5 w-5" />
+                                  I'M AT THE LOCATION — ENTER PASSKEY
+                                </>
                               )}
                             </Button>
                           </div>
                         </div>
                       </div>
-                    )}
+                    </div>
+                  )}
 
-                    {/* Runner Travel - Runner navigates to location */}
-                    {gameState!.stage === 'runner_travel' && (
-                      <div className="corner-card bg-black/40 backdrop-blur-xl p-8 border border-white/5 relative overflow-hidden">
-                        <div className="corner-br" /> <div className="corner-bl" />
-                        <div className="space-y-6">
-                          <div className="flex flex-col gap-2">
-                              <Badge className="w-fit mb-2 bg-[#95FF00]/10 text-white border border-[#95FF00] text-[10px] uppercase">Round {gameState!.round + 1}</Badge>
-                            <h2 className="text-xl font-bold tracking-widest uppercase">Travel to Location</h2>
-                            <p className="text-[10px] text-white/40 uppercase tracking-widest leading-relaxed">Find the volunteer at the coordinates provided below.</p>
-                          </div>
-                          
+                  {/* Runner Game - Passkey entry + Minigame */}
+                  {(gameState!.stage === 'runner_game') && (
+                    <RunnerGame
+                      token={session!.token}
+                      currentRoundIndex={gameState!.round}
+                      totalRounds={rounds.length}
+                      onRoundComplete={async () => {
+                        // Allow the server's already-updated complete or p1_solve state to sync back down.
+                        await sync();
+                      }}
+                    />
+                  )}
+
+                  {/* Final QR Handshake */}
+                  {gameState!.stage === 'final_qr' && (
+                    <div className="corner-card bg-black/40 backdrop-blur-xl p-6 sm:p-8 border border-[#95FF00]/30 relative text-center overflow-hidden">
+                      <div className="corner-br" /> <div className="corner-bl" />
+                      <div className="absolute inset-0 bg-[#95FF00]/5 pointer-events-none" />
+                      <div className="relative z-10 space-y-6">
+                        <div className="space-y-2">
+                          <h2 className="text-xl sm:text-2xl font-bold tracking-widest uppercase text-[#95FF00]">Final Authentication</h2>
+                          <p className="text-[10px] sm:text-xs text-white/50 uppercase tracking-[0.15em] sm:tracking-[0.25em]">
+                            {role === 'solver'
+                              ? 'Show this QR to the runner to finish the game.'
+                              : 'Scan solver QR to complete the quest.'}
+                          </p>
+                        </div>
+
+                        {role === 'solver' ? (
                           <div className="space-y-4">
-                            {gameState!.handoff && (
-                              <div className="corner-card border-[#95FF00] bg-[#95FF00]/5 p-4 space-y-2 text-s relative">
-                                <div className="corner-tr" />
-                                <div><span className="text-[10px] uppercase text-[#95FF00]/60 font-bold mr-2">Volunteer:</span> {gameState!.handoff.volunteer}</div>
-                                <div><span className="text-[10px] uppercase text-[#95FF00]/60 font-bold mr-2">Passkey:</span> <span className="font-mono text-white tracking-widest">{gameState!.handoff.passkey}</span></div>
-                                <div><span className="text-[10px] uppercase text-[#95FF00]/60 font-bold mr-2">Target Node:</span> {gameState!.handoff.place}</div>
+                            {finalQrLoading && (
+                              <div className="text-white/50 text-xs uppercase tracking-widest">Loading final QR...</div>
+                            )}
+
+                            {finalQrError && (
+                              <div className="p-3 border border-rose-600/40 bg-rose-600/10 text-rose-400 text-[10px] uppercase tracking-widest">
+                                {finalQrError}
                               </div>
                             )}
 
-                            {/* Coordinates */}
-                            <div className="corner-card bg-[#15171A] grid grid-cols-2 gap-4 p-4 border border-white/5">
-                              <div>
-                                <span className="text-[10px] font-bold text-white/30 uppercase">Latitude</span>
-                                <div className="font-mono text-m text-white/80">{currentRound.coord.lat}</div>
+                            {!!finalQrImageUrl && (
+                              <div className="mx-auto w-fit p-3 sm:p-4 border border-[#95FF00]/40 bg-white">
+                                <img src={finalQrImageUrl} alt="Final completion QR code" className="w-52 h-52 sm:w-72 sm:h-72 object-contain" />
                               </div>
-                              <div>
-                                <span className="text-[10px] font-bold text-white/30 uppercase">Longitude</span>
-                                <div className="font-mono text-m text-white/80">{currentRound.coord.lng}</div>
-                              </div>
-                            </div>
+                            )}
 
-                            {/* Volunteer card */}
-                            <div className={cn("corner-card flex items-center gap-3 p-4 border border-white/5 transition-all duration-500", currentRound.volunteer.bg)}>
-                              <div className={cn("w-10 h-10 rounded-none border border-white/10 flex items-center justify-center font-bold text-sm", currentRound.volunteer.color)}>
-                                {currentRound.volunteer.initials}
+                            {!!finalQrPayload && (
+                              <div className="text-[#95FF00] font-mono text-xs sm:text-sm break-all tracking-[0.18em] sm:tracking-[0.25em]">
+                                {finalQrPayload}
                               </div>
-                              <div className="flex flex-col">
-                                <div className={cn("font-bold text-lg uppercase tracking-wider", currentRound.volunteer.color)}>
-                                  {currentRound.volunteer.name}
-                                </div>
-                                <div className="text-[10px] text-white/60 uppercase tracking-widest font-mono">
-                                  {currentRound.coord.place}
-                                </div>
-                              </div>
-                              <div className="corner-br opacity-50"></div>
-                              <div className="corner-bl opacity-50"></div>
-                            </div>
-
-                            {/* Arrived — open passkey + minigame */}
-                            <div className="pt-4 border-t border-white/5">
-                              <Button className="w-full font-bold uppercase tracking-[0.2em] h-14" variant="sage" size="md" onClick={handleArrivedAtLocation} disabled={isEnteringRunnerGame}>
-                                {isEnteringRunnerGame ? (
-                                  <span className="flex items-center gap-2">
-                                    <span className="w-3 h-3 border border-black/50 border-t-transparent rounded-full animate-spin" />
-                                    VERIFYING LOCATION...
-                                  </span>
-                                ) : (
-                                  <>
-                                    <QrCode className="mr-3 h-5 w-5" />
-                                    I'M AT THE LOCATION — ENTER PASSKEY
-                                  </>
-                                )}
-                              </Button>
-                            </div>
+                            )}
                           </div>
-                        </div>
+                        ) : (
+                          <div className="space-y-4">
+                            <Button
+                              className="w-full font-bold uppercase tracking-[0.2em] h-14"
+                              variant="sage"
+                              size="md"
+                              onClick={() => setFinalQrScannerOpen(true)}
+                              disabled={isVerifyingFinalQr}
+                            >
+                              {isVerifyingFinalQr ? (
+                                <span className="flex items-center gap-2">
+                                  <span className="w-3 h-3 border border-black/50 border-t-transparent rounded-full animate-spin" />
+                                  Verifying...
+                                </span>
+                              ) : (
+                                <>
+                                  <QrCode className="mr-3 h-5 w-5" />
+                                  Scan Solver Final QR
+                                </>
+                              )}
+                            </Button>
+
+                            {finalQrScannerOpen && (
+                              <div className="pt-2">
+                                <QRScanner
+                                  onScan={handleVerifyFinalQr}
+                                  onClose={() => setFinalQrScannerOpen(false)}
+                                />
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
-                    )}
+                    </div>
+                  )}
 
-                    {/* Runner Game - Passkey entry + Minigame */}
-                    {(gameState!.stage === 'runner_game') && (
-                      <RunnerGame
-                        token={session!.token}
-                        currentRoundIndex={gameState!.round}
-                        totalRounds={rounds.length}
-                        onRoundComplete={async () => {
-                          // Allow the server's already-updated complete or p1_solve state to sync back down.
-                          await sync();
-                        }}
-                      />
-                    )}
-
-                    {/* Final QR Handshake */}
-                    {gameState!.stage === 'final_qr' && (
-                      <div className="corner-card bg-black/40 backdrop-blur-xl p-6 sm:p-8 border border-[#95FF00]/30 relative text-center overflow-hidden">
-                        <div className="corner-br" /> <div className="corner-bl" />
-                        <div className="absolute inset-0 bg-[#95FF00]/5 pointer-events-none" />
-                        <div className="relative z-10 space-y-6">
-                          <div className="space-y-2">
-                            <h2 className="text-xl sm:text-2xl font-bold tracking-widest uppercase text-[#95FF00]">Final Authentication</h2>
-                            <p className="text-[10px] sm:text-xs text-white/50 uppercase tracking-[0.15em] sm:tracking-[0.25em]">
-                              {role === 'solver'
-                                ? 'Show this QR to the runner to finish the game.'
-                                : 'Scan solver QR to complete the quest.'}
-                            </p>
-                          </div>
-
-                          {role === 'solver' ? (
-                            <div className="space-y-4">
-                              {finalQrLoading && (
-                                <div className="text-white/50 text-xs uppercase tracking-widest">Loading final QR...</div>
-                              )}
-
-                              {finalQrError && (
-                                <div className="p-3 border border-rose-600/40 bg-rose-600/10 text-rose-400 text-[10px] uppercase tracking-widest">
-                                  {finalQrError}
-                                </div>
-                              )}
-
-                              {!!finalQrImageUrl && (
-                                <div className="mx-auto w-fit p-3 sm:p-4 border border-[#95FF00]/40 bg-white">
-                                  <img src={finalQrImageUrl} alt="Final completion QR code" className="w-52 h-52 sm:w-72 sm:h-72 object-contain" />
-                                </div>
-                              )}
-
-                              {!!finalQrPayload && (
-                                <div className="text-[#95FF00] font-mono text-xs sm:text-sm break-all tracking-[0.18em] sm:tracking-[0.25em]">
-                                  {finalQrPayload}
-                                </div>
-                              )}
-                            </div>
-                          ) : (
-                            <div className="space-y-4">
-                              <Button
-                                className="w-full font-bold uppercase tracking-[0.2em] h-14"
-                                variant="sage"
-                                size="md"
-                                onClick={() => setFinalQrScannerOpen(true)}
-                                disabled={isVerifyingFinalQr}
-                              >
-                                {isVerifyingFinalQr ? (
-                                  <span className="flex items-center gap-2">
-                                    <span className="w-3 h-3 border border-black/50 border-t-transparent rounded-full animate-spin" />
-                                    Verifying...
-                                  </span>
-                                ) : (
-                                  <>
-                                    <QrCode className="mr-3 h-5 w-5" />
-                                    Scan Solver Final QR
-                                  </>
-                                )}
-                              </Button>
-
-                              {finalQrScannerOpen && (
-                                <div className="pt-2">
-                                  <QRScanner
-                                    onScan={handleVerifyFinalQr}
-                                    onClose={() => setFinalQrScannerOpen(false)}
-                                  />
-                                </div>
-                              )}
-                            </div>
-                          )}
+                  {/* Quest Complete */}
+                  {gameState!.stage === 'complete' && (
+                    <div className="corner-card bg-black/40 backdrop-blur-xl p-8 border border-[#95FF00]/30 relative text-center overflow-hidden">
+                      <div className="corner-br" /> <div className="corner-bl" />
+                      <div className="absolute inset-0 bg-[#95FF00]/5 pointer-events-none" />
+                      <div className="relative z-10 space-y-8">
+                        <div>
+                          <Zap className="h-16 w-16 text-[#95FF00] fill-[#95FF00] mx-auto mb-6 animate-pulse" />
+                          <h2 className="text-3xl font-bold tracking-[0.3em] uppercase mb-2 text-[#95FF00]">Quest Complete</h2>
+                          <p className="text-[10px] text-white/60 uppercase tracking-[0.2em] sm:tracking-[0.4em]">All nodes synchronized. Protocol achieved.</p>
                         </div>
-                      </div>
-                    )}
 
-                    {/* Quest Complete */}
-                    {gameState!.stage === 'complete' && (
-                      <div className="corner-card bg-black/40 backdrop-blur-xl p-8 border border-[#95FF00]/30 relative text-center overflow-hidden">
-                        <div className="corner-br" /> <div className="corner-bl" />
-                        <div className="absolute inset-0 bg-[#95FF00]/5 pointer-events-none" />
-                        <div className="relative z-10 space-y-8">
-                          <div>
-                            <Zap className="h-16 w-16 text-[#95FF00] fill-[#95FF00] mx-auto mb-6 animate-pulse" />
-                            <h2 className="text-3xl font-bold tracking-[0.3em] uppercase mb-2 text-[#95FF00]">Quest Complete</h2>
-                            <p className="text-[10px] text-white/60 uppercase tracking-[0.2em] sm:tracking-[0.4em]">All nodes synchronized. Protocol achieved.</p>
-                          </div>
-                          
-                          <div className="space-y-3">
-                            {rounds.map((r: RoundQuestion, i: number) => (
-                              <div key={i} className="corner-card flex items-center gap-3 p-4 bg-white/5 border border-white/5 text-left relative group hover:border-[#95FF00]/30 transition-all">
-                                <div className={cn("w-10 h-10 rounded-none border border-white/10 flex items-center justify-center text-xs font-bold", r.volunteer.bg, r.volunteer.color)}>
-                                  {r.volunteer.initials}
-                                </div>
-                                <div className="flex-1">
-                                  <div className="text-xs font-bold uppercase tracking-widest text-[#95FF00]/80">Round {i + 1}</div>
-                                  <div className="text-[10px] text-white/40 uppercase tracking-tighter">{r.coord.place}</div>
-                                </div>
-                                <CheckCircle2 className="h-5 w-5 text-[#95FF00]" />
+                        <div className="space-y-3">
+                          {rounds.map((r: RoundQuestion, i: number) => (
+                            <div key={i} className="corner-card flex items-center gap-3 p-4 bg-white/5 border border-white/5 text-left relative group hover:border-[#95FF00]/30 transition-all">
+                              <div className={cn("w-10 h-10 rounded-none border border-white/10 flex items-center justify-center text-xs font-bold", r.volunteer.bg, r.volunteer.color)}>
+                                {r.volunteer.initials}
                               </div>
-                            ))}
-                          </div>
-                          
+                              <div className="flex-1">
+                                <div className="text-xs font-bold uppercase tracking-widest text-[#95FF00]/80">Round {i + 1}</div>
+                                <div className="text-[10px] text-white/40 uppercase tracking-tighter">{r.coord.place}</div>
+                              </div>
+                              <CheckCircle2 className="h-5 w-5 text-[#95FF00]" />
+                            </div>
+                          ))}
                         </div>
+
                       </div>
-                    )}
-                  </>
-                )}
-              </motion.div>
+                    </div>
+                  )}
+                </>
+              )}
+            </motion.div>
           </AnimatePresence>
 
           {/* Game Map */}
@@ -1116,10 +1116,10 @@ export default function App() {
                   </div>
                 </div>
                 <div className="p-4">
-                  <SectorMap 
-                    rounds={rounds} 
-                    currentRound={gameState!.round} 
-                    roundsDone={gameState!.roundsDone} 
+                  <SectorMap
+                    rounds={rounds}
+                    currentRound={gameState!.round}
+                    roundsDone={gameState!.roundsDone}
                     stage={gameState!.stage}
                   />
                 </div>

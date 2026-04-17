@@ -62,7 +62,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Dynamic Timer if data passed */}
         {startTime !== undefined && (
-           <GameTimer startTime={startTime} finishTime={finishTime || null} />
+          <GameTimer startTime={startTime} finishTime={finishTime || null} />
         )}
 
         {metaText && (

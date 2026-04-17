@@ -49,7 +49,7 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
       if (isActive) {
         instance.stop()
           .then(() => instance.clear())
-          .catch(() => {})
+          .catch(() => { })
           .finally(() => {
             const el = document.getElementById('qr-reader');
             if (el) el.innerHTML = '';

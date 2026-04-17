@@ -49,7 +49,7 @@ export const Modal: React.FC<ModalProps> = ({
         >
           {/* Decorative Corner Bracket */}
           <div className="absolute -top-1 -left-1 w-6 h-6 border-t-2 border-l-2 border-[#95FF00]" />
-          
+
           {/* Close button */}
           <button
             onClick={onClose}

@@ -12,10 +12,10 @@ interface MenuOverlayProps {
 }
 
 const NAV_LINKS = [
-  { label: 'Home',    path: '/' },
-  { label: 'Solver',  path: '/solver' },
-  { label: 'Runner',  path: '/runner' },
-  { label: 'Admin',   path: '/admin' },
+  { label: 'Home', path: '/' },
+  { label: 'Solver', path: '/solver' },
+  { label: 'Runner', path: '/runner' },
+  { label: 'Admin', path: '/admin' },
 ];
 
 /**
@@ -44,8 +44,8 @@ export function MenuOverlay({ isOpen, onClose, role, teamName, onLogout, onNavig
         <motion.div
           key="menu-overlay"
           initial={{ clipPath: 'inset(0 0 100% 0)' }}
-          animate={{ clipPath: 'inset(0 0 0% 0)'   }}
-          exit={{   clipPath: 'inset(0 0 100% 0)'   }}
+          animate={{ clipPath: 'inset(0 0 0% 0)' }}
+          exit={{ clipPath: 'inset(0 0 100% 0)' }}
           transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
           style={{
             position: 'fixed',
@@ -58,7 +58,7 @@ export function MenuOverlay({ isOpen, onClose, role, teamName, onLogout, onNavig
           }}
         >
           <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle, #fff 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
-          
+
           {/* Top bar */}
           <div className="flex justify-between items-center mb-16 relative z-10">
             <div className="text-[12px] font-black uppercase tracking-[0.4em] text-white flex items-center gap-4">
@@ -148,11 +148,11 @@ function MenuNavItem({ label, delay, onClick, active }: MenuNavItemProps) {
 
   const onEnter = () => {
     if (marqRef.current) marqRef.current.style.transform = 'translateY(0)';
-    if (textRef.current) textRef.current.style.transform  = 'translateY(-100%)';
+    if (textRef.current) textRef.current.style.transform = 'translateY(-100%)';
   };
   const onLeave = () => {
     if (marqRef.current) marqRef.current.style.transform = 'translateY(100%)';
-    if (textRef.current) textRef.current.style.transform  = 'translateY(0)';
+    if (textRef.current) textRef.current.style.transform = 'translateY(0)';
   };
 
   return (

@@ -35,7 +35,7 @@ export function RoleSelection({ onSelect }: RoleSelectionProps) {
           <div className="w-1.5 h-1.5 rounded-full bg-[#95FF00] animate-pulse" />
           SYSTEM.PROTOCOL <span className="text-white/40">v1.0.4</span>
         </span>
-        <button 
+        <button
           onClick={() => {
             window.history.pushState({}, '', '/admin');
             window.dispatchEvent(new PopStateEvent('popstate'));
@@ -47,12 +47,12 @@ export function RoleSelection({ onSelect }: RoleSelectionProps) {
       </nav>
 
       <div className="max-w-6xl mx-auto w-full relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
-        
+
         {/* Left Col - Hero Title */}
         <div className="lg:col-span-7 pr-0 lg:pr-8">
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }} 
-            animate={{ opacity: 1, y: 0 }} 
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, ease: "easeOut" }}
           >
             {/* Badge */}
@@ -60,11 +60,11 @@ export function RoleSelection({ onSelect }: RoleSelectionProps) {
               <span className="w-1 h-1 bg-[#95FF00]" />
               Secure_Connection_Active
             </div>
-            
+
             {/* Headline */}
             <h1 className="text-[clamp(3.5rem,8vw,7rem)] font-bold uppercase tracking-tighter leading-[0.85] mb-8 font-space-grotesk text-white">
-              QUEST <br/>
-              <span className="text-white/10">THE CODE</span><br/>
+              QUEST <br />
+              <span className="text-white/10">THE CODE</span><br />
               <span className="text-[#95FF00]" style={{ textShadow: '0 0 50px rgba(149,255,0,0.3)' }}>SCAVENGER</span>
             </h1>
 
@@ -87,9 +87,9 @@ export function RoleSelection({ onSelect }: RoleSelectionProps) {
               onClick={() => onSelect(role.key)}
               className="corner-card group relative text-left bg-black/40 backdrop-blur-xl border border-white/5 hover:border-[#95FF00]/40 transition-all duration-300 cursor-crosshair overflow-hidden p-8"
             >
-              <div className="corner-br opacity-20 group-hover:opacity-100" /> 
+              <div className="corner-br opacity-20 group-hover:opacity-100" />
               <div className="corner-bl opacity-20 group-hover:opacity-100" />
-              
+
               {/* Giant background number overlay */}
               <div className="absolute -top-4 -right-2 text-[120px] font-bold opacity-[0.03] text-white group-hover:text-[#95FF00] group-hover:opacity-[0.08] transition-all duration-500 leading-none tracking-tighter pointer-events-none font-space-grotesk">
                 0{idx + 1}
@@ -104,7 +104,7 @@ export function RoleSelection({ onSelect }: RoleSelectionProps) {
                     {role.label}
                   </h3>
                 </div>
-                
+
                 <p className="font-mono text-[11px] text-white/30 tracking-widest leading-relaxed min-h-[48px] uppercase">
                   {role.sub}
                 </p>

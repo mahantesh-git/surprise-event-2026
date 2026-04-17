@@ -14,10 +14,10 @@ export function PersistentProgress({ totalRounds, currentRound, roundsDone }: Pe
       {Array.from({ length: totalRounds }).map((_, i) => {
         const isDone = roundsDone[i];
         const isActive = i === currentRound;
-        
+
         return (
           <div key={i} className="flex-1 overflow-hidden relative">
-            <div 
+            <div
               className={cn(
                 "h-full w-full transition-all duration-700",
                 isDone ? "bg-[#95FF00]" : (isActive ? "bg-[#333333]" : "bg-white/5")

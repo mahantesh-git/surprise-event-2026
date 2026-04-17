@@ -17,7 +17,7 @@ export function GameTimer({ startTime, finishTime }: GameTimerProps) {
     }
 
     const start = new Date(startTime).getTime();
-    
+
     if (finishTime) {
       setElapsed(new Date(finishTime).getTime() - start);
       return;

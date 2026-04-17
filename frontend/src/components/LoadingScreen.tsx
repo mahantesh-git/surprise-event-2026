@@ -14,12 +14,12 @@ export function LoadingScreen({ onComplete, duration = 1600 }: LoadingScreenProp
   const [count, setCount] = useState(0);
   const [exiting, setExiting] = useState(false);
   const startRef = useRef<number | null>(null);
-  const rafRef   = useRef<number>(0);
+  const rafRef = useRef<number>(0);
 
   useEffect(() => {
     const step = (ts: number) => {
       if (!startRef.current) startRef.current = ts;
-      const elapsed  = ts - startRef.current;
+      const elapsed = ts - startRef.current;
       const progress = Math.min(elapsed / duration, 1);
       // Ease-out cubic
       const eased = 1 - Math.pow(1 - progress, 3);
@@ -39,8 +39,8 @@ export function LoadingScreen({ onComplete, duration = 1600 }: LoadingScreenProp
   }, [duration, onComplete]);
 
   const hundreds = Math.floor(count / 100);
-  const tens     = Math.floor((count % 100) / 10);
-  const ones     = count % 10;
+  const tens = Math.floor((count % 100) / 10);
+  const ones = count % 10;
 
   return (
     <div
@@ -51,7 +51,7 @@ export function LoadingScreen({ onComplete, duration = 1600 }: LoadingScreenProp
       }}
     >
       {/* Background glitch effect would go here if we had a canvas, but let's stick to CSS/HTML */}
-      
+
       <div className="w-full max-w-sm space-y-8 relative">
         <div className="space-y-2 font-mono">
           <div className="flex items-center gap-3">
@@ -81,7 +81,7 @@ export function LoadingScreen({ onComplete, duration = 1600 }: LoadingScreenProp
             <span>{count}%</span>
           </div>
           <div className="h-[2px] w-full bg-white/5 relative overflow-hidden">
-            <motion.div 
+            <motion.div
               className="absolute top-0 left-0 h-full bg-[#95FF00]"
               style={{ width: `${count}%` }}
             />

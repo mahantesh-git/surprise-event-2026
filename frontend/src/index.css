@@ -12,7 +12,7 @@
   --color-white: #ffffff;
   --color-muted: rgba(255, 255, 255, 0.5);
   --color-grid: rgba(255, 255, 255, 0.07);
-  
+
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.145 0 0);
@@ -38,7 +38,7 @@
   --font-sans: 'Space Grotesk Variable', sans-serif;
   --font-mono: 'DM Mono', monospace;
   --font-heading: var(--font-sans);
-  
+
   --color-background: var(--color-bg);
   --color-foreground: var(--color-white);
   --color-card: var(--card);
@@ -57,7 +57,7 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  
+
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -69,7 +69,9 @@
     @apply border-border outline-ring/50 box-border shadow-none;
   }
 
-  html, body, #root {
+  html,
+  body,
+  #root {
     @apply w-full h-full;
   }
 
@@ -83,7 +85,16 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
-  h1, h2, h3, h4, h5, h6, p, ul, ol, dl {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  p,
+  ul,
+  ol,
+  dl {
     @apply m-0;
   }
 
@@ -117,6 +128,7 @@
 }
 
 @layer components {
+
   /* ── Background & Ambiance ───────────────────────────── */
   .grid-bg {
     @apply fixed inset-0 pointer-events-none z-0;
@@ -133,11 +145,11 @@
     transform: translateX(-50%);
     width: 400px;
     height: 400px;
-    background: radial-gradient(circle, rgba(149,255,0,0.15) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(149, 255, 0, 0.15) 0%, transparent 70%);
     filter: blur(40px);
   }
 
-  
+
 
   .glow-neon {
     text-shadow: 0 0 30px rgba(149, 255, 0, 0.4);
@@ -147,45 +159,52 @@
     @apply relative w-full border border-white/5 bg-black/20 backdrop-blur-md p-6;
   }
 
-  .corner-card::before, .corner-card::after,
-  .corner-card .corner-br, .corner-card .corner-bl {
+  .corner-card::before,
+  .corner-card::after,
+  .corner-card .corner-br,
+  .corner-card .corner-bl {
     content: '';
     position: absolute;
-    width: 16px; height: 16px;
+    width: 16px;
+    height: 16px;
   }
 
   .corner-card::before {
-    top: 0; left: 0;
+    top: 0;
+    left: 0;
     border-top: 1px solid var(--color-white);
     border-left: 1px solid var(--color-white);
     opacity: 0.3;
   }
 
   .corner-card::after {
-    top: 0; right: 0;
+    top: 0;
+    right: 0;
     border-top: 1px solid var(--color-white);
     border-right: 1px solid var(--color-white);
     opacity: 0.3;
   }
 
   .corner-card .corner-br {
-    bottom: 0; right: 0;
+    bottom: 0;
+    right: 0;
     border-bottom: 1px solid var(--color-white);
     border-right: 1px solid var(--color-white);
     opacity: 0.3;
   }
 
   .corner-card .corner-bl {
-    bottom: 0; left: 0;
+    bottom: 0;
+    left: 0;
     border-bottom: 1px solid var(--color-white);
     border-left: 1px solid var(--color-white);
     opacity: 0.3;
   }
-  
+
   .btn-primary {
     @apply border border-[#95FF00] bg-transparent text-[#95FF00] px-5 py-2 text-xs font-semibold uppercase tracking-widest transition-all duration-200 rounded-sm hover:bg-[#95FF00] hover:text-black cursor-pointer;
   }
-  
+
   .btn-secondary {
     @apply flex items-center justify-center gap-2 bg-[#0B0C0D] border border-white/10 text-white px-5 py-3 rounded-sm text-sm font-semibold hover:border-[#95FF00] hover:bg-[#95FF000D] transition-all cursor-pointer;
   }
@@ -220,6 +239,7 @@
       opacity: 0;
       transform: translateY(12px);
     }
+
     to {
       opacity: 1;
       transform: translateY(0);
@@ -235,14 +255,14 @@
     text-transform: uppercase;
     margin-bottom: 12px;
   }
-  
+
   .scan-bar-container {
     height: 2px;
-    background: rgba(255,255,255,0.08);
+    background: rgba(255, 255, 255, 0.08);
     border-radius: 1px;
     overflow: hidden;
   }
-  
+
   .scan-bar-fill {
     height: 100%;
     background: var(--color-neon);
@@ -252,8 +272,13 @@
   }
 
   @keyframes scan-line {
-    0% { transform: translateX(-100%); }
-    100% { transform: translateX(350%); }
+    0% {
+      transform: translateX(-100%);
+    }
+
+    100% {
+      transform: translateX(350%);
+    }
   }
 
   /* ── QR Reader Overrides ─────────────────────────────────── */
@@ -266,11 +291,11 @@
   }
 
   #qr-reader button {
-    @apply !border !border-[#95FF00] !bg-transparent !text-[#95FF00] !px-3 !py-1 !font-mono !text-xs !font-medium hover:!bg-[#95FF00] hover:!text-black !transition-colors !rounded-sm;
+    @apply !border !border-[#95FF00] !bg-transparent !text-[#95FF00] !px-3 !py-1 !font-mono !text-xs !font-medium hover: !bg-[#95FF00] hover: !text-black !transition-colors !rounded-sm;
   }
 
   #qr-reader select {
-    @apply !border !border-white/20 !bg-[#0B0C0D] !text-white !font-mono !px-2 !py-1 !text-xs !mr-2 !rounded-sm focus:!border-[#95FF00] !outline-none;
+    @apply !border !border-white/20 !bg-[#0B0C0D] !text-white !font-mono !px-2 !py-1 !text-xs !mr-2 !rounded-sm focus: !border-[#95FF00] !outline-none;
   }
 
   #qr-reader__scan_region {
@@ -293,13 +318,23 @@
 
   /* ── Custom Animations ───────────────────────────────── */
   @keyframes shimmer {
-    from { transform: translateX(-100%); }
-    to { transform: translateX(100%); }
+    from {
+      transform: translateX(-100%);
+    }
+
+    to {
+      transform: translateX(100%);
+    }
   }
 
   @keyframes fade-out {
-    from { opacity: 1; }
-    to { opacity: 0; }
+    from {
+      opacity: 1;
+    }
+
+    to {
+      opacity: 0;
+    }
   }
 
   .animate-shimmer {
@@ -327,9 +362,24 @@
     @apply font-mono text-[16px] leading-[1.6] text-white/90 bg-[#0B0C0D] p-6 border border-white/5 relative overflow-x-auto;
   }
 
-  .syntax-keyword { color: #FF9D00; }
-  .syntax-number { color: #95FF00; }
-  .syntax-string { color: #00D1FF; }
-  .syntax-comment { color: #666666; font-style: italic; }
-  .syntax-op { color: #FF00E5; }
+  .syntax-keyword {
+    color: #FF9D00;
+  }
+
+  .syntax-number {
+    color: #95FF00;
+  }
+
+  .syntax-string {
+    color: #00D1FF;
+  }
+
+  .syntax-comment {
+    color: #666666;
+    font-style: italic;
+  }
+
+  .syntax-op {
+    color: #FF00E5;
+  }
 }
