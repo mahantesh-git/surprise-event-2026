@@ -43,10 +43,10 @@ export function GameTimer({ startTime, finishTime }: GameTimerProps) {
   const paddedSeconds = seconds.toString().padStart(2, '0');
 
   return (
-    <div className="flex items-center gap-2 px-3 py-1.5 border border-[#95FF00]/20 bg-[#95FF00]/5 backdrop-blur-sm min-w-[120px] justify-center relative overflow-hidden group">
+    <div className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 border border-[#95FF00]/20 bg-[#95FF00]/5 backdrop-blur-sm min-w-[96px] sm:min-w-[120px] justify-center relative overflow-hidden group">
       <div className="absolute inset-0 bg-[#95FF00]/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-      <Clock className={`w-3.5 h-3.5 ${finishTime ? 'text-white' : 'text-[#95FF00]'}`} />
-      <span className={`font-mono text-sm tracking-widest ${finishTime ? 'text-white font-bold' : 'text-[#95FF00]'}`}>
+      <Clock className={`w-3 h-3 sm:w-3.5 sm:h-3.5 ${finishTime ? 'text-white' : 'text-[#95FF00]'}`} />
+      <span className={`font-mono text-xs sm:text-sm tracking-[0.08em] sm:tracking-widest ${finishTime ? 'text-white font-bold' : 'text-[#95FF00]'}`}>
         {paddedHours}:{paddedMinutes}:{paddedSeconds}
       </span>
       {finishTime && (

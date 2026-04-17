@@ -16,6 +16,7 @@ import {
     wipeAdminDatabase, 
     getAdminConfig,
     updateAdminConfig,
+    isAuthError,
     type RoundQuestion 
 } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -53,6 +54,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [isAdminLoggingIn, setIsAdminLoggingIn] = useState(false);
 
   const [teams, setTeams] = useState<Array<{ id: string; name: string; email: string; createdAt: string; lastLoginAt: string | null }>>([]);
   const [questions, setQuestions] = useState<RoundQuestion[]>([]);
@@ -74,9 +76,9 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
   const refreshData = async (sessionToken: string) => {
     try {
       const [teamsResponse, questionsResponse, configResponse] = await Promise.all([
-        getAdminTeams(sessionToken).catch(() => ({ teams: [] })),
-        getAdminQuestions(sessionToken).catch(() => ({ questions: [] })),
-        getAdminConfig(sessionToken).catch(() => ({ loginEnabled: false })),
+        getAdminTeams(sessionToken),
+        getAdminQuestions(sessionToken),
+        getAdminConfig(sessionToken),
       ]);
       
       setTeams(teamsResponse?.teams || []);
@@ -85,7 +87,14 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
       setQuestions(sorted);
       setLoginEnabled(!!configResponse?.loginEnabled);
       setError(null);
-    } catch {
+    } catch (refreshError) {
+      if (isAuthError(refreshError)) {
+        window.localStorage.removeItem(ADMIN_SESSION_KEY);
+        setToken(null);
+        setError('Admin session expired. Please sign in again.');
+        return;
+      }
+
       setError('Failed to refresh data from server');
     }
   };
@@ -97,13 +106,17 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
   }, [token]);
 
   const handleAdminLogin = async () => {
+    if (isAdminLoggingIn) return;
     setError(null);
+    setIsAdminLoggingIn(true);
     try {
       const response = await adminLogin(email, password);
       window.localStorage.setItem(ADMIN_SESSION_KEY, response.token);
       setToken(response.token);
     } catch (loginError) {
       setError(loginError instanceof Error ? loginError.message : 'Login failed');
+    } finally {
+      setIsAdminLoggingIn(false);
     }
   };
 
@@ -273,6 +286,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                     autoCapitalize="none"
                     autoCorrect="off"
                     spellCheck="false"
+                    disabled={isAdminLoggingIn}
                     className="bg-black/50 border-white/10 group-focus-within:border-[#95FF00]/50 transition-colors uppercase text-[10px] tracking-widest h-12"
                   />
                 </div>
@@ -282,10 +296,11 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                     type="password" 
                     value={password} 
                     onChange={(event) => setPassword(event.target.value)} 
-                    onKeyDown={(event) => event.key === 'Enter' && handleAdminLogin()}
+                    onKeyDown={(event) => event.key === 'Enter' && !isAdminLoggingIn && handleAdminLogin()}
                     autoCapitalize="none"
                     autoCorrect="off"
                     spellCheck="false"
+                    disabled={isAdminLoggingIn}
                     className="bg-black/50 border-white/10 group-focus-within:border-[#95FF00]/50 transition-colors uppercase text-[10px] tracking-widest h-12"
                   />
                 </div>
@@ -310,8 +325,16 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                   variant="sage" 
                   className="flex-1 font-bold uppercase tracking-[0.2em] h-12" 
                   onClick={handleAdminLogin}
+                  disabled={isAdminLoggingIn || !email.trim() || !password.trim()}
                 >
-                  Authenticate
+                  {isAdminLoggingIn ? (
+                    <span className="flex items-center gap-2">
+                      <span className="w-3 h-3 border border-black/50 border-t-transparent rounded-full animate-spin" />
+                      Authenticating...
+                    </span>
+                  ) : (
+                    'Authenticate'
+                  )}
                 </Button>
               </div>
             </div>
@@ -322,13 +345,13 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
   }
 
   return (
-    <div className="min-h-screen bg-[#15171A] text-white px-4 sm:px-6 py-12 relative overflow-hidden">
+    <div className="min-h-screen bg-[#15171A] text-white px-3 sm:px-6 py-8 sm:py-12 relative overflow-hidden">
       {/* Background Decorative Element */}
       <div className="fixed top-0 right-0 p-12 opacity-[0.02] pointer-events-none select-none">
         <span className="text-[20vw] font-black leading-none uppercase">Admin</span>
       </div>
 
-      <div className="max-w-6xl mx-auto space-y-12 relative z-10">
+      <div className="max-w-6xl mx-auto space-y-8 sm:space-y-12 relative z-10">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-white/5 pb-8 relative">
           <div className="absolute -left-12 top-0 h-full w-[1px] bg-gradient-to-b from-transparent via-[#95FF00]/20 to-transparent hidden xl:block" />
@@ -338,7 +361,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
               <div className="h-[1px] w-8 bg-[#95FF00]/50" />
               <span className="text-[8px] uppercase font-mono tracking-[0.4em] text-[#95FF00]/60">v2.0.4.sys_admin</span>
             </div>
-            <h1 className="text-4xl md:text-6xl font-black uppercase tracking-tighter leading-none">
+            <h1 className="text-3xl sm:text-4xl md:text-6xl font-black uppercase tracking-tighter leading-none">
               Control<span className="text-[#95FF00]">_</span>Center
             </h1>
           </div>
@@ -386,7 +409,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
         )}
 
         {activeTab === 'leaderboard' && (
-          <div className="-mx-4 sm:-mx-6 h-[calc(100vh-200px)] min-h-[500px] relative">
+          <div className="-mx-3 sm:-mx-6 h-[calc(100vh-160px)] min-h-[420px] sm:h-[calc(100vh-200px)] sm:min-h-[500px] relative">
             <Leaderboard />
           </div>
         )}

@@ -38,6 +38,9 @@ export default function App() {
   const [p1Code, setP1Code] = useState('');
   const [selectedLanguage, setSelectedLanguage] = useState<SupportedLanguage>('python');
   const [isRunning, setIsRunning] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [isSyncingRunner, setIsSyncingRunner] = useState(false);
+  const [isEnteringRunnerGame, setIsEnteringRunnerGame] = useState(false);
   const [consoleOutput, setConsoleOutput] = useState<{ 
     stdout: string; 
     stderr: string; 
@@ -122,11 +125,15 @@ export default function App() {
   if (loading || roundsLoading) return <div className="min-h-screen flex items-center justify-center text-white bg-[#0B0C0D]"><Zap className="animate-pulse text-[#95FF00]" /></div>;
 
   const handleLogin = async () => {
+    if (isLoggingIn) return;
     setLoginError(null);
+    setIsLoggingIn(true);
     try {
       await login(teamName, password);
     } catch (error) {
       setLoginError(error instanceof Error ? error.message : 'Login failed');
+    } finally {
+      setIsLoggingIn(false);
     }
   };
 
@@ -173,15 +180,17 @@ export default function App() {
                 className="w-full high-clearance-input text-center h-14"
                 autoComplete="off"
                 spellCheck="false"
+                disabled={isLoggingIn}
               />
               <input 
                 placeholder="ACCESS_PASSWORD" 
                 type="password" 
                 value={password} 
                 onChange={(event) => setPassword(event.target.value)} 
-                onKeyDown={(event) => event.key === 'Enter' && handleLogin()}
+                onKeyDown={(event) => event.key === 'Enter' && !isLoggingIn && handleLogin()}
                 className="w-full high-clearance-input text-center h-14"
                 autoComplete="off"
+                disabled={isLoggingIn}
               />
               {loginError && (
                 <div className="p-3 border border-rose-600/50 bg-rose-600/10 text-rose-400 text-[10px] uppercase tracking-widest text-center font-mono">
@@ -193,8 +202,16 @@ export default function App() {
                 variant="sage"
                 size="md"
                 onClick={handleLogin}
+                disabled={isLoggingIn || !teamName.trim() || !password.trim()}
               >
-                Establish Connection
+                {isLoggingIn ? (
+                  <span className="flex items-center gap-2">
+                    <span className="w-3 h-3 border border-black/50 border-t-transparent rounded-full animate-spin" />
+                    CONNECTING...
+                  </span>
+                ) : (
+                  'Establish Connection'
+                )}
               </Button>
               <p className="text-[10px] font-mono text-center text-white/30 leading-relaxed uppercase tracking-tighter pt-4">
                 Protocol: Secure Auth / Node: 0{role === 'solver' ? '1' : '2'}
@@ -283,6 +300,35 @@ export default function App() {
     }
   };
 
+  const handleSyncRunnerNode = async () => {
+    if (isSyncingRunner) return;
+    setIsSyncingRunner(true);
+    try {
+      await updateState({
+        stage: 'runner_travel',
+        handoff: {
+          passkey: currentRound.qrPasskey,
+          lat: currentRound.coord.lat,
+          lng: currentRound.coord.lng,
+          volunteer: currentRound.volunteer.name,
+          place: currentRound.coord.place,
+        },
+      });
+    } finally {
+      setIsSyncingRunner(false);
+    }
+  };
+
+  const handleArrivedAtLocation = async () => {
+    if (isEnteringRunnerGame) return;
+    setIsEnteringRunnerGame(true);
+    try {
+      await updateState({ stage: 'runner_game' });
+    } finally {
+      setIsEnteringRunnerGame(false);
+    }
+  };
+
   const nextRound = () => {
     if (gameState!.round < rounds.length - 1) {
       updateState({ round: gameState!.round + 1, stage: 'p1_solve', handoff: null });
@@ -305,21 +351,21 @@ export default function App() {
         finishTime={gameState?.finishTime}
       />
       
-      <div className="min-h-screen pt-16 pb-8 px-4 sm:px-6 relative z-10 text-white bg-[#15171A] reveal-up">
+      <div className="min-h-screen pt-16 pb-8 px-4 sm:px-6 relative z-10 text-white bg-[#15171A] reveal-up overflow-x-hidden">
         <div className="w-full">
           {/* Header */}
           <div className="mb-[var(--svh-md)] space-y-6">
-            <div className="flex items-end justify-between">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <div className="flex items-center gap-2 mb-1">
                   <Zap className="h-3 w-3 text-[#95FF00] fill-[#95FF00]" />
                   <span className="label-technical">Operational Telemetry</span>
                 </div>
-                <h1 className="text-4xl font-bold uppercase tracking-tighter leading-none font-space-grotesk">
+                <h1 className="text-3xl sm:text-4xl font-bold uppercase tracking-tighter leading-none font-space-grotesk">
                   ROUND <span className="text-[#95FF00]">0{gameState!.round + 1}</span>
                 </h1>
               </div>
-              <div className="flex flex-col items-end gap-1">
+              <div className="flex flex-col items-start sm:items-end gap-1">
                 <Badge variant="outline" className="uppercase text-[9px] border-[#95FF00]/40 text-[#95FF00] bg-[#95FF00]/5 px-2 py-0 rounded-none tracking-widest font-mono">{role}</Badge>
                 <span className="text-[10px] font-mono text-white/40 uppercase tracking-tight">{session.team.name} @ SYSTEM_ROOT</span>
               </div>
@@ -408,7 +454,7 @@ export default function App() {
                             variant="sage"
                             size="md"
                             onClick={runCode}
-                            disabled={isRunning}
+                            disabled={isRunning || !p1Code.trim()}
                           >
                             {isRunning ? (
                               <span className="flex items-center gap-2">
@@ -529,25 +575,24 @@ export default function App() {
                             {/* Passkey */}
                             <div className="corner-card bg-[#95FF00]/10 border border-[#95FF00] p-4 text-center">
                               <div className="text-[10px] font-bold text-[#95FF00] uppercase tracking-[0.2em] mb-1">Passkey</div>
-                              <div className="font-mono text-xl font-bold tracking-[0.4em] text-white">{currentRound.qrPasskey}</div>
+                              <div className="font-mono text-base sm:text-xl font-bold tracking-[0.22em] sm:tracking-[0.4em] text-white break-all">{currentRound.qrPasskey}</div>
                             </div>
 
                             <Button 
                               className="w-full font-bold uppercase tracking-[0.2em] h-12"
                               variant="emerald"
                               size="md"
-                              onClick={() => updateState({
-                                stage: 'runner_travel',
-                                handoff: {
-                                  passkey: currentRound.qrPasskey,
-                                  lat: currentRound.coord.lat,
-                                  lng: currentRound.coord.lng,
-                                  volunteer: currentRound.volunteer.name,
-                                  place: currentRound.coord.place,
-                                },
-                              })}
+                              onClick={handleSyncRunnerNode}
+                              disabled={isSyncingRunner}
                             >
-                              Synchronize Node 02
+                              {isSyncingRunner ? (
+                                <span className="flex items-center gap-2">
+                                  <span className="w-3 h-3 border border-[#95FF00]/50 border-t-transparent rounded-full animate-spin" />
+                                  Synchronizing...
+                                </span>
+                              ) : (
+                                'Synchronize Node 02'
+                              )}
                             </Button>
                           </div>
                         </div>
@@ -606,9 +651,18 @@ export default function App() {
 
                             {/* Arrived — open passkey + minigame */}
                             <div className="pt-4 border-t border-white/5">
-                              <Button className="w-full font-bold uppercase tracking-[0.2em] h-14" variant="sage" size="md" onClick={() => updateState({ stage: 'runner_game' })}>
-                                <QrCode className="mr-3 h-5 w-5" />
-                                I'M AT THE LOCATION — ENTER PASSKEY
+                              <Button className="w-full font-bold uppercase tracking-[0.2em] h-14" variant="sage" size="md" onClick={handleArrivedAtLocation} disabled={isEnteringRunnerGame}>
+                                {isEnteringRunnerGame ? (
+                                  <span className="flex items-center gap-2">
+                                    <span className="w-3 h-3 border border-black/50 border-t-transparent rounded-full animate-spin" />
+                                    VERIFYING LOCATION...
+                                  </span>
+                                ) : (
+                                  <>
+                                    <QrCode className="mr-3 h-5 w-5" />
+                                    I'M AT THE LOCATION — ENTER PASSKEY
+                                  </>
+                                )}
                               </Button>
                             </div>
                           </div>
@@ -638,7 +692,7 @@ export default function App() {
                           <div>
                             <Zap className="h-16 w-16 text-[#95FF00] fill-[#95FF00] mx-auto mb-6 animate-pulse" />
                             <h2 className="text-3xl font-bold tracking-[0.3em] uppercase mb-2 text-[#95FF00]">Quest Complete</h2>
-                            <p className="text-[10px] text-white/60 uppercase tracking-[0.4em]">All nodes synchronized. Protocol achieved.</p>
+                            <p className="text-[10px] text-white/60 uppercase tracking-[0.2em] sm:tracking-[0.4em]">All nodes synchronized. Protocol achieved.</p>
                           </div>
                           
                           <div className="space-y-3">

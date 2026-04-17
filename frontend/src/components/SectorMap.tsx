@@ -269,7 +269,7 @@ export function SectorMap({ rounds, currentRound, stage }: SectorMapProps) {
   return (
     <div className="space-y-3">
       {/* Map */}
-      <div className="relative w-full border border-[#95FF00]/40 bg-[#15171A] corner-card overflow-hidden shadow-[0_0_30px_rgba(149,255,0,0.1)]" style={{ height: 320 }}>
+      <div className="relative w-full h-[260px] sm:h-[320px] border border-[#95FF00]/40 bg-[#15171A] corner-card overflow-hidden shadow-[0_0_30px_rgba(149,255,0,0.1)]">
         <div ref={mapContainerRef} className="absolute inset-0 w-full h-full" />
 
         {/* Status badges */}
@@ -317,7 +317,7 @@ export function SectorMap({ rounds, currentRound, stage }: SectorMapProps) {
                 }
               }
             }}
-            className="absolute bottom-3 right-3 z-[1000] bg-black/90 border border-[#00BFFF]/60 px-3 py-2 flex items-center gap-2 font-mono text-[9px] uppercase tracking-widest text-[#00BFFF] hover:bg-[#00BFFF]/20 transition-all pointer-events-auto backdrop-blur-sm shadow-[0_0_15px_rgba(0,191,255,0.2)] active:scale-95"
+            className="absolute bottom-3 right-3 z-[1000] bg-black/90 border border-[#00BFFF]/60 px-2 sm:px-3 py-2 flex items-center gap-1.5 sm:gap-2 font-mono text-[9px] uppercase tracking-[0.12em] sm:tracking-widest text-[#00BFFF] hover:bg-[#00BFFF]/20 transition-all pointer-events-auto backdrop-blur-sm shadow-[0_0_15px_rgba(0,191,255,0.2)] active:scale-95"
           >
             <LocateFixed className="h-4 w-4" />
             {geoStatus === 'watching' ? 'Recenter' : 'Locate Me'}
@@ -339,7 +339,7 @@ export function SectorMap({ rounds, currentRound, stage }: SectorMapProps) {
           href={navUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center justify-center gap-3 w-full py-4 border-2 border-[#95FF00]/40 bg-[#95FF00]/5 text-[#95FF00] font-mono text-xs uppercase tracking-[0.25em] hover:bg-[#95FF00]/20 hover:border-[#95FF00] transition-all duration-300 shadow-[0_0_20px_rgba(149,255,0,0.05)] active:scale-[0.98]"
+          className="flex items-center justify-center gap-2 sm:gap-3 w-full py-3 sm:py-4 border-2 border-[#95FF00]/40 bg-[#95FF00]/5 text-[#95FF00] font-mono text-[10px] sm:text-xs uppercase tracking-[0.15em] sm:tracking-[0.25em] hover:bg-[#95FF00]/20 hover:border-[#95FF00] transition-all duration-300 shadow-[0_0_20px_rgba(149,255,0,0.05)] active:scale-[0.98]"
         >
           <Navigation className="h-4 w-4" />
           {runnerCoords ? 'Navigate to Target' : 'Explore Target Site'}
@@ -348,7 +348,7 @@ export function SectorMap({ rounds, currentRound, stage }: SectorMapProps) {
       )}
 
       {/* Legend */}
-      <div className="flex items-center justify-center gap-6 py-3 border-t border-white/5 bg-black/20 text-[9px] font-mono uppercase tracking-widest">
+      <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-6 py-3 border-t border-white/5 bg-black/20 text-[9px] font-mono uppercase tracking-widest">
         {isRunnerStage ? (
           <>
             <div className="flex items-center gap-2">

@@ -5,11 +5,12 @@ import path from 'path';
 import { spawn } from 'child_process';
 import { ObjectId } from 'mongodb';
 import type { LoginPayload, GameState, QuestionDocument } from './types';
-import { ensureIndexes, getQuestionsCollection, getTeamsCollection, getConfigCollection } from './db';
+import { closeClient, ensureIndexes, getQuestionsCollection, getTeamsCollection, getConfigCollection } from './db';
 import { requireAdmin, requireAuth, signAdminToken, signToken, normalizeRole, type AdminAuthedRequest, type AuthedRequest } from './auth';
 import { createTeam, findTeamByName, verifyTeamPassword, findTeamById } from './team-service';
 import { createInitialGameState, normalizeGameState, sanitizeGameStateUpdate } from './game';
 import { DEFAULT_QUESTIONS } from './defaultQuestions';
+import { asyncHandler, createApiErrorHandler, HttpError } from './errors';
 
 const envPath = path.resolve(__dirname, '../.env');
 const fallbackEnvPath = path.resolve(__dirname, '../.env.example');
@@ -22,6 +23,9 @@ const app = express();
 const port = Number(process.env.PORT || 4000);
 const eventQrCodesDir = path.resolve(__dirname, '../../event_qr_codes');
 const questionQrScriptPath = path.resolve(__dirname, '../scripts/generate_question_qr.py');
+const route = asyncHandler;
+let server: ReturnType<typeof app.listen> | null = null;
+let isShuttingDown = false;
 
 function buildLocationQrCode(round: number) {
   return `QUEST-LOC-R${Math.max(1, Math.trunc(round))}`;
@@ -157,6 +161,14 @@ async function seedQuestionsIfEmpty() {
   await questions.insertMany(DEFAULT_QUESTIONS.map(question => ({ ...question, createdAt: now, updatedAt: now })));
 }
 
+function toObjectId(value: string, label: string) {
+  if (!ObjectId.isValid(value)) {
+    throw new HttpError(400, `Invalid ${label}`);
+  }
+
+  return new ObjectId(value);
+}
+
 app.use(cors());
 app.use(express.json());
 
@@ -164,7 +176,7 @@ app.get('/api/health', (_request, response) => {
   response.json({ ok: true });
 });
 
-app.post('/api/auth/login', async (request, response) => {
+app.post('/api/auth/login', route(async (request, response) => {
   const body = request.body as LoginPayload;
   const teamName = body.teamName?.trim();
   const password = body.password;
@@ -219,9 +231,9 @@ app.post('/api/auth/login', async (request, response) => {
     },
     gameState,
   });
-});
+}));
 
-app.get('/api/session', requireAuth, async (request: AuthedRequest, response) => {
+app.get('/api/session', requireAuth, route(async (request: AuthedRequest, response) => {
   const auth = request.auth;
   if (!auth) {
     response.status(401).json({ error: 'Not authenticated' });
@@ -241,9 +253,9 @@ app.get('/api/session', requireAuth, async (request: AuthedRequest, response) =>
     },
     role: auth.role,
   });
-});
+}));
 
-app.get('/api/game/state', requireAuth, async (request: AuthedRequest, response) => {
+app.get('/api/game/state', requireAuth, route(async (request: AuthedRequest, response) => {
   const auth = request.auth;
   if (!auth) {
     response.status(401).json({ error: 'Not authenticated' });
@@ -264,9 +276,9 @@ app.get('/api/game/state', requireAuth, async (request: AuthedRequest, response)
   }
 
   response.json({ gameState: normalizedState });
-});
+}));
 
-app.patch('/api/game/state', requireAuth, async (request: AuthedRequest, response) => {
+app.patch('/api/game/state', requireAuth, route(async (request: AuthedRequest, response) => {
   const auth = request.auth;
   if (!auth) {
     response.status(401).json({ error: 'Not authenticated' });
@@ -295,9 +307,9 @@ app.patch('/api/game/state', requireAuth, async (request: AuthedRequest, respons
   );
 
   response.json({ gameState: nextState });
-});
+}));
 
-app.post('/api/game/reset', requireAuth, async (request: AuthedRequest, response) => {
+app.post('/api/game/reset', requireAuth, route(async (request: AuthedRequest, response) => {
   const auth = request.auth;
   if (!auth) {
     response.status(401).json({ error: 'Not authenticated' });
@@ -320,7 +332,7 @@ app.post('/api/game/reset', requireAuth, async (request: AuthedRequest, response
   );
 
   response.json({ gameState: nextState });
-});
+}));
 
 // Language → Piston runtime config
 const PISTON_CONFIG: Record<string, { language: string; version: string; fileName: string }> = {
@@ -333,7 +345,7 @@ const PISTON_CONFIG: Record<string, { language: string; version: string; fileNam
   go: { language: 'go', version: '1.16.2', fileName: 'solution.go' },
 };
 
-app.post('/api/game/compile', requireAuth, async (request: AuthedRequest, response) => {
+app.post('/api/game/compile', requireAuth, route(async (request: AuthedRequest, response) => {
   const auth = request.auth;
   if (!auth) {
     response.status(401).json({ error: 'Not authenticated' });
@@ -371,7 +383,7 @@ app.post('/api/game/compile', requireAuth, async (request: AuthedRequest, respon
 
   // 1. Rate Limiting (10 attempts per minute)
   const teams = await getTeamsCollection();
-  const team = await teams.findOne({ _id: new ObjectId(auth.teamId) });
+  const team = await teams.findOne({ _id: toObjectId(auth.teamId, 'team id') });
   if (!team) {
     response.status(404).json({ error: 'Team not found' });
     return;
@@ -394,7 +406,7 @@ app.post('/api/game/compile', requireAuth, async (request: AuthedRequest, respon
 
   // 2. Fetch Question for Verification
   const questions = await getQuestionsCollection();
-  const question = await questions.findOne({ _id: new ObjectId(questionId) });
+  const question = await questions.findOne({ _id: toObjectId(questionId, 'questionId') });
   if (!question) {
     response.status(404).json({ error: 'Question not found' });
     return;
@@ -457,39 +469,34 @@ app.post('/api/game/compile', requireAuth, async (request: AuthedRequest, respon
     console.error('Execution failed:', err);
     response.status(502).json({ error: 'Code execution failed. Please check your logic or try again later.' });
   }
-});
+}));
 
-app.get('/api/questions', async (_request, response) => {
-  try {
-    const questions = await getQuestionsCollection();
-    const docs = await questions.find({}).sort({ round: 1 }).toArray();
+app.get('/api/questions', route(async (_request, response) => {
+  const questions = await getQuestionsCollection();
+  const docs = await questions.find({}).sort({ round: 1 }).toArray();
 
-    // Mask sensitive fields for non-privileged players
-    const masked = docs.map(({ _id, ...rest }) => {
-      const q = rest as any;
-      const p1 = q.p1 || {};
-      return {
-        id: _id.toString(),
-        ...q,
-        locationQrCode: undefined,
-        p1: {
-          title: p1.title || 'Untitled',
-          language: p1.language || 'python',
-          code: p1.code || '',
-          hint: p1.hint || '',
-          // Hide ans, output, and testCases for security
-        }
-      };
-    });
+  // Mask sensitive fields for non-privileged players
+  const masked = docs.map(({ _id, ...rest }) => {
+    const q = rest as any;
+    const p1 = q.p1 || {};
+    return {
+      id: _id.toString(),
+      ...q,
+      locationQrCode: undefined,
+      p1: {
+        title: p1.title || 'Untitled',
+        language: p1.language || 'python',
+        code: p1.code || '',
+        hint: p1.hint || '',
+        // Hide ans, output, and testCases for security
+      }
+    };
+  });
 
-    response.json({ questions: masked });
-  } catch (error: any) {
-    console.error('Questions error:', error);
-    response.status(500).json({ error: 'Failed to fetch questions', details: error.message });
-  }
-});
+  response.json({ questions: masked });
+}));
 
-app.post('/api/runner/verify-location-qr', requireAuth, async (request: AuthedRequest, response) => {
+app.post('/api/runner/verify-location-qr', requireAuth, route(async (request: AuthedRequest, response) => {
   const auth = request.auth;
   if (!auth || auth.role !== 'runner') {
     response.status(403).json({ error: 'Only runners can verify location QR codes' });
@@ -522,10 +529,10 @@ app.post('/api/runner/verify-location-qr', requireAuth, async (request: AuthedRe
   }
 
   response.json({ ok: true });
-});
+}));
 
 // Runner verifies the QR passkey to unlock their minigame
-app.post('/api/runner/verify-passkey', requireAuth, async (request: AuthedRequest, response) => {
+app.post('/api/runner/verify-passkey', requireAuth, route(async (request: AuthedRequest, response) => {
   const auth = request.auth;
   if (!auth || auth.role !== 'runner') {
     response.status(403).json({ error: 'Only runners can verify passkeys' });
@@ -569,10 +576,10 @@ app.post('/api/runner/verify-passkey', requireAuth, async (request: AuthedReques
   const gameType = gameTypes[currentRoundIndex % 3];
 
   response.json({ ok: true, gameType, stage: 'runner_game' });
-});
+}));
 
 // Runner completes minigame — advances both solver & runner to next round
-app.post('/api/runner/complete-round', requireAuth, async (request: AuthedRequest, response) => {
+app.post('/api/runner/complete-round', requireAuth, route(async (request: AuthedRequest, response) => {
   const auth = request.auth;
   if (!auth || auth.role !== 'runner') {
     response.status(403).json({ error: 'Only runners can complete rounds' });
@@ -614,10 +621,10 @@ app.post('/api/runner/complete-round', requireAuth, async (request: AuthedReques
   await teams.updateOne({ _id: team._id }, { $set: { gameState: nextState, updatedAt: new Date() } });
 
   response.json({ ok: true, gameState: nextState });
-});
+}));
 
 // Runner GPS location update — called frequently by runner's device
-app.put('/api/runner/location', requireAuth, async (request: AuthedRequest, response) => {
+app.put('/api/runner/location', requireAuth, route(async (request: AuthedRequest, response) => {
   const auth = request.auth!;
   if (auth.role !== 'runner') {
     response.status(403).json({ error: 'Only runners can update location' });
@@ -632,14 +639,14 @@ app.put('/api/runner/location', requireAuth, async (request: AuthedRequest, resp
 
   const teams = await getTeamsCollection();
   await teams.updateOne(
-    { _id: new ObjectId(auth.teamId) },
+    { _id: toObjectId(auth.teamId, 'team id') },
     { $set: { 'gameState.currentLat': lat, 'gameState.currentLng': lng, updatedAt: new Date() } }
   );
 
   response.json({ ok: true });
-});
+}));
 
-app.get('/api/leaderboard', async (_request, response) => {
+app.get('/api/leaderboard', route(async (_request, response) => {
   const teams = await getTeamsCollection();
   const docs = await teams.find({}, { sort: { 'gameState.round': -1, 'gameState.startTime': 1 } }).toArray();
 
@@ -659,9 +666,9 @@ app.get('/api/leaderboard', async (_request, response) => {
   });
 
   response.json({ leaderboard });
-});
+}));
 
-app.get('/api/admin/config', requireAdmin, async (_request: AdminAuthedRequest, response) => {
+app.get('/api/admin/config', requireAdmin, route(async (_request: AdminAuthedRequest, response) => {
   const config = await getConfigCollection();
   const docs = await config.find({}).toArray();
   const configMap = docs.reduce((acc, doc) => {
@@ -669,9 +676,9 @@ app.get('/api/admin/config', requireAdmin, async (_request: AdminAuthedRequest, 
     return acc;
   }, {} as Record<string, any>);
   response.json(configMap);
-});
+}));
 
-app.put('/api/admin/config', requireAdmin, async (request: AdminAuthedRequest, response) => {
+app.put('/api/admin/config', requireAdmin, route(async (request: AdminAuthedRequest, response) => {
   const { key, value } = request.body as { key?: string; value?: any };
   if (!key) {
     response.status(400).json({ error: 'key is required' });
@@ -684,7 +691,7 @@ app.put('/api/admin/config', requireAdmin, async (request: AdminAuthedRequest, r
     { upsert: true }
   );
   response.json({ ok: true });
-});
+}));
 
 app.post('/api/admin/login', (request, response) => {
   const { email, password } = request.body as { email?: string; password?: string };
@@ -702,7 +709,7 @@ app.post('/api/admin/login', (request, response) => {
   response.json({ token, email });
 });
 
-app.get('/api/admin/teams', requireAdmin, async (_request: AdminAuthedRequest, response) => {
+app.get('/api/admin/teams', requireAdmin, route(async (_request: AdminAuthedRequest, response) => {
   const teams = await getTeamsCollection();
   const docs = await teams.find({}, { sort: { createdAt: -1 } }).toArray();
   response.json({
@@ -714,9 +721,9 @@ app.get('/api/admin/teams', requireAdmin, async (_request: AdminAuthedRequest, r
       lastLoginAt: team.lastLoginAt || null,
     })),
   });
-});
+}));
 
-app.post('/api/admin/teams', requireAdmin, async (request: AdminAuthedRequest, response) => {
+app.post('/api/admin/teams', requireAdmin, route(async (request: AdminAuthedRequest, response) => {
   const { name, email, password } = request.body as { name?: string; email?: string; password?: string };
   if (!name || !password) {
     response.status(400).json({ error: 'name and password are required' });
@@ -732,9 +739,9 @@ app.post('/api/admin/teams', requireAdmin, async (request: AdminAuthedRequest, r
   }
 
   response.status(201).json({ ok: true });
-});
+}));
 
-app.delete('/api/admin/teams/:id', requireAdmin, async (request: AdminAuthedRequest, response) => {
+app.delete('/api/admin/teams/:id', requireAdmin, route(async (request: AdminAuthedRequest, response) => {
   const teamId = String(request.params.id);
   if (!ObjectId.isValid(teamId)) {
     response.status(400).json({ error: 'Invalid team id' });
@@ -742,34 +749,29 @@ app.delete('/api/admin/teams/:id', requireAdmin, async (request: AdminAuthedRequ
   }
 
   const teams = await getTeamsCollection();
-  await teams.deleteOne({ _id: new ObjectId(teamId) });
+  await teams.deleteOne({ _id: toObjectId(teamId, 'team id') });
   response.json({ ok: true });
-});
+}));
 
-app.delete('/api/admin/teams', requireAdmin, async (_request: AdminAuthedRequest, response) => {
+app.delete('/api/admin/teams', requireAdmin, route(async (_request: AdminAuthedRequest, response) => {
   const teams = await getTeamsCollection();
   const result = await teams.deleteMany({});
   response.json({ ok: true, deletedCount: result.deletedCount });
-});
+}));
 
-app.get('/api/admin/questions', requireAdmin, async (_request: AdminAuthedRequest, response) => {
-  try {
-    const questions = await getQuestionsCollection();
-    const docs = await questions.find({}).sort({ round: 1 }).toArray();
-    response.json({
-      questions: docs.map(({ _id, ...rest }) => ({
-        id: _id.toString(),
-        ...rest,
-        locationQrCode: resolveQuestionLocationQrCode(rest as QuestionDocument),
-      })),
-    });
-  } catch (error: any) {
-    console.error('Admin questions error:', error);
-    response.status(500).json({ error: 'Failed to fetch questions', details: error.message });
-  }
-});
+app.get('/api/admin/questions', requireAdmin, route(async (_request: AdminAuthedRequest, response) => {
+  const questions = await getQuestionsCollection();
+  const docs = await questions.find({}).sort({ round: 1 }).toArray();
+  response.json({
+    questions: docs.map(({ _id, ...rest }) => ({
+      id: _id.toString(),
+      ...rest,
+      locationQrCode: resolveQuestionLocationQrCode(rest as QuestionDocument),
+    })),
+  });
+}));
 
-app.post('/api/admin/questions', requireAdmin, async (request: AdminAuthedRequest, response) => {
+app.post('/api/admin/questions', requireAdmin, route(async (request: AdminAuthedRequest, response) => {
   const payload = createQuestionPayload(request.body);
   const now = new Date();
   const questions = await getQuestionsCollection();
@@ -778,20 +780,17 @@ app.post('/api/admin/questions', requireAdmin, async (request: AdminAuthedReques
     const result = await questions.insertOne({ ...payload, createdAt: now, updatedAt: now });
     response.status(201).json({ id: result.insertedId.toString(), locationQrCode: payload.locationQrCode });
   } catch (error) {
-    response.status(400).json({ error: 'Invalid question payload or duplicate round number' });
+    throw new HttpError(400, 'Invalid question payload or duplicate round number');
   }
-});
+}));
 
-app.put('/api/admin/questions/:id', requireAdmin, async (request: AdminAuthedRequest, response) => {
+app.put('/api/admin/questions/:id', requireAdmin, route(async (request: AdminAuthedRequest, response) => {
   const questionId = String(request.params.id);
-  if (!ObjectId.isValid(questionId)) {
-    response.status(400).json({ error: 'Invalid question id' });
-    return;
-  }
+  const objectId = toObjectId(questionId, 'question id');
 
   const questions = await getQuestionsCollection();
   try {
-    const existing = await questions.findOne({ _id: new ObjectId(questionId) });
+    const existing = await questions.findOne({ _id: objectId });
     if (!existing) {
       response.status(404).json({ error: 'Question not found' });
       return;
@@ -799,32 +798,28 @@ app.put('/api/admin/questions/:id', requireAdmin, async (request: AdminAuthedReq
 
     const payload = createQuestionPayload(request.body, existing);
     await generateQuestionQrAsset(payload);
-    await questions.updateOne({ _id: new ObjectId(questionId) }, { $set: { ...payload, updatedAt: new Date() } });
+    await questions.updateOne({ _id: objectId }, { $set: { ...payload, updatedAt: new Date() } });
     response.json({ ok: true });
   } catch {
-    response.status(400).json({ error: 'Invalid question payload or duplicate round number' });
+    throw new HttpError(400, 'Invalid question payload or duplicate round number');
   }
-});
+}));
 
-app.delete('/api/admin/questions/:id', requireAdmin, async (request: AdminAuthedRequest, response) => {
+app.delete('/api/admin/questions/:id', requireAdmin, route(async (request: AdminAuthedRequest, response) => {
   const questionId = String(request.params.id);
-  if (!ObjectId.isValid(questionId)) {
-    response.status(400).json({ error: 'Invalid question id' });
-    return;
-  }
 
   const questions = await getQuestionsCollection();
-  await questions.deleteOne({ _id: new ObjectId(questionId) });
+  await questions.deleteOne({ _id: toObjectId(questionId, 'question id') });
   response.json({ ok: true });
-});
+}));
 
-app.delete('/api/admin/questions', requireAdmin, async (_request: AdminAuthedRequest, response) => {
+app.delete('/api/admin/questions', requireAdmin, route(async (_request: AdminAuthedRequest, response) => {
   const questions = await getQuestionsCollection();
   const result = await questions.deleteMany({});
   response.json({ ok: true, deletedCount: result.deletedCount });
-});
+}));
 
-app.delete('/api/admin/database', requireAdmin, async (_request: AdminAuthedRequest, response) => {
+app.delete('/api/admin/database', requireAdmin, route(async (_request: AdminAuthedRequest, response) => {
   const teams = await getTeamsCollection();
   const questions = await getQuestionsCollection();
 
@@ -838,12 +833,9 @@ app.delete('/api/admin/database', requireAdmin, async (_request: AdminAuthedRequ
     deletedTeams: teamsResult.deletedCount,
     deletedQuestions: questionsResult.deletedCount,
   });
-});
+}));
 
-app.use((error: any, _request: express.Request, response: express.Response, _next: express.NextFunction) => {
-  console.error('API error:', error);
-  response.status(500).json({ error: 'Internal server error' });
-});
+app.use(createApiErrorHandler());
 
 app.use((_request, response) => {
   response.status(404).json({ error: 'Not found' });
@@ -853,7 +845,7 @@ async function main() {
   await ensureIndexes();
   await seedQuestionsIfEmpty();
 
-  const server = app.listen(port, '0.0.0.0', () => {
+  server = app.listen(port, '0.0.0.0', () => {
     console.log(`Backend listening on http://localhost:${port}`);
   });
 
@@ -867,6 +859,51 @@ async function main() {
     process.exit(1);
   });
 }
+
+async function shutdown(signal: string) {
+  if (isShuttingDown) {
+    return;
+  }
+
+  isShuttingDown = true;
+  console.log(`${signal} received. Shutting down gracefully...`);
+
+  await new Promise<void>((resolve) => {
+    if (!server) {
+      resolve();
+      return;
+    }
+
+    server.close((error) => {
+      if (error) {
+        console.error('Error while closing HTTP server', error);
+      }
+      resolve();
+    });
+  });
+
+  try {
+    await closeClient();
+  } catch (error) {
+    console.error('Error while closing MongoDB connection', error);
+  }
+}
+
+process.on('SIGINT', () => {
+  void shutdown('SIGINT').finally(() => process.exit(0));
+});
+
+process.on('SIGTERM', () => {
+  void shutdown('SIGTERM').finally(() => process.exit(0));
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('Unhandled promise rejection:', reason);
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught exception:', error);
+});
 
 main().catch((error) => {
   console.error('Failed to start backend', error);

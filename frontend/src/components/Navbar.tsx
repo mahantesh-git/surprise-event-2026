@@ -30,7 +30,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       className={cn(
         'reveal-up fixed top-0 left-0 right-0 z-50',
         'flex justify-between items-center',
-        'px-6 md:px-12 py-5 md:py-6',
+        'px-3 sm:px-6 md:px-12 py-3 sm:py-5 md:py-6',
         'bg-transparent',
         className
       )}
@@ -49,7 +49,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       </div>
 
       {/* Right side: meta + status + hamburger */}
-      <div className="flex items-center gap-6">
+      <div className="flex items-center gap-2 sm:gap-4 md:gap-6">
         <div className="hidden md:flex flex-col items-end gap-1 font-mono">
           <div className="flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-[#95FF00] animate-pulse" />
@@ -67,23 +67,23 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {metaText && (
           <div className="flex flex-col items-end">
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[#95FF00]">
+            <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.15em] sm:tracking-[0.2em] text-[#95FF00]">
               {metaText}
             </span>
-            <span className="text-[7px] text-white/30 uppercase tracking-[0.1em] font-mono">
+            <span className="hidden sm:block text-[7px] text-white/30 uppercase tracking-[0.1em] font-mono">
               Vector_Assigned
             </span>
           </div>
         )}
 
-        <div className="h-8 w-[1px] bg-white/10 mx-2" />
+        <div className="hidden sm:block h-8 w-[1px] bg-white/10 mx-1 md:mx-2" />
 
         <button
           onClick={onMenuOpen}
           className="flex items-center gap-3 bg-transparent border-none cursor-none p-0 group"
           aria-label="Open menu"
         >
-          <div className="flex flex-col items-end space-y-0.5">
+          <div className="hidden sm:flex flex-col items-end space-y-0.5">
             <span className="text-[11px] font-bold uppercase tracking-[0.15em] group-hover:text-[#95FF00] transition-colors">{ctaText}</span>
             <span className="text-[7px] font-mono text-white/20 uppercase tracking-[0.2em]">Matrix_Map</span>
           </div>

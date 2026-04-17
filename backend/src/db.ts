@@ -62,3 +62,14 @@ export async function ensureIndexes() {
   await questions.createIndex({ round: 1 }, { unique: true });
   await config.createIndex({ key: 1 }, { unique: true });
 }
+
+export async function closeClient() {
+  if (!client) {
+    return;
+  }
+
+  const activeClient = client;
+  client = null;
+  connectingPromise = null;
+  await activeClient.close();
+}

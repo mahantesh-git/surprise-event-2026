@@ -2,6 +2,16 @@ import type { GameState, HandoffDetails, Role } from '@/hooks/useGameState';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
 
+export class ApiError extends Error {
+  status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+  }
+}
+
 export interface TeamSession {
   token: string;
   role: Role;
@@ -42,7 +52,7 @@ async function requestJson<T>(path: string, init: RequestInit = {}, token?: stri
 
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error(payload?.error || 'Request failed');
+    throw new ApiError(payload?.error || 'Request failed', response.status);
   }
 
   return payload as T;
@@ -68,6 +78,10 @@ export async function updateGameState(token: string, updates: GameStateUpdate) {
     method: 'PATCH',
     body: JSON.stringify(updates),
   }, token);
+}
+
+export function isAuthError(error: unknown) {
+  return error instanceof ApiError && (error.status === 401 || error.status === 403);
 }
 
 export async function verifyRunnerLocationQr(token: string, qrCode: string) {

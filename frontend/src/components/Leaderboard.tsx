@@ -214,15 +214,15 @@ export function Leaderboard() {
   if (loading) return <div className="text-white/50 text-[10px] tracking-widest uppercase p-12 text-center">Loading Data Link...</div>;
 
   return (
-      <div ref={rootRef} className={`relative w-full overflow-hidden bg-[#060606] ${isFullscreen ? 'h-screen rounded-none border-none' : 'h-[calc(100vh-140px)] min-h-[500px] rounded-xl border border-white/10'}`}>
+      <div ref={rootRef} className={`relative w-full overflow-hidden bg-[#060606] ${isFullscreen ? 'h-screen rounded-none border-none' : 'h-[calc(100vh-120px)] min-h-[420px] sm:h-[calc(100vh-140px)] sm:min-h-[500px] rounded-xl border border-white/10'}`}>
         {/* Full Screen Map View */}
         {questions.length > 0 ? <MapView teams={teams} questions={questions} now={now} /> : <div className="absolute inset-0 flex items-center justify-center text-white/50 text-xs font-mono tracking-widest z-0">No Rounds Configured</div>}
 
         {/* Floating List View overlay on the right */}
-        <div className={`absolute top-4 right-4 flex flex-col h-[calc(100%-2rem)] max-h-[700px] z-10 transition-all duration-300 ${isListVisible ? 'w-full max-w-[360px] corner-card border border-white/10 shadow-2xl backdrop-blur-xl bg-black/60' : 'w-auto'}`}>
+        <div className={`absolute top-2 left-2 right-2 sm:top-4 sm:right-4 sm:left-auto flex flex-col h-[calc(100%-1rem)] sm:h-[calc(100%-2rem)] max-h-[700px] z-10 transition-all duration-300 ${isListVisible ? 'w-auto sm:w-full sm:max-w-[360px] corner-card border border-white/10 shadow-2xl backdrop-blur-xl bg-black/60' : 'w-auto'}`}>
           {isListVisible ? (
             <>
-              <div className="px-4 py-3 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
+              <div className="px-3 sm:px-4 py-3 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
                 <div className="flex items-center gap-2">
                   <Trophy className="w-4 h-4 text-[#95FF00]" />
                   <h2 className="text-[10px] uppercase tracking-[0.2em] font-bold text-white/80">Leaderboard</h2>
@@ -248,7 +248,7 @@ export function Leaderboard() {
                 </div>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-hide">
+              <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 scrollbar-hide">
                  {teams.map((t, idx) => (
                    <div key={t.id} className="bg-black/50 border border-white/10 p-3 relative group transition-colors hover:border-[#95FF00]/20 backdrop-blur-md">
                       <div className="absolute right-3 top-3 opacity-10 text-[20px] font-black italic select-none">
@@ -256,7 +256,7 @@ export function Leaderboard() {
                       </div>
                       <div className="pr-10">
                         <h3 className="font-bold text-xs uppercase tracking-widest text-[#95FF00] truncate">{t.name}</h3>
-                        <div className="flex items-center gap-3 mt-2 text-[10px] text-white/50 uppercase tracking-widest font-mono">
+                        <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-2 text-[10px] text-white/50 uppercase tracking-widest font-mono">
                            <span className="flex items-center gap-1"><Target className="w-3 h-3 text-[#95FF00]/50"/> {t.solvedCount}/{questions.length}</span>
                            <span className="flex items-center gap-1"><Clock className="w-3 h-3 text-[#95FF00]/50" /> {formatDuration(t.startTime, t.finishTime, now)}</span>
                         </div>
@@ -268,7 +268,7 @@ export function Leaderboard() {
               </div>
             </>
           ) : (
-            <div className="flex flex-col gap-2">
+            <div className="absolute right-2 top-2 sm:right-0 sm:top-0 flex flex-col gap-2">
               <button 
                 onClick={toggleFullscreen}
                 className="bg-black/80 border border-white/10 text-white/50 p-3 rounded shadow-[0_0_15px_rgba(0,0,0,0.5)] backdrop-blur-xl hover:bg-white/5 hover:text-white transition-all flex items-center justify-center group pointer-events-auto"

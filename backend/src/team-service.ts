@@ -11,6 +11,10 @@ export async function findTeamByName(teamName: string) {
 }
 
 export async function findTeamById(teamId: string) {
+  if (!ObjectId.isValid(teamId)) {
+    return null;
+  }
+
   const teams = await getTeamsCollection();
   return teams.findOne({ _id: new ObjectId(teamId) });
 }
