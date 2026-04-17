@@ -17,13 +17,16 @@ import { AdminPanel } from '@/components/AdminPanel';
 import { RoleSelection } from '@/components/RoleSelection';
 import { useGameState, Role } from '@/hooks/useGameState';
 import { useRunnerGps } from '@/hooks/useRunnerGps';
-import { getQuestions, compileCode, RoundQuestion } from '@/lib/api';
+import { getQuestions, compileCode, getFinalRoundQrCode, verifyRunnerFinalQr, RoundQuestion } from '@/lib/api';
 import type { SupportedLanguage } from '@/components/CodeEditor';
 import { CodeEditor, LANGUAGE_TEMPLATES } from '@/components/CodeEditor';
 import { PersistentProgress } from '@/components/PersistentProgress';
 import { SectorMap } from '@/components/SectorMap';
 import { RunnerGame } from '@/components/RunnerGame';
 import { Leaderboard } from '@/components/Leaderboard';
+import { QRScanner } from '@/components/QRScanner';
+
+const SOLVER_FULLSCREEN_EXIT_KEY = import.meta.env.VITE_SOLVER_EXIT_KEY || 'quest-exit';
 
 export default function App() {
   const [pathname, setPathname] = useState(() => window.location.pathname);
@@ -41,6 +44,11 @@ export default function App() {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isSyncingRunner, setIsSyncingRunner] = useState(false);
   const [isEnteringRunnerGame, setIsEnteringRunnerGame] = useState(false);
+  const [finalQrPayload, setFinalQrPayload] = useState<string>('');
+  const [finalQrLoading, setFinalQrLoading] = useState(false);
+  const [finalQrError, setFinalQrError] = useState<string | null>(null);
+  const [finalQrScannerOpen, setFinalQrScannerOpen] = useState(false);
+  const [isVerifyingFinalQr, setIsVerifyingFinalQr] = useState(false);
   const [consoleOutput, setConsoleOutput] = useState<{ 
     stdout: string; 
     stderr: string; 
@@ -48,8 +56,34 @@ export default function App() {
     testResults?: Array<{ input: string; passed: boolean; stdout: string; stderr: string }> 
   } | null>(null);
   const [feedback, setFeedback] = useState<{ type: 'ok' | 'err', msg: string } | null>(null);
+  const [notification, setNotification] = useState<{ id: number; message: string; tone: 'info' | 'success' } | null>(null);
+  const [showFullscreenExitGate, setShowFullscreenExitGate] = useState(false);
+  const [fullscreenExitKeyInput, setFullscreenExitKeyInput] = useState('');
+  const [fullscreenExitError, setFullscreenExitError] = useState<string | null>(null);
+  const [reenteringFullscreen, setReenteringFullscreen] = useState(false);
 
   const [devMode, setDevMode] = useState(false);
+  const previousRoundStateRef = useRef<number | null>(null);
+  const lastRunnerHandoffNoticeRef = useRef<string>('');
+  const lastSolverCompleteNoticeRef = useRef(false);
+  const notificationTimerRef = useRef<number | null>(null);
+  const solverExitAuthorizedRef = useRef(false);
+  const wasFullscreenRef = useRef(false);
+
+  const requestAppFullscreen = async () => {
+    const root = document.documentElement as HTMLElement & {
+      webkitRequestFullscreen?: () => Promise<void> | void;
+    };
+    const request = root.requestFullscreen?.bind(root) ?? root.webkitRequestFullscreen?.bind(root);
+    if (!request) return false;
+
+    try {
+      await Promise.resolve(request());
+      return true;
+    } catch {
+      return false;
+    }
+  };
 
   // Stream runner GPS to backend while in field stages
   useRunnerGps(
@@ -99,6 +133,132 @@ export default function App() {
     }
   }, [gameState?.round, gameState?.stage, rounds]);
 
+  useEffect(() => {
+    if (!session?.token || !gameState) {
+      setFinalQrPayload('');
+      setFinalQrError(null);
+      setFinalQrLoading(false);
+      setFinalQrScannerOpen(false);
+      return;
+    }
+
+    if (gameState.stage !== 'final_qr') {
+      setFinalQrPayload('');
+      setFinalQrError(null);
+      setFinalQrLoading(false);
+      setFinalQrScannerOpen(false);
+      return;
+    }
+
+    if (role === 'solver') {
+      setFinalQrLoading(true);
+      setFinalQrError(null);
+      getFinalRoundQrCode(session.token)
+        .then((result) => {
+          setFinalQrPayload(result.qrCode);
+        })
+        .catch((error) => {
+          setFinalQrError(error instanceof Error ? error.message : 'Failed to load final QR code');
+        })
+        .finally(() => setFinalQrLoading(false));
+      return;
+    }
+
+    pushNotification('Runner final step: scan the solver finish QR to complete the quest.');
+  }, [gameState?.stage, role, session?.token]);
+
+  const pushNotification = (message: string, tone: 'info' | 'success' = 'info') => {
+    if (notificationTimerRef.current) {
+      window.clearTimeout(notificationTimerRef.current);
+      notificationTimerRef.current = null;
+    }
+
+    setNotification({ id: Date.now(), message, tone });
+    notificationTimerRef.current = window.setTimeout(() => {
+      setNotification(null);
+      notificationTimerRef.current = null;
+    }, 4500);
+  };
+
+  useEffect(() => {
+    if (!gameState || !session || !role) {
+      previousRoundStateRef.current = null;
+      lastRunnerHandoffNoticeRef.current = '';
+      lastSolverCompleteNoticeRef.current = false;
+      return;
+    }
+
+    const prevRound = previousRoundStateRef.current;
+    const handoffKey = `${gameState.round}:${gameState.handoff?.passkey ?? ''}`;
+
+    if (
+      role === 'runner'
+      && gameState.stage === 'runner_travel'
+      && gameState.handoff?.passkey
+      && lastRunnerHandoffNoticeRef.current !== handoffKey
+    ) {
+      pushNotification(`Solver synchronized round ${gameState.round + 1}. Travel and scan the location QR.`);
+      lastRunnerHandoffNoticeRef.current = handoffKey;
+    }
+
+    if (
+      role === 'solver'
+      && prevRound !== null
+      && gameState.round > prevRound
+      && gameState.stage === 'p1_solve'
+    ) {
+      pushNotification(`Runner finished round ${prevRound + 1}. Round ${gameState.round + 1} is now unlocked.`, 'success');
+    }
+
+    if (
+      role === 'solver'
+      && gameState.stage === 'complete'
+      && !lastSolverCompleteNoticeRef.current
+    ) {
+      pushNotification('Runner finished the final round. Quest completed.', 'success');
+      lastSolverCompleteNoticeRef.current = true;
+    }
+
+    previousRoundStateRef.current = gameState.round;
+  }, [gameState, role, session]);
+
+  useEffect(() => {
+    return () => {
+      if (notificationTimerRef.current) {
+        window.clearTimeout(notificationTimerRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!session || role !== 'solver') {
+      setShowFullscreenExitGate(false);
+      setFullscreenExitKeyInput('');
+      setFullscreenExitError(null);
+      solverExitAuthorizedRef.current = false;
+      wasFullscreenRef.current = false;
+      return;
+    }
+
+    const handleFullscreenChange = () => {
+      const isFullscreen = !!document.fullscreenElement;
+
+      if (!isFullscreen && solverExitAuthorizedRef.current) {
+        solverExitAuthorizedRef.current = false;
+      } else if (!isFullscreen && wasFullscreenRef.current && !solverExitAuthorizedRef.current) {
+        setShowFullscreenExitGate(true);
+        setFullscreenExitError(null);
+        setFullscreenExitKeyInput('');
+      }
+
+      wasFullscreenRef.current = isFullscreen;
+    };
+
+    wasFullscreenRef.current = !!document.fullscreenElement;
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, [session, role]);
+
   if (pathname === '/admin') {
     return (
       <AdminPanel
@@ -130,11 +290,55 @@ export default function App() {
     setIsLoggingIn(true);
     try {
       await login(teamName, password);
+      if (role === 'solver') {
+        await requestAppFullscreen();
+        wasFullscreenRef.current = !!document.fullscreenElement;
+      }
     } catch (error) {
       setLoginError(error instanceof Error ? error.message : 'Login failed');
     } finally {
       setIsLoggingIn(false);
     }
+  };
+
+  const handleAllowFullscreenExit = async () => {
+    if (fullscreenExitKeyInput.trim() !== SOLVER_FULLSCREEN_EXIT_KEY) {
+      setFullscreenExitError('Invalid exit key');
+      return;
+    }
+
+    setShowFullscreenExitGate(false);
+    setFullscreenExitError(null);
+    setFullscreenExitKeyInput('');
+
+    if (document.fullscreenElement) {
+      // Single-use authorization only for this immediate exit action.
+      solverExitAuthorizedRef.current = true;
+      try {
+        await document.exitFullscreen();
+      } catch {
+        // Ignore browser exit errors and keep current display mode.
+      }
+      return;
+    }
+
+    // If solver already exited before entering key, do not persist authorization.
+    solverExitAuthorizedRef.current = false;
+  };
+
+  const handleReturnToFullscreen = async () => {
+    setReenteringFullscreen(true);
+    setFullscreenExitError(null);
+    const ok = await requestAppFullscreen();
+    setReenteringFullscreen(false);
+    if (ok || document.fullscreenElement) {
+      setShowFullscreenExitGate(false);
+      setFullscreenExitKeyInput('');
+      wasFullscreenRef.current = true;
+      return;
+    }
+
+    setFullscreenExitError('Unable to re-enter fullscreen automatically. Try again.');
   };
 
   const handleLogout = () => {
@@ -329,6 +533,25 @@ export default function App() {
     }
   };
 
+  const handleVerifyFinalQr = async (decodedValue: string) => {
+    if (!session?.token || isVerifyingFinalQr) return;
+
+    setIsVerifyingFinalQr(true);
+    try {
+      await verifyRunnerFinalQr(session.token, decodedValue.trim());
+      setFinalQrScannerOpen(false);
+      await sync();
+    } catch (error) {
+      pushNotification(error instanceof Error ? error.message : 'Final QR verification failed');
+    } finally {
+      setIsVerifyingFinalQr(false);
+    }
+  };
+
+  const finalQrImageUrl = finalQrPayload
+    ? `https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=${encodeURIComponent(finalQrPayload)}`
+    : '';
+
   const nextRound = () => {
     if (gameState!.round < rounds.length - 1) {
       updateState({ round: gameState!.round + 1, stage: 'p1_solve', handoff: null });
@@ -336,10 +559,98 @@ export default function App() {
   };
 
   const isMyTurn = (role === 'solver' && ['p1_solve', 'p1_solved'].includes(gameState!.stage)) ||
-                   (role === 'runner' && ['runner_travel', 'runner_game', 'runner_done'].includes(gameState!.stage));
+                   (role === 'runner' && ['runner_travel', 'runner_game', 'runner_done'].includes(gameState!.stage))
+                   || gameState!.stage === 'final_qr';
 
   return (
     <>
+      <AnimatePresence>
+        {showFullscreenExitGate && role === 'solver' && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[160] bg-black/80 backdrop-blur-sm flex items-center justify-center px-4"
+          >
+            <motion.div
+              initial={{ y: 16, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 16, opacity: 0 }}
+              className="w-full max-w-md corner-card border border-[#95FF00]/40 bg-[#0B0C0D] p-6 sm:p-8"
+            >
+              <div className="space-y-5">
+                <div className="space-y-2 text-center">
+                  <h2 className="text-[#95FF00] text-lg sm:text-xl font-black uppercase tracking-[0.2em]">Exit Fullscreen?</h2>
+                  <p className="text-[10px] sm:text-xs text-white/50 uppercase tracking-[0.12em]">
+                    Enter security key to leave solver fullscreen mode.
+                  </p>
+                </div>
+
+                <input
+                  type="password"
+                  value={fullscreenExitKeyInput}
+                  onChange={(event) => setFullscreenExitKeyInput(event.target.value)}
+                  onKeyDown={(event) => event.key === 'Enter' && handleAllowFullscreenExit()}
+                  placeholder="EXIT_KEY"
+                  className="w-full high-clearance-input text-center h-12"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                />
+
+                {fullscreenExitError && (
+                  <div className="p-2 border border-rose-600/40 bg-rose-600/10 text-rose-400 text-[10px] uppercase tracking-widest text-center">
+                    {fullscreenExitError}
+                  </div>
+                )}
+
+                <div className="flex gap-3">
+                  <Button
+                    className="flex-1 font-bold uppercase tracking-[0.16em] h-11"
+                    variant="ink"
+                    onClick={handleReturnToFullscreen}
+                    disabled={reenteringFullscreen}
+                  >
+                    {reenteringFullscreen ? 'Re-entering...' : 'Stay Fullscreen'}
+                  </Button>
+                  <Button
+                    className="flex-1 font-bold uppercase tracking-[0.16em] h-11"
+                    variant="sage"
+                    onClick={handleAllowFullscreenExit}
+                  >
+                    Allow Exit
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {notification && (
+          <motion.div
+            key={notification.id}
+            initial={{ opacity: 0, y: -18 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -18 }}
+            className={cn(
+              'fixed top-16 sm:top-20 left-1/2 -translate-x-1/2 z-[120] w-[calc(100%-1.5rem)] sm:w-auto sm:max-w-2xl px-4 py-3 border backdrop-blur-md shadow-lg',
+              notification.tone === 'success'
+                ? 'border-[#95FF00]/50 bg-[#95FF00]/10 text-[#95FF00]'
+                : 'border-white/20 bg-black/70 text-white',
+            )}
+          >
+            <div className="flex items-center gap-2">
+              <Zap className="h-4 w-4 shrink-0" />
+              <p className="text-[10px] sm:text-xs font-mono uppercase tracking-[0.15em] sm:tracking-[0.2em]">
+                {notification.message}
+              </p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <PersistentProgress totalRounds={rounds.length} currentRound={gameState?.round ?? 0} roundsDone={gameState?.roundsDone ?? []} />
       <GridBackground />
       <Navbar 
@@ -681,6 +992,81 @@ export default function App() {
                           await sync();
                         }}
                       />
+                    )}
+
+                    {/* Final QR Handshake */}
+                    {gameState!.stage === 'final_qr' && (
+                      <div className="corner-card bg-black/40 backdrop-blur-xl p-6 sm:p-8 border border-[#95FF00]/30 relative text-center overflow-hidden">
+                        <div className="corner-br" /> <div className="corner-bl" />
+                        <div className="absolute inset-0 bg-[#95FF00]/5 pointer-events-none" />
+                        <div className="relative z-10 space-y-6">
+                          <div className="space-y-2">
+                            <h2 className="text-xl sm:text-2xl font-bold tracking-widest uppercase text-[#95FF00]">Final Authentication</h2>
+                            <p className="text-[10px] sm:text-xs text-white/50 uppercase tracking-[0.15em] sm:tracking-[0.25em]">
+                              {role === 'solver'
+                                ? 'Show this QR to the runner to finish the game.'
+                                : 'Scan solver QR to complete the quest.'}
+                            </p>
+                          </div>
+
+                          {role === 'solver' ? (
+                            <div className="space-y-4">
+                              {finalQrLoading && (
+                                <div className="text-white/50 text-xs uppercase tracking-widest">Loading final QR...</div>
+                              )}
+
+                              {finalQrError && (
+                                <div className="p-3 border border-rose-600/40 bg-rose-600/10 text-rose-400 text-[10px] uppercase tracking-widest">
+                                  {finalQrError}
+                                </div>
+                              )}
+
+                              {!!finalQrImageUrl && (
+                                <div className="mx-auto w-fit p-3 sm:p-4 border border-[#95FF00]/40 bg-white">
+                                  <img src={finalQrImageUrl} alt="Final completion QR code" className="w-52 h-52 sm:w-72 sm:h-72 object-contain" />
+                                </div>
+                              )}
+
+                              {!!finalQrPayload && (
+                                <div className="text-[#95FF00] font-mono text-xs sm:text-sm break-all tracking-[0.18em] sm:tracking-[0.25em]">
+                                  {finalQrPayload}
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="space-y-4">
+                              <Button
+                                className="w-full font-bold uppercase tracking-[0.2em] h-14"
+                                variant="sage"
+                                size="md"
+                                onClick={() => setFinalQrScannerOpen(true)}
+                                disabled={isVerifyingFinalQr}
+                              >
+                                {isVerifyingFinalQr ? (
+                                  <span className="flex items-center gap-2">
+                                    <span className="w-3 h-3 border border-black/50 border-t-transparent rounded-full animate-spin" />
+                                    Verifying...
+                                  </span>
+                                ) : (
+                                  <>
+                                    <QrCode className="mr-3 h-5 w-5" />
+                                    Scan Solver Final QR
+                                  </>
+                                )}
+                              </Button>
+
+                              {finalQrScannerOpen && (
+                                <div className="pt-2">
+                                  <QRScanner
+                                    onScan={handleVerifyFinalQr}
+                                    onClose={() => setFinalQrScannerOpen(false)}
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     )}
 
                     {/* Quest Complete */}

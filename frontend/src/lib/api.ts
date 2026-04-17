@@ -259,6 +259,17 @@ export async function updateRunnerLocation(token: string, lat: number, lng: numb
   }, token);
 }
 
+export async function getFinalRoundQrCode(token: string) {
+  return requestJson<{ qrCode: string }>('/game/final-qr', { method: 'GET' }, token);
+}
+
+export async function verifyRunnerFinalQr(token: string, qrCode: string) {
+  return requestJson<{ ok: boolean; gameState: GameState }>('/runner/verify-final-qr', {
+    method: 'POST',
+    body: JSON.stringify({ qrCode }),
+  }, token);
+}
+
 export async function getAdminConfig(token: string) {
   return requestJson<Record<string, any>>('/admin/config', { method: 'GET' }, token);
 }

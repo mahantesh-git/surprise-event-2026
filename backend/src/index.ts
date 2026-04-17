@@ -169,6 +169,10 @@ function toObjectId(value: string, label: string) {
   return new ObjectId(value);
 }
 
+function buildFinalRoundQrCode(teamId: string) {
+  return `QUEST-FINISH-${teamId.slice(-6).toUpperCase()}`;
+}
+
 app.use(cors());
 app.use(express.json());
 
@@ -332,6 +336,32 @@ app.post('/api/game/reset', requireAuth, route(async (request: AuthedRequest, re
   );
 
   response.json({ gameState: nextState });
+}));
+
+app.get('/api/game/final-qr', requireAuth, route(async (request: AuthedRequest, response) => {
+  const auth = request.auth;
+  if (!auth) {
+    response.status(401).json({ error: 'Not authenticated' });
+    return;
+  }
+
+  if (auth.role !== 'solver') {
+    response.status(403).json({ error: 'Only solver can access final QR' });
+    return;
+  }
+
+  const team = await findTeamById(auth.teamId);
+  if (!team) {
+    response.status(404).json({ error: 'Team not found' });
+    return;
+  }
+
+  if (team.gameState.stage !== 'final_qr') {
+    response.status(409).json({ error: 'Final QR is not available yet' });
+    return;
+  }
+
+  response.json({ qrCode: buildFinalRoundQrCode(team._id.toString()) });
 }));
 
 // Language → Piston runtime config
@@ -603,9 +633,9 @@ app.post('/api/runner/complete-round', requireAuth, route(async (request: Authed
   if (isLastRound) {
     nextState = {
       ...team.gameState,
-      stage: 'complete',
+      stage: 'final_qr',
       roundsDone,
-      finishTime: team.gameState.finishTime || new Date().toISOString(),
+      finishTime: null,
     };
   } else {
     nextState = {
@@ -616,6 +646,48 @@ app.post('/api/runner/complete-round', requireAuth, route(async (request: Authed
       handoff: null,
     };
   }
+
+  const teams = await getTeamsCollection();
+  await teams.updateOne({ _id: team._id }, { $set: { gameState: nextState, updatedAt: new Date() } });
+
+  response.json({ ok: true, gameState: nextState });
+}));
+
+app.post('/api/runner/verify-final-qr', requireAuth, route(async (request: AuthedRequest, response) => {
+  const auth = request.auth;
+  if (!auth || auth.role !== 'runner') {
+    response.status(403).json({ error: 'Only runners can verify final QR code' });
+    return;
+  }
+
+  const { qrCode } = request.body as { qrCode?: string };
+  if (!qrCode?.trim()) {
+    response.status(400).json({ error: 'qrCode is required' });
+    return;
+  }
+
+  const team = await findTeamById(auth.teamId);
+  if (!team) {
+    response.status(404).json({ error: 'Team not found' });
+    return;
+  }
+
+  if (team.gameState.stage !== 'final_qr') {
+    response.status(409).json({ error: 'Final QR verification is not active right now' });
+    return;
+  }
+
+  const expectedQrCode = buildFinalRoundQrCode(team._id.toString());
+  if (expectedQrCode !== qrCode.trim().toUpperCase()) {
+    response.status(401).json({ error: 'Invalid final QR code' });
+    return;
+  }
+
+  const nextState: GameState = {
+    ...team.gameState,
+    stage: 'complete',
+    finishTime: team.gameState.finishTime || new Date().toISOString(),
+  };
 
   const teams = await getTeamsCollection();
   await teams.updateOne({ _id: team._id }, { $set: { gameState: nextState, updatedAt: new Date() } });

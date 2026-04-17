@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { getGameState, getSession, loginTeam, resetGameState, updateGameState } from '@/lib/api';
 
-export type Stage = 'p1_solve' | 'p1_solved' | 'runner_travel' | 'runner_game' | 'runner_done' | 'complete';
+export type Stage = 'p1_solve' | 'p1_solved' | 'runner_travel' | 'runner_game' | 'runner_done' | 'final_qr' | 'complete';
 export type Role = 'solver' | 'runner';
 
 export interface GameState {

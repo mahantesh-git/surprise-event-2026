@@ -1,6 +1,6 @@
 export type Role = 'solver' | 'runner';
 
-export type Stage = 'p1_solve' | 'p1_solved' | 'runner_travel' | 'runner_game' | 'runner_done' | 'complete';
+export type Stage = 'p1_solve' | 'p1_solved' | 'runner_travel' | 'runner_game' | 'runner_done' | 'final_qr' | 'complete';
 
 
 export interface HandoffDetails {

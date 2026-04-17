@@ -31,7 +31,92 @@ export const LANGUAGE_TEMPLATES: Record<SupportedLanguage, string> = {
     'package main\n\nimport "fmt"\n\nfunc main() {\n    // Write your solution here\n    _ = fmt.Println\n}\n',
 };
 
+const LANGUAGE_COMPLETIONS: Record<string, string[]> = {
+  python: ['def', 'class', 'import', 'from', 'return', 'if', 'elif', 'else', 'while', 'for', 'in', 'try', 'except', 'finally', 'with', 'as', 'pass', 'break', 'continue', 'yield', 'lambda', 'global', 'nonlocal', 'assert', 'del', 'True', 'False', 'None', 'and', 'or', 'not', 'is', 'print', 'len', 'range', 'str', 'int', 'float', 'list', 'dict', 'set', 'tuple', 'open', 'type', 'sum', 'min', 'max', 'abs'],
+  java: ['abstract', 'assert', 'boolean', 'break', 'byte', 'case', 'catch', 'char', 'class', 'const', 'continue', 'default', 'do', 'double', 'else', 'enum', 'extends', 'final', 'finally', 'float', 'for', 'goto', 'if', 'implements', 'import', 'instanceof', 'int', 'interface', 'long', 'native', 'new', 'package', 'private', 'protected', 'public', 'return', 'short', 'static', 'strictfp', 'super', 'switch', 'synchronized', 'this', 'throw', 'throws', 'transient', 'try', 'void', 'volatile', 'while', 'String', 'System.out.println', 'System.out.print', 'Math'],
+  c: ['auto', 'break', 'case', 'char', 'const', 'continue', 'default', 'do', 'double', 'else', 'enum', 'extern', 'float', 'for', 'goto', 'if', 'int', 'long', 'register', 'return', 'short', 'signed', 'sizeof', 'static', 'struct', 'switch', 'typedef', 'union', 'unsigned', 'void', 'volatile', 'while', 'printf', 'scanf', 'malloc', 'free', 'NULL', '#include'],
+  cpp: ['auto', 'break', 'case', 'char', 'const', 'continue', 'default', 'do', 'double', 'else', 'enum', 'extern', 'float', 'for', 'goto', 'if', 'int', 'long', 'register', 'return', 'short', 'signed', 'sizeof', 'static', 'struct', 'switch', 'typedef', 'union', 'unsigned', 'void', 'volatile', 'while', 'class', 'catch', 'const_cast', 'delete', 'dynamic_cast', 'explicit', 'export', 'false', 'friend', 'inline', 'mutable', 'namespace', 'new', 'operator', 'private', 'protected', 'public', 'reinterpret_cast', 'static_cast', 'template', 'this', 'throw', 'true', 'try', 'typeid', 'typename', 'using', 'virtual', 'cout', 'cin', 'endl', 'std', 'vector', 'string', 'map', 'set', '#include'],
+  go: ['break', 'default', 'func', 'interface', 'select', 'case', 'defer', 'go', 'map', 'struct', 'chan', 'else', 'goto', 'package', 'switch', 'const', 'fallthrough', 'if', 'range', 'type', 'continue', 'for', 'import', 'return', 'var', 'fmt.Println', 'fmt.Printf', 'make', 'new', 'len', 'cap', 'append', 'close', 'panic', 'recover', 'string', 'int', 'int64', 'float64', 'bool'],
+};
+
+const LANGUAGE_SNIPPETS: Record<string, { label: string, insertText: string, documentation?: string }[]> = {
+  python: [
+    { label: 'def', insertText: 'def ${1:name}(${2:args}):\n\t${3:pass}', documentation: 'Function definition' },
+    { label: 'class', insertText: 'class ${1:Name}:\n\tdef __init__(self):\n\t\t${2:pass}', documentation: 'Class definition' },
+    { label: 'for', insertText: 'for ${1:item} in ${2:iterable}:\n\t${3:pass}', documentation: 'For loop' },
+    { label: 'if', insertText: 'if ${1:condition}:\n\t${2:pass}', documentation: 'If statement' },
+  ],
+  java: [
+    { label: 'sout', insertText: 'System.out.println(${1});', documentation: 'Print to standard output' },
+    { label: 'psvm', insertText: 'public static void main(String[] args) {\n\t${1}\n}', documentation: 'Main method' },
+    { label: 'fori', insertText: 'for (int i = 0; i < ${1:length}; i++) {\n\t${2}\n}', documentation: 'For loop' },
+    { label: 'class', insertText: 'public class ${1:Name} {\n\t${2}\n}', documentation: 'Class definition' },
+  ],
+  c: [
+    { label: 'main', insertText: 'int main() {\n\t${1}\n\treturn 0;\n}', documentation: 'Main function' },
+    { label: 'for', insertText: 'for (int i = 0; i < ${1:length}; i++) {\n\t${2}\n}', documentation: 'For loop' },
+    { label: 'printf', insertText: 'printf("${1:%d}\\n", ${2:var});', documentation: 'Print formatted' },
+  ],
+  cpp: [
+    { label: 'main', insertText: 'int main() {\n\t${1}\n\treturn 0;\n}', documentation: 'Main function' },
+    { label: 'fori', insertText: 'for (int i = 0; i < ${1:length}; i++) {\n\t${2}\n}', documentation: 'For loop' },
+    { label: 'cout', insertText: 'std::cout << ${1} << std::endl;', documentation: 'Print to standard output' },
+  ],
+  go: [
+    { label: 'main', insertText: 'func main() {\n\t${1}\n}', documentation: 'Main function' },
+    { label: 'for', insertText: 'for ${1:i} := 0; $1 < ${2:length}; $1++ {\n\t${3}\n}', documentation: 'For loop' },
+    { label: 'forr', insertText: 'for ${1:i}, ${2:v} := range ${3:iterable} {\n\t${4}\n}', documentation: 'For range loop' },
+    { label: 'func', insertText: 'func ${1:name}(${2:args}) ${3:ret} {\n\t${4}\n}', documentation: 'Function definition' },
+    { label: 'fmt.Println', insertText: 'fmt.Println(${1})', documentation: 'Print line' },
+  ],
+};
+
+let intellisenseRegistered = false;
+
 function defineQuestTheme(monaco: Monaco) {
+  if (!intellisenseRegistered) {
+    intellisenseRegistered = true;
+    Object.keys(LANGUAGE_COMPLETIONS).forEach((lang) => {
+      monaco.languages.registerCompletionItemProvider(lang, {
+        provideCompletionItems: (model: any, position: any) => {
+          const word = model.getWordUntilPosition(position);
+          const range = {
+            startLineNumber: position.lineNumber,
+            endLineNumber: position.lineNumber,
+            startColumn: word.startColumn,
+            endColumn: word.endColumn,
+          };
+
+          const suggestions: any[] = [];
+          
+          LANGUAGE_COMPLETIONS[lang].forEach(keyword => {
+            suggestions.push({
+              label: keyword,
+              kind: monaco.languages.CompletionItemKind.Keyword,
+              insertText: keyword,
+              range
+            });
+          });
+
+          if (LANGUAGE_SNIPPETS[lang]) {
+            LANGUAGE_SNIPPETS[lang].forEach(snippet => {
+              suggestions.push({
+                label: snippet.label,
+                kind: monaco.languages.CompletionItemKind.Snippet,
+                insertText: snippet.insertText,
+                insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+                documentation: snippet.documentation,
+                range
+              });
+            });
+          }
+
+          return { suggestions };
+        }
+      });
+    });
+  }
+
   monaco.editor.defineTheme('quest-dark', {
     base: 'vs-dark',
     inherit: true,
