@@ -1,26 +1,56 @@
 import type { GameState, HandoffDetails, Role } from '@/hooks/useGameState';
 
-let host = import.meta.env.VITE_API_HOST || import.meta.env.VITE_API_BASE_URL || '';
-if (host) {
-  if (!host.startsWith('http') && !host.startsWith('//')) {
-    host = `https://${host}`;
-  }
+const getApiBaseUrl = () => {
+  // Use VITE_API_HOST as primary, fallback to VITE_API_BASE_URL
+  let h = import.meta.env.VITE_API_HOST || import.meta.env.VITE_API_BASE_URL || '';
   
-  // Render-specific fix: if the host is an internal name (no dots, not localhost),
-  // append .onrender.com so it's resolvable from the public internet.
+  // Debug log for production (visible in browser console)
+  console.log('[API] Raw host from environment:', h || '(empty)');
+
+  if (!h && typeof window !== 'undefined') {
+    // If no host specified, and we're on localhost, assume local backend
+    if (window.location.hostname === 'localhost') {
+      h = 'http://localhost:5000';
+    } else {
+      // Otherwise fallback to relative /api
+      return '/api';
+    }
+  }
+
+  if (!h) return '/api';
+
+  // Ensure protocol exists
+  if (!h.startsWith('http') && !h.startsWith('//')) {
+    h = `https://${h}`;
+  }
+
+  // Render-specific fix: internal service names (no dots) are not resolvable from browsers.
+  // We automatically append .onrender.com if it's not localhost and missing a top-level domain.
   try {
-    const url = new URL(host);
-    if (!url.hostname.includes('.') && url.hostname !== 'localhost' && !url.hostname.includes(':')) {
-      host = host.replace(url.hostname, `${url.hostname}.onrender.com`);
+    const u = new URL(h);
+    const hostname = u.hostname;
+    
+    if (hostname !== 'localhost' && !hostname.includes('.') && !hostname.includes(':')) {
+      console.log(`[API] Fixing internal hostname: ${hostname} -> ${hostname}.onrender.com`);
+      u.hostname = `${hostname}.onrender.com`;
+      h = u.toString();
     }
   } catch (e) {
-    // Fallback for simple string cases
-    if (!host.includes('.') && !host.includes('localhost') && !host.includes('://localhost')) {
-      host = `${host}.onrender.com`;
+    // Fallback for non-URL strings
+    if (!h.includes('.') && !h.includes('localhost') && !h.includes('://localhost')) {
+      h = `${h}.onrender.com`;
     }
   }
-}
-const API_BASE = host.endsWith('/api') ? host : `${host}/api`;
+
+  // Cleanup: remove trailing slashes and ensure /api suffix
+  h = h.replace(/\/+$/, '');
+  const final = h.endsWith('/api') ? h : `${h}/api`;
+  
+  console.log('[API] Final base URL initialized at:', final);
+  return final;
+};
+
+const API_BASE = getApiBaseUrl();
 
 export class ApiError extends Error {
   status: number;
