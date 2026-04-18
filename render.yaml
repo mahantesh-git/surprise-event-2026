@@ -23,9 +23,8 @@ services:
       - key: PISTON_API_URL
         value: https://emkc.org/api/v2/piston/execute
 
-  - type: web
+  - type: static
     name: quest-frontend
-    env: static
     rootDir: frontend
     buildCommand: npm install && npm run build
     staticPublishPath: dist
@@ -40,7 +39,7 @@ services:
         fromService:
           type: web
           name: quest-backend
-          property: host
+          property: url
           # Render will automatically append /api via frontend code logic, 
           # but we can explicitly pass the full path if needed:
           # Render automatically passes the base URL like https://quest-backend.onrender.com

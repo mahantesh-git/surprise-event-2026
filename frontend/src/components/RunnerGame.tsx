@@ -358,7 +358,7 @@ export function RunnerGame({ token, currentRoundIndex, totalRounds, onRoundCompl
                 <div className="relative">
                   <input
                     placeholder="PASSKEY"
-                    className="w-full bg-black/40 border border-[var(--color-accent)]/30 text-center h-20 text-2xl tracking-[0.4em] font-black uppercase text-[var(--color-accent)] placeholder:text-[var(--color-accent)]/10 focus:border-[var(--color-accent)] focus:bg-[var(--color-accent)]/5 transition-all duration-500 outline-none rounded-xl shadow-[0_0_30px_rgba(238,58,23,0.05)]"
+                    className="w-full bg-white/5 border border-white/10 text-center h-20 text-2xl tracking-[0.4em] font-black uppercase text-white placeholder:text-white/10 focus:border-white/20 focus:bg-white/10 transition-all duration-500 outline-none rounded-xl"
                     value={passkey}
                     onChange={(e) => { setPasskey(e.target.value); setError(null); }}
                     onKeyDown={(e) => e.key === 'Enter' && handleVerifyPasskey()}
