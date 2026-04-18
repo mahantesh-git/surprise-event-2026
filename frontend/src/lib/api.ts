@@ -10,7 +10,7 @@ const getApiBaseUrl = () => {
   if (!h && typeof window !== 'undefined') {
     // If no host specified, and we're on localhost, assume local backend
     if (window.location.hostname === 'localhost') {
-      h = 'http://localhost:5000';
+      h = 'http://localhost:4000';
     } else {
       // Otherwise fallback to relative /api
       return '/api';

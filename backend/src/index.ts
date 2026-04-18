@@ -1,4 +1,6 @@
+import axios from 'axios';
 import cors from 'cors';
+
 import dotenv from 'dotenv';
 import express from 'express';
 import path from 'path';
@@ -451,6 +453,7 @@ app.post('/api/game/compile', requireAuth, route(async (request: AuthedRequest, 
   try {
     const pistonUrls = [
       process.env.PISTON_API_URL || 'https://emkc.org/api/v2/piston/execute',
+      'https://piston.engineer/api/v2/execute',
       'http://127.0.0.1:2000/api/v2/execute'
     ];
     
@@ -459,45 +462,46 @@ app.post('/api/game/compile', requireAuth, route(async (request: AuthedRequest, 
     let activeUrlIndex = 0;
 
     for (const tc of testCases) {
-      let pistonRes = null;
+      let pistonData: any = null;
       let lastError = '';
 
       while (activeUrlIndex < pistonUrls.length) {
         const url = pistonUrls[activeUrlIndex];
         try {
-          const res = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              language: pistonCfg.language,
-              version: pistonCfg.version,
-              files: [{ name: pistonCfg.fileName, content: code }],
-              stdin: tc.input || '',
-              args: [],
-              run_timeout: 5000,
-              compile_timeout: 5000,
-            }),
+          console.log(`Trying Piston at: ${url}`);
+          const res = await axios.post(url, {
+            language: pistonCfg.language,
+            version: pistonCfg.version,
+            files: [{ name: pistonCfg.fileName, content: code }],
+            stdin: tc.input || '',
+            args: [],
+            run_timeout: 5000,
+            compile_timeout: 5000,
+          }, {
+            timeout: 10000,
+            headers: {
+              'User-Agent': 'Quest-Scavenger-Hunt/1.0'
+            }
           });
 
-          if (res.ok) {
-            pistonRes = res;
+          if (res.status === 200) {
+            pistonData = res.data;
             break;
           }
-          const errorText = await res.text();
-          lastError = `Status ${res.status}: ${errorText}`;
-        } catch (err) {
-          lastError = err instanceof Error ? err.message : String(err);
+          lastError = `Status ${res.status}: ${JSON.stringify(res.data)}`;
+        } catch (err: any) {
+          lastError = err.response?.data?.message || err.message;
+          console.warn(`Piston attempt failed for ${url}:`, lastError);
         }
         activeUrlIndex++;
       }
 
-      if (!pistonRes) {
+      if (!pistonData) {
         throw new Error(`Piston API error (all endpoints failed): ${lastError}`);
       }
 
-      const data = await pistonRes.json() as any;
-      const run = data.run ?? { stdout: '', stderr: '', code: 0 };
-      const compile = data.compile ?? { code: 0, stderr: '' };
+      const run = pistonData.run ?? { stdout: '', stderr: '', code: 0 };
+      const compile = pistonData.compile ?? { code: 0, stderr: '' };
 
       const stdout = (run.stdout || '').trim();
       const stderr = (run.stderr || compile.stderr || '').trim();
