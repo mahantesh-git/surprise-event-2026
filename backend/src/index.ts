@@ -23,6 +23,8 @@ if (envLoad.error) {
 
 const app = express();
 const port = Number(process.env.PORT || 4000);
+
+
 const eventQrCodesDir = path.resolve(__dirname, '../../event_qr_codes');
 const questionQrScriptPath = path.resolve(__dirname, '../scripts/generate_question_qr.py');
 const route = asyncHandler;
