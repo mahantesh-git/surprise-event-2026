@@ -121,7 +121,7 @@ export function MenuOverlay({ isOpen, onClose, role, teamName, onLogout, onNavig
                 onClick={() => { onClose(); setTimeout(onLogout, 200); }}
                 className="group flex flex-col items-end gap-1"
               >
-                <div className="border border-red-500/20 px-6 py-3 text-[11px] uppercase tracking-[0.3em] font-black group-hover:bg-red-500/10 group-hover:border-red-500/50 transition-all text-red-500/60 group-hover:text-red-500">
+                <div className="border border-[var(--color-accent)]/20 px-6 py-3 text-[11px] uppercase tracking-[0.3em] font-black group-hover:bg-[var(--color-accent)]/10 group-hover:border-[var(--color-accent)]/50 transition-all text-[var(--color-accent)]/60 group-hover:text-[var(--color-accent)]">
                   Abort_Session
                 </div>
                 <span className="text-[7px] text-white/10 uppercase tracking-[0.4em] mr-1">Disconnect_Hard</span>

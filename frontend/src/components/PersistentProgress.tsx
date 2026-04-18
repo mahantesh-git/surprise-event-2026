@@ -28,7 +28,7 @@ export function PersistentProgress({ totalRounds, currentRound, roundsDone }: Pe
                 initial={{ x: '-100%' }}
                 animate={{ x: '100%' }}
                 transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}
-                className="absolute inset-0 bg-[var(--color-accent)] shadow-[0_0_8px_var(--color-accent)]"
+                className="absolute inset-0 bg-[var(--color-accent)] shadow-accent-xs"
               />
             )}
           </div>

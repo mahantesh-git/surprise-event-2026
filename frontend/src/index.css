@@ -10,9 +10,9 @@
   --color-bg-void: #131314;
   --color-bg-surface: #1C1C1C;
   --color-accent: #EE3A17;
-  --color-accent-muted: rgba(236, 94, 42, 0.7);
+  --color-accent-muted: rgba(238, 58, 23, 0.7);
   --color-accent-fill: rgba(238, 58, 23, 0.05);
-  --color-accent-tertiary: #F7BD14;
+  --color-accent-tertiary: #FF4D00;
   --color-text-primary: #E3E3E3;
   --color-grid: rgba(238, 58, 23, 0.05);
 
@@ -67,11 +67,22 @@
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) * 1.4);
+
+  --shadow-accent-xs: 0 0 6px rgba(238, 58, 23, 0.15);
+  --shadow-accent-sm: 0 0 10px rgba(238, 58, 23, 0.2);
+  --shadow-accent-md: 0 0 20px rgba(238, 58, 23, 0.25);
+  --shadow-accent-lg: 0 0 30px rgba(238, 58, 23, 0.3);
+  --shadow-accent-xl: 0 0 50px rgba(238, 58, 23, 0.4);
+  
+  --shadow-black-sm: 0 4px 10px rgba(0, 0, 0, 0.3);
+  --shadow-black-md: 0 8px 20px rgba(0, 0, 0, 0.5);
+  --shadow-black-lg: 0 0 50px rgba(0, 0, 0, 0.6);
+  --shadow-black-xl: 0 20px 40px -10px rgba(0, 0, 0, 0.8);
 }
 
 @layer base {
   * {
-    @apply border-border outline-ring/50 box-border shadow-none;
+    @apply border-border outline-ring/50 box-border;
   }
 
   html,
@@ -216,7 +227,7 @@
   }
 
   .high-clearance-input:focus {
-    @apply border-[var(--color-accent)]/40 bg-white/[0.03] shadow-[0_0_20px_rgba(238,58,23,0.1)];
+    @apply border-[var(--color-accent)]/40 bg-white/[0.03] shadow-accent-md;
   }
 
   #qr-reader__dashboard {
@@ -269,7 +280,7 @@
   }
 
   .syntax-keyword {
-    color: #F7BD14;
+    color: #EE3A17;
   }
 
   .syntax-number {
@@ -281,11 +292,11 @@
   }
 
   .syntax-comment {
-    color: rgba(236, 94, 42, 0.7);
+    color: rgba(238, 58, 23, 0.7);
     font-style: italic;
   }
 
   .syntax-op {
-    color: #EC5E2A;
+    color: #EE3A17;
   }
 }

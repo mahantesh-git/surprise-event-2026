@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getGameState, getSession, loginTeam, resetGameState, updateGameState } from '@/lib/api';
+import { getGameState, getSession, loginTeam, resetGameState, updateGameState, ChatMessage } from '@/lib/api';
 
 export type Stage = 'p1_solve' | 'p1_solved' | 'runner_travel' | 'runner_game' | 'runner_done' | 'final_qr' | 'complete';
 export type Role = 'solver' | 'runner';
@@ -11,6 +11,7 @@ export interface GameState {
   handoff: HandoffDetails | null;
   startTime?: string | null;
   finishTime?: string | null;
+  lastMessage?: ChatMessage | null;
 }
 
 export interface HandoffDetails {
@@ -42,6 +43,7 @@ export interface TeamSession {
   role: Role;
   team: TeamProfile;
   gameState: GameState;
+  lastMessage?: ChatMessage | null;
 }
 
 function parseStoredSession(role: Role): TeamSession | null {
@@ -71,8 +73,9 @@ export function useGameState(role: Role) {
 
   const syncGameState = async (token: string) => {
     const response = await getGameState(token);
-    setGameState(response.gameState);
-    return response.gameState;
+    const stateWithMsg = { ...response.gameState, lastMessage: response.lastMessage ?? null };
+    setGameState(stateWithMsg);
+    return stateWithMsg;
   };
 
   useEffect(() => {
@@ -141,9 +144,10 @@ export function useGameState(role: Role) {
       role: response.role,
       team: response.team,
       gameState: response.gameState,
+      lastMessage: null,
     };
     setSession(nextSession);
-    setGameState(response.gameState);
+    setGameState({ ...response.gameState, lastMessage: null });
     window.localStorage.setItem(storageKey, JSON.stringify(nextSession));
   };
 
@@ -157,10 +161,11 @@ export function useGameState(role: Role) {
   const updateState = async (updates: Partial<GameState>) => {
     if (!session) return;
     const response = await updateGameState(session.token, updates);
-    setGameState(response.gameState);
+    const stateWithMsg = { ...response.gameState, lastMessage: response.lastMessage ?? null };
+    setGameState(stateWithMsg);
     setSession((currentSession) => {
       if (!currentSession) return currentSession;
-      const nextSession = { ...currentSession, gameState: response.gameState };
+      const nextSession = { ...currentSession, gameState: stateWithMsg, lastMessage: response.lastMessage ?? null };
       window.localStorage.setItem(storageKey, JSON.stringify(nextSession));
       return nextSession;
     });
@@ -169,10 +174,11 @@ export function useGameState(role: Role) {
   const resetGame = async () => {
     if (!session) return;
     const response = await resetGameState(session.token);
-    setGameState(response.gameState);
+    const stateWithMsg = { ...response.gameState, lastMessage: null };
+    setGameState(stateWithMsg);
     setSession((currentSession) => {
       if (!currentSession) return currentSession;
-      const nextSession = { ...currentSession, gameState: response.gameState };
+      const nextSession = { ...currentSession, gameState: stateWithMsg, lastMessage: null };
       window.localStorage.setItem(storageKey, JSON.stringify(nextSession));
       return nextSession;
     });

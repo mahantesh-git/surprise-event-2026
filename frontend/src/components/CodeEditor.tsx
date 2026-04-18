@@ -121,14 +121,14 @@ function defineQuestTheme(monaco: Monaco) {
     base: 'vs-dark',
     inherit: true,
     rules: [
-      { token: 'comment', foreground: '4a5568', fontStyle: 'italic' },
-      { token: 'keyword', foreground: '95FF00', fontStyle: 'bold' },
-      { token: 'string', foreground: 'a8e6cf' },
-      { token: 'number', foreground: '68d391' },
-      { token: 'type', foreground: '63b3ed' },
-      { token: 'function', foreground: 'f6ad55' },
-      { token: 'variable', foreground: 'e2e8f0' },
-      { token: 'delimiter', foreground: '718096' },
+      { token: 'comment', foreground: '666666', fontStyle: 'italic' },
+      { token: 'keyword', foreground: 'EE3A17', fontStyle: 'bold' },
+      { token: 'string', foreground: 'E3E3E3' },
+      { token: 'number', foreground: 'EE3A17' },
+      { token: 'type', foreground: 'E3E3E3' },
+      { token: 'function', foreground: 'EE3A17' },
+      { token: 'variable', foreground: 'FFFFFF' },
+      { token: 'delimiter', foreground: '444444' },
     ],
     colors: {
       'editor.background': '#1C1C1C',           // --color-bg-surface

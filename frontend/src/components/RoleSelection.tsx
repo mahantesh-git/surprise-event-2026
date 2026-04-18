@@ -50,7 +50,7 @@ export function RoleSelection({ onSelect }: RoleSelectionProps) {
             <h1 className="text-[clamp(3.5rem,8vw,7rem)] font-bold uppercase tracking-tighter leading-[0.85] mb-8 font-space-grotesk text-white">
               QUEST <br />
               <span className="text-white/10">THE CODE</span><br />
-              <span className="text-[var(--color-accent)]" style={{ textShadow: '0 0 50px rgba(149,255,0,0.3)' }}>SCAVENGER</span>
+              <span className="text-[var(--color-accent)]" style={{ textShadow: '0 0 50px rgba(238, 58, 23, 0.3)' }}>SCAVENGER</span>
             </h1>
 
             {/* Subtext */}

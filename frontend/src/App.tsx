@@ -5,7 +5,8 @@ import {
   CheckCircle2,
   MapPin,
   QrCode,
-  RefreshCw
+  RefreshCw,
+  MessageSquare
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -25,6 +26,7 @@ import { SectorMap } from '@/components/SectorMap';
 import { RunnerGame } from '@/components/RunnerGame';
 import { Leaderboard } from '@/components/Leaderboard';
 import { QRScanner } from '@/components/QRScanner';
+import { TacticalComms } from '@/components/TacticalComms';
 
 const SOLVER_FULLSCREEN_EXIT_KEY = import.meta.env.VITE_SOLVER_EXIT_KEY || 'quest-exit';
 
@@ -33,7 +35,8 @@ export default function App() {
   const [teamName, setTeamName] = useState('');
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState<string | null>(null);
-  const role = pathname === '/solver' || pathname === '/runner' ? (pathname.slice(1) as Role) : null;
+  const normalizedPathname = pathname.replace(/\/$/, '');
+  const role = normalizedPathname === '/solver' || normalizedPathname === '/runner' ? (normalizedPathname.slice(1) as Role) : null;
   const { session, gameState, loading, login, logout, resetGame, updateState, sync } = useGameState((role ?? 'solver') as Role);
   const [rounds, setRounds] = useState<RoundQuestion[]>([]);
   const [roundsLoading, setRoundsLoading] = useState(false);
@@ -61,6 +64,7 @@ export default function App() {
   const [fullscreenExitKeyInput, setFullscreenExitKeyInput] = useState('');
   const [fullscreenExitError, setFullscreenExitError] = useState<string | null>(null);
   const [reenteringFullscreen, setReenteringFullscreen] = useState(false);
+  const [isCommsOpen, setIsCommsOpen] = useState(false);
 
   const [devMode, setDevMode] = useState(false);
   const previousRoundStateRef = useRef<number | null>(null);
@@ -69,6 +73,7 @@ export default function App() {
   const notificationTimerRef = useRef<number | null>(null);
   const solverExitAuthorizedRef = useRef(false);
   const wasFullscreenRef = useRef(false);
+  const lastMessageNoticeRef = useRef<number>(Date.now());
 
   const requestAppFullscreen = async () => {
     const root = document.documentElement as HTMLElement & {
@@ -220,6 +225,14 @@ export default function App() {
     }
 
     previousRoundStateRef.current = gameState.round;
+
+    // Tactical Comms Notification
+    if (gameState.lastMessage && gameState.lastMessage.timestamp > lastMessageNoticeRef.current) {
+      if (gameState.lastMessage.senderRole !== role) {
+        pushNotification(`COMMS [${gameState.lastMessage.senderRole.toUpperCase()}]: ${gameState.lastMessage.text}`, 'success');
+      }
+      lastMessageNoticeRef.current = gameState.lastMessage.timestamp;
+    }
   }, [gameState, role, session]);
 
   useEffect(() => {
@@ -355,7 +368,7 @@ export default function App() {
         <div className="min-h-screen flex items-center justify-center px-4 sm:px-6 pt-20 relative z-10 text-white bg-[var(--color-bg-void)] reveal-up">
           <div className="corner-card w-full max-w-md bg-[var(--color-bg-surface)] backdrop-blur-xl p-8 border border-white/5">
 
-            <CardHeader className="border-b-0 pb-0">
+            <CardHeader className="border-[var(--color-accent)] pb-0">
               <div className="text-center space-y-6 mb-8 pt-4">
                 <div className="flex flex-col items-center gap-2">
                   <div className="flex items-center gap-2">
@@ -393,7 +406,7 @@ export default function App() {
                 disabled={isLoggingIn}
               />
               {loginError && (
-                <div className="p-3 border border-rose-600/50 bg-rose-600/10 text-rose-400 text-[10px] uppercase tracking-widest text-center font-mono">
+                <div className="px-4 py-2.5 rounded-full border border-[var(--color-accent)]/30 bg-[var(--color-accent)]/10 text-[var(--color-accent)] text-[10px] uppercase tracking-widest text-center font-mono backdrop-blur-sm">
                   {loginError}
                 </div>
               )}
@@ -594,7 +607,7 @@ export default function App() {
                 />
 
                 {fullscreenExitError && (
-                  <div className="p-2 border border-rose-600/40 bg-rose-600/10 text-rose-400 text-[10px] uppercase tracking-widest text-center">
+                  <div className="px-4 py-2 rounded-full border border-[var(--color-accent)]/60 bg-[var(--color-accent)]/20 text-[var(--color-accent)] text-[10px] uppercase tracking-widest text-center backdrop-blur-sm">
                     {fullscreenExitError}
                   </div>
                 )}
@@ -629,7 +642,7 @@ export default function App() {
             exit={{ opacity: 0, y: -60, scaleX: 0.6, scaleY: 0.4, filter: 'blur(4px)' }}
             transition={{ type: "spring", stiffness: 500, damping: 30, mass: 0.5 }}
             className={cn(
-              'fixed top-[70px] sm:top-[84px] left-1/2 -translate-x-1/2 z-[40] w-[calc(100%-2rem)] sm:w-auto sm:min-w-[320px] max-w-md px-3 sm:px-4 py-2 sm:py-2.5 rounded-full shadow-[0_20px_40px_-10px_rgba(0,0,0,0.8)] backdrop-blur-3xl border',
+              'fixed top-[70px] sm:top-[84px] left-1/2 -translate-x-1/2 z-[40] w-[calc(100%-2rem)] sm:w-auto sm:min-w-[320px] max-w-md px-3 sm:px-4 py-2 sm:py-2.5 rounded-full shadow-black-xl backdrop-blur-3xl border',
               notification.tone === 'success'
                 ? 'bg-[var(--color-accent)]/15 border-[var(--color-accent)]/30 text-[var(--color-accent)]'
                 : 'bg-[var(--color-bg-void)]/90 border-white/10 text-white'
@@ -807,10 +820,10 @@ export default function App() {
                                       {consoleOutput.testResults.map((tr, idx) => (
                                         <div key={idx} className={cn(
                                           "flex items-center justify-between p-2 rounded-sm font-mono text-[10px]",
-                                          tr.passed ? "bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/20" : "bg-rose-500/10 border border-rose-500/20"
+                                          tr.passed ? "bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/20" : "bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/20"
                                         )}>
                                           <div className="flex items-center gap-2">
-                                            <span className={tr.passed ? "text-[var(--color-accent)]" : "text-rose-500"}>
+                                            <span className={tr.passed ? "text-[var(--color-accent)]" : "text-[var(--color-accent)]"}>
                                               {tr.passed ? "●" : "×"}
                                             </span>
                                             <span className="text-white/60">CASE_{idx + 1}</span>
@@ -820,7 +833,7 @@ export default function App() {
                                             {tr.passed ? (
                                               <span className="text-[var(--color-accent)]">PASSED</span>
                                             ) : (
-                                              <span className="text-rose-500">FAILED</span>
+                                              <span className="text-[var(--color-accent)]">FAILED</span>
                                             )}
                                           </div>
                                         </div>
@@ -842,10 +855,10 @@ export default function App() {
                                   </div>
                                 )}
                                 {consoleOutput.stderr && (
-                                  <pre className="text-rose-400 text-[11px] whitespace-pre-wrap break-all mt-1">{consoleOutput.stderr}</pre>
+                                  <pre className="text-[var(--color-accent)]/80 text-[11px] whitespace-pre-wrap break-all mt-1">{consoleOutput.stderr}</pre>
                                 )}
                                 {!consoleOutput.matched && !consoleOutput.stderr && consoleOutput.stdout && (
-                                  <div className="text-rose-400 text-[10px] mt-2 uppercase tracking-widest">
+                                  <div className="text-[var(--color-accent)] text-[10px] mt-2 uppercase tracking-widest">
                                     Verification Failed: Logic mismatch detected.
                                   </div>
                                 )}
@@ -898,7 +911,7 @@ export default function App() {
 
                           <Button
                             className="w-full font-bold uppercase tracking-[0.2em] h-12"
-                            variant="emerald"
+                            variant="primary"
                             size="md"
                             onClick={handleSyncRunnerNode}
                             disabled={isSyncingRunner}
@@ -951,7 +964,7 @@ export default function App() {
                           </div>
 
                           {/* Volunteer card */}
-                          <div className={cn("corner-card flex items-center gap-3 p-3 border border-white/5 transition-all duration-500", currentRound.volunteer.bg)}>
+                          <div className={cn("corner-card flex items-center gap-3 p-3 border border-white/5 transition-all duration-500 bg-[var(--color-accent)]", currentRound.volunteer.bg)}>
                             <div className={cn("w-9 h-9 shrink-0 rounded-none border border-white/10 flex items-center justify-center font-bold text-sm", currentRound.volunteer.color)}>
                               {currentRound.volunteer.initials}
                             </div>
@@ -1021,7 +1034,7 @@ export default function App() {
                             )}
 
                             {finalQrError && (
-                              <div className="p-3 border border-rose-600/40 bg-rose-600/10 text-rose-400 text-[10px] uppercase tracking-widest">
+                              <div className="px-4 py-2.5 rounded-full border border-[var(--color-accent)]/60 bg-[var(--color-accent)]/20 text-[var(--color-accent)] text-[10px] uppercase tracking-widest text-center backdrop-blur-sm">
                                 {finalQrError}
                               </div>
                             )}
@@ -1132,6 +1145,40 @@ export default function App() {
           )}
         </div>
       </div>
+
+      {/* Tactical Comms FAB - Outside main container for visibility */}
+      {(role === 'solver' || role === 'runner') && session && (
+        <button
+          onClick={() => setIsCommsOpen(true)}
+          className={cn(
+            "fixed bottom-8 right-8 w-14 h-14 rounded-full z-[100] shadow-2xl transition-all duration-300 group overflow-hidden",
+            "bg-black border border-[var(--color-accent)]/30 flex items-center justify-center hover:scale-110 active:scale-95",
+            isCommsOpen ? "opacity-0 scale-90 pointer-events-none" : "opacity-100 scale-100"
+          )}
+        >
+          <div className="absolute inset-0 bg-[var(--color-accent)]/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+          <MessageSquare className="w-6 h-6 text-[var(--color-accent)] group-hover:text-[var(--color-accent)]/80 transition-colors" />
+
+          {/* Notification ping */}
+          {gameState?.lastMessage && gameState.lastMessage.timestamp > lastMessageNoticeRef.current && gameState.lastMessage.senderRole !== role && (
+            <span className="absolute top-3 right-3 flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--color-accent)] opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-[var(--color-accent)]"></span>
+            </span>
+          )}
+        </button>
+      )}
+
+      {/* Tactical Comms Modal */}
+      {session && (role === 'solver' || role === 'runner') && (
+        <TacticalComms
+          token={session.token}
+          role={role}
+          isOpen={isCommsOpen}
+          onClose={() => setIsCommsOpen(false)}
+          lastMessage={gameState?.lastMessage}
+        />
+      )}
     </>
   );
 }

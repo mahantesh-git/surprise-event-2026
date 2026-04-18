@@ -46,12 +46,17 @@ const TapGame = ({ onComplete }: { onComplete: () => void }) => {
   );
 
   if (timeLeft === 0) return (
-    <div className="text-center p-8 space-y-6">
-      <RefreshCcw className="w-16 h-16 text-rose-500 mx-auto" />
-      <h2 className="text-2xl font-bold text-rose-400">Time's Up!</h2>
+    <div className="flex flex-col items-center justify-center p-8 space-y-6">
+      <div className="px-4 py-2.5 rounded-full border border-[var(--color-accent)]/30 bg-[var(--color-accent)]/10 text-[var(--color-accent)] flex items-center gap-3 shadow-accent-md">
+        <RefreshCcw className="w-4 h-4 animate-spin-slow" />
+        <div className="flex flex-col items-start leading-none">
+          <span className="text-[8px] uppercase tracking-[0.2em] opacity-50 mb-0.5">Operation Failure</span>
+          <span className="text-[11px] font-bold uppercase tracking-widest">Time Expired</span>
+        </div>
+      </div>
       <button
         onClick={() => { setTaps(0); setTimeLeft(15); haptic(100); }}
-        className="bg-zinc-800 hover:bg-zinc-700 px-8 py-4 rounded-xl font-bold text-lg transition-colors border border-zinc-700"
+        className="bg-zinc-800 hover:bg-zinc-700 px-8 py-4 rounded-xl font-bold text-sm uppercase tracking-widest transition-colors border border-zinc-700 text-white/80"
       >🔄 Try Again</button>
     </div>
   );
@@ -60,7 +65,7 @@ const TapGame = ({ onComplete }: { onComplete: () => void }) => {
     <div className="space-y-4">
       <div className="flex justify-between text-sm font-mono text-white/40 px-1">
         <span>HITS: <span className="text-[var(--color-accent)]">{taps}</span>/{required}</span>
-        <span>TIME: <span className={timeLeft <= 5 ? 'text-rose-400' : 'text-white/80'}>{timeLeft}s</span></span>
+        <span>TIME: <span className={timeLeft <= 5 ? 'text-[var(--color-accent)]' : 'text-white/80'}>{timeLeft}s</span></span>
       </div>
       <div className="relative h-72 w-full bg-black rounded-xl overflow-hidden border border-white/10">
         <div className="absolute inset-0 opacity-10 bg-[linear-gradient(to_right,#374151_1px,transparent_1px),linear-gradient(to_bottom,#374151_1px,transparent_1px)] bg-[size:2rem_2rem]" />
@@ -71,7 +76,7 @@ const TapGame = ({ onComplete }: { onComplete: () => void }) => {
           animate={{ left: `${target.x}%`, top: `${target.y}%` }}
           transition={{ type: 'spring', stiffness: 300, damping: 20 }}
           onClick={handleTap}
-          className="absolute w-16 h-16 bg-[var(--color-accent)] rounded-full shadow-lg shadow-[var(--color-accent)]/40 flex items-center justify-center -translate-x-1/2 -translate-y-1/2 active:scale-75 transition-transform"
+          className="absolute w-16 h-16 bg-[var(--color-accent)] rounded-full shadow-accent-lg flex items-center justify-center -translate-x-1/2 -translate-y-1/2 active:scale-75 transition-transform"
         >
           <Crosshair className="text-black w-7 h-7" />
         </motion.button>
@@ -150,10 +155,10 @@ const PatternGame = ({ onComplete }: { onComplete: () => void }) => {
   const [wrongFlash, setWrongFlash] = useState(false);
 
   const colorClasses = [
-    { bg: 'bg-rose-500', dim: 'bg-rose-500/20 border-rose-500/30' },
-    { bg: 'bg-blue-500', dim: 'bg-blue-500/20 border-blue-500/30' },
-    { bg: 'bg-yellow-500', dim: 'bg-yellow-500/20 border-yellow-500/30' },
     { bg: 'bg-[var(--color-accent)]', dim: 'bg-[var(--color-accent)]/20 border-[var(--color-accent)]/30' },
+    { bg: 'bg-blue-500', dim: 'bg-blue-500/20 border-blue-500/30' },
+    { bg: 'bg-emerald-500', dim: 'bg-emerald-500/20 border-emerald-500/30' },
+    { bg: 'bg-violet-500', dim: 'bg-violet-500/20 border-violet-500/30' },
   ];
 
   const start = () => {
@@ -198,7 +203,18 @@ const PatternGame = ({ onComplete }: { onComplete: () => void }) => {
 
   return (
     <div className="space-y-4">
-      {wrongFlash && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center text-rose-400 text-sm font-mono">✘ Wrong sequence! Restarting...</motion.div>}
+      {wrongFlash && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex justify-center mb-4"
+        >
+          <div className="px-4 py-2 rounded-full border border-[var(--color-accent)]/30 bg-[var(--color-accent)]/10 text-[var(--color-accent)] text-[9px] uppercase tracking-widest flex items-center gap-2">
+            <AlertCircle className="w-3.5 h-3.5" />
+            Sequence Mismatch: Restarting
+          </div>
+        </motion.div>
+      )}
       <div className="text-sm font-mono text-white/40 text-center">
         {pattern.length === 0 ? 'Press Start to begin' : playing ? '⟐ Watch the pattern…' : '⟐ Repeat the pattern!'}
       </div>
@@ -282,7 +298,7 @@ export function RunnerGame({ token, currentRoundIndex, totalRounds, onRoundCompl
       {screen === 'location' && (
         <motion.div key="location" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
           <div className="corner-card bg-[var(--color-bg-surface)] backdrop-blur-xl relative p-8 max-w-md mx-auto">
-            
+
             <div className="space-y-6">
               <div className="text-center space-y-3">
                 <div className="w-16 h-16 bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/30 flex items-center justify-center mx-auto">
@@ -296,9 +312,11 @@ export function RunnerGame({ token, currentRoundIndex, totalRounds, onRoundCompl
               </div>
 
               {error && (
-                <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }}
-                  className="flex items-center gap-2 p-3 bg-rose-500/10 border border-rose-500/30 text-rose-400 text-[10px] font-mono uppercase tracking-wider">
-                  <AlertCircle className="w-4 h-4 shrink-0" />{error}
+                <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} className="flex justify-center">
+                  <div className="px-4 py-2.5 rounded-full border border-[var(--color-accent)]/30 bg-[var(--color-accent)]/10 text-[var(--color-accent)] text-[10px] uppercase tracking-widest flex items-center gap-2.5 shadow-accent-md">
+                    <AlertCircle className="w-3.5 h-3.5" />
+                    {error}
+                  </div>
                 </motion.div>
               )}
 
@@ -341,7 +359,7 @@ export function RunnerGame({ token, currentRoundIndex, totalRounds, onRoundCompl
       {screen === 'passkey' && (
         <motion.div key="passkey" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
           <div className="corner-card bg-[var(--color-bg-surface)] backdrop-blur-xl relative p-8 max-w-md mx-auto">
-            
+
             <div className="space-y-6">
               <div className="text-center space-y-3">
                 <div className="w-16 h-16 bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/30 flex items-center justify-center mx-auto">
@@ -366,13 +384,15 @@ export function RunnerGame({ token, currentRoundIndex, totalRounds, onRoundCompl
                     autoComplete="off"
                     spellCheck={false}
                   />
-                  {error && <div className="absolute -bottom-[2px] left-0 right-0 h-[2px] bg-rose-500" />}
+                  {error && <div className="absolute -bottom-[2px] left-0 right-0 h-[2px] bg-[var(--color-accent)]" />}
                 </div>
 
                 {error && (
-                  <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }}
-                    className="flex items-center gap-2 p-3 bg-rose-500/10 border border-rose-500/30 text-rose-400 text-[10px] font-mono uppercase tracking-wider">
-                    <AlertCircle className="w-4 h-4 shrink-0" />{error}
+                  <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} className="flex justify-center">
+                    <div className="px-4 py-2.5 rounded-full border border-[var(--color-accent)]/30 bg-[var(--color-accent)]/10 text-[var(--color-accent)] text-[10px] uppercase tracking-widest flex items-center gap-2.5 shadow-accent-md">
+                      <AlertCircle className="w-3.5 h-3.5" />
+                      {error}
+                    </div>
                   </motion.div>
                 )}
 
@@ -432,7 +452,7 @@ export function RunnerGame({ token, currentRoundIndex, totalRounds, onRoundCompl
       {screen === 'victory' && (
         <motion.div key="victory" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5 }}>
           <div className="corner-card bg-[var(--color-bg-surface)] backdrop-blur-xl p-8 border border-[var(--color-accent)]/30 relative text-center overflow-hidden">
-            
+
             <div className="absolute inset-0 bg-[var(--color-accent)]/5 pointer-events-none" />
             <div className="relative z-10 space-y-8">
 
@@ -464,7 +484,7 @@ export function RunnerGame({ token, currentRoundIndex, totalRounds, onRoundCompl
               <div className="flex gap-1 justify-center">
                 {[...Array(3)].map((_, i) => (
                   <motion.div key={i} animate={{ scale: [0.8, 1.2, 0.8] }} transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.3 }}>
-                    <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
+                    <Star className="w-5 h-5 text-[var(--color-accent)] fill-[var(--color-accent)]" />
                   </motion.div>
                 ))}
               </div>

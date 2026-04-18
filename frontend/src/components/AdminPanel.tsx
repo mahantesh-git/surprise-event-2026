@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Lock, LogOut, Plus, Trash2, Edit3, Save, X, Database, ShieldAlert, ChevronLeft, Terminal, Trophy } from 'lucide-react';
+import { Lock, LogOut, Plus, Trash2, Edit3, Save, X, Database, ShieldAlert, ChevronLeft, Terminal, Trophy, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Leaderboard } from '@/components/Leaderboard';
 import {
@@ -307,8 +307,11 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
               </div>
 
               {error && (
-                <div className="border border-red-500/50 bg-red-500/10 p-3 text-[10px] uppercase tracking-widest text-red-400 font-mono">
-                  ERROR: {error}
+                <div className="flex justify-center">
+                  <div className="px-4 py-2.5 rounded-full border border-[var(--color-accent)]/30 bg-[var(--color-accent)]/10 text-[var(--color-accent)] text-[10px] uppercase tracking-widest flex items-center gap-2.5 shadow-accent-md">
+                    <AlertCircle className="w-3.5 h-3.5" />
+                    {error}
+                  </div>
                 </div>
               )}
 
@@ -386,7 +389,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
             <Button className="btn-secondary font-bold uppercase tracking-[0.2em] h-10 px-6 border-white/5 bg-white/[0.05] text-[10px]" onClick={onBack}>
               Terminal_Exit
             </Button>
-            <Button variant="ghost" className="font-bold uppercase tracking-[0.2em] h-10 px-6 border-red-500/10 text-red-500/60 hover:text-red-400 hover:bg-red-500/5 text-[10px]" onClick={handleAdminLogout}>
+            <Button variant="ghost" className="font-bold uppercase tracking-[0.2em] h-10 px-6 border-[var(--color-accent)]/10 text-[var(--color-accent)]/60 hover:text-[var(--color-accent)] hover:bg-[var(--color-accent)]/5 text-[10px]" onClick={handleAdminLogout}>
               <LogOut className="mr-2 h-3 w-3" />
               Disconnect
             </Button>
@@ -397,10 +400,12 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            className="border border-red-500/50 bg-red-500/10 p-4 text-xs uppercase tracking-widest text-red-400 font-mono flex items-center gap-3"
+            className="flex justify-center"
           >
-            <ShieldAlert className="w-4 h-4" />
-            SYSTEM_ERROR: {error}
+            <div className="px-5 py-3 rounded-full border border-[var(--color-accent)]/30 bg-[var(--color-accent)]/10 text-[var(--color-accent)] text-[11px] uppercase tracking-widest flex items-center gap-3 shadow-accent-lg">
+              <ShieldAlert className="w-4 h-4" />
+              {error}
+            </div>
           </motion.div>
         )}
 
@@ -464,7 +469,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                     <h2 className="text-xs font-mono uppercase tracking-[0.4em] text-white/40">Active_Nodes</h2>
                   </div>
                   {teams.length > 0 && (
-                    <Button className="btn-secondary text-red-400 p-0 h-auto text-[9px] uppercase tracking-widest bg-transparent border-none hover:bg-transparent" onClick={handleDeleteAllTeams}>
+                    <Button className="btn-secondary text-[var(--color-accent)] p-0 h-auto text-[9px] uppercase tracking-widest bg-transparent border-none hover:bg-transparent" onClick={handleDeleteAllTeams}>
                       Wipe All
                     </Button>
                   )}
@@ -483,7 +488,8 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                       </div>
                       <Button
                         variant="ghost"
-                        size="sm text-white/20 hover:text-red-400 hover:bg-red-500/10"
+                        size="sm"
+                        className="text-white/20 hover:text-[var(--color-accent)] hover:bg-[var(--color-accent)]/10"
                         onClick={() => handleDeleteTeam(team.id)}
                       >
                         <Trash2 className="w-4 h-4" />
@@ -576,7 +582,8 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                             <label className="text-[10px] uppercase tracking-widest text-[var(--color-accent)]/60">Verification_Test_Suite</label>
                             <Button
                               variant="ghost"
-                              size="sm h-6 px-2 text-[8px] uppercase tracking-widest text-[var(--color-accent)] hover:bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/20"
+                              size="sm"
+                              className="h-6 px-2 text-[8px] uppercase tracking-widest text-[var(--color-accent)] hover:bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/20"
                               onClick={() => {
                                 const existing = draftQuestion.p1.testCases || [];
                                 setDraftQuestion({
@@ -606,7 +613,8 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                                 />
                                 <Button
                                   variant="ghost"
-                                  size="sm col-span-1 p-0 h-8 text-rose-500 hover:bg-rose-500/10"
+                                  size="sm"
+                                  className="col-span-1 p-0 h-8 text-[var(--color-accent)] hover:bg-[var(--color-accent)]/10"
                                   onClick={() => {
                                     const cases = (draftQuestion.p1.testCases || []).filter((_, i) => i !== idx);
                                     setDraftQuestion({ ...draftQuestion, p1: { ...draftQuestion.p1, testCases: cases } });
@@ -679,7 +687,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                     <Terminal className="text-[var(--color-accent)] w-4 h-4" />
                     <h2 className="text-xs font-mono uppercase tracking-[0.4em] text-white/40">Active_Simulation_Sequences</h2>
                   </div>
-                  <Button className="btn-secondary text-red-400 p-0 h-auto text-[9px] uppercase tracking-widest bg-transparent border-none hover:bg-transparent" onClick={handleDeleteAllQuestions}>
+                  <Button className="btn-secondary text-[var(--color-accent)] p-0 h-auto text-[9px] uppercase tracking-widest bg-transparent border-none hover:bg-transparent" onClick={handleDeleteAllQuestions}>
                     Purge All
                   </Button>
                 </div>
@@ -706,17 +714,17 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                           </div>
                         </div>
                         <div className="flex gap-2">
-                          <Button
-                            className="btn-secondary"
-                            size="sm font-mono text-[9px] uppercase tracking-widest border-white/5 h-10 px-4"
-                            onClick={() => handleEditQuestion(question)}
-                          >
+                            <Button
+                              className="btn-secondary font-mono text-[9px] uppercase tracking-widest border-white/5 h-10 px-4"
+                              size="sm"
+                              onClick={() => handleEditQuestion(question)}
+                            >
                             Modify
                           </Button>
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="text-white/20 hover:text-red-400 hover:bg-red-500/10 h-10 w-10 p-0"
+                            className="text-white/20 hover:text-[var(--color-accent)] hover:bg-[var(--color-accent)]/10 h-10 w-10 p-0"
                             onClick={() => handleDeleteQuestion(question.id)}
                           >
                             <Trash2 className="w-4 h-4" />
@@ -735,8 +743,8 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
 
               {/* Final Danger Zone */}
               <section className="pt-12">
-                <div className="border border-red-500/20 bg-red-500/[0.02] p-8 space-y-4">
-                  <div className="flex items-center gap-3 text-red-500">
+                <div className="border-[var(--color-accent)]/20 bg-[var(--color-accent)]/[0.02] p-8 space-y-4">
+                  <div className="flex items-center gap-3 text-[var(--color-accent)]">
                     <ShieldAlert className="w-5 h-5" />
                     <h3 className="font-black uppercase tracking-tight">Level_0_Protocol</h3>
                   </div>
@@ -744,7 +752,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                     Immediate termination of all database records including Operative accounts and Simulation data. This action is irreversible.
                   </p>
                   <Button
-                    className="btn-secondary bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20 font-bold uppercase tracking-[0.2em] h-12 w-full"
+                    className="btn-secondary bg-[var(--color-accent)]/10 border-[var(--color-accent)]/30 text-[var(--color-accent)] hover:bg-[var(--color-accent)]/20 font-bold uppercase tracking-[0.2em] h-12 w-full"
                     onClick={handleWipeDatabase}
                   >
                     Authorize_Nuke

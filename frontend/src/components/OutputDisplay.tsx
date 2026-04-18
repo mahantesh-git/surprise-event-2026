@@ -45,16 +45,16 @@ export const OutputDisplay: React.FC<OutputDisplayProps> = ({
         {/* Stderr */}
         {stderr && (
           <div className="mb-3">
-            <p className="text-[10px] text-red-600 font-mono leading-tight mb-1">Error:</p>
-            <pre className="font-mono text-[10px] md:text-xs leading-tight whitespace-pre-wrap break-words bg-red-50 p-2 border border-red-300 text-red-700">
+            <p className="text-[10px] text-[var(--color-accent)] font-mono leading-tight mb-1">Error:</p>
+            <pre className="font-mono text-[10px] md:text-xs leading-tight whitespace-pre-wrap break-words bg-[var(--color-accent)]/5 p-2 border border-[var(--color-accent)]/20 text-[var(--color-accent)]">
               {stderr}
             </pre>
           </div>
         )}
-
+        
         {/* Timeout warning */}
         {timedOut && (
-          <div className="p-2 border-l-2 border-orange-600 bg-orange-50 text-orange-700 text-[10px] md:text-xs">
+          <div className="p-2 border-l-2 border-[var(--color-accent)] bg-[var(--color-accent)]/5 text-[var(--color-accent)] text-[10px] md:text-xs">
             ⚠ Execution timeout (4 seconds exceeded)
           </div>
         )}

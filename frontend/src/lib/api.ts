@@ -70,6 +70,7 @@ export interface TeamSession {
     name: string;
   };
   gameState: GameState;
+  lastMessage?: ChatMessage | null;
 }
 
 export interface AdminSession {
@@ -83,6 +84,12 @@ export interface TeamProfile {
     name: string;
   };
   role: Role;
+}
+
+export interface ChatMessage {
+  text: string;
+  senderRole: string;
+  timestamp: number;
 }
 
 export interface GameStateUpdate extends Partial<Omit<GameState, 'handoff'>> {
@@ -120,11 +127,11 @@ export async function getSession(token: string) {
 }
 
 export async function getGameState(token: string) {
-  return requestJson<{ gameState: GameState }>('/game/state', { method: 'GET' }, token);
+  return requestJson<{ gameState: GameState; lastMessage?: ChatMessage }>('/game/state', { method: 'GET' }, token);
 }
 
 export async function updateGameState(token: string, updates: GameStateUpdate) {
-  return requestJson<{ gameState: GameState }>('/game/state', {
+  return requestJson<{ gameState: GameState; lastMessage?: ChatMessage }>('/game/state', {
     method: 'PATCH',
     body: JSON.stringify(updates),
   }, token);
@@ -328,5 +335,16 @@ export async function updateAdminConfig(token: string, key: string, value: any) 
   return requestJson<{ ok: boolean }>('/admin/config', {
     method: 'PUT',
     body: JSON.stringify({ key, value }),
+  }, token);
+}
+
+export async function getChatPhrases(token: string) {
+  return requestJson<{ phrases: string[] }>('/chat/phrases', { method: 'GET' }, token);
+}
+
+export async function sendChatMessage(token: string, text: string) {
+  return requestJson<{ ok: boolean; lastMessage: ChatMessage }>('/chat/send', {
+    method: 'POST',
+    body: JSON.stringify({ text }),
   }, token);
 }

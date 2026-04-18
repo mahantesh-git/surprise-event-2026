@@ -125,7 +125,7 @@ export function SectorMap({ rounds, currentRound, stage }: SectorMapProps) {
           border:4px solid #000;
           border-radius:50% 50% 50% 0;
           transform:rotate(-45deg);
-          box-shadow:0 0 20px var(--color-accent), 0 0 40px rgba(149, 255, 0, 0.4);
+          box-shadow:0 0 20px var(--color-accent), 0 0 40px rgba(238, 58, 23, 0.4);
           display:flex;align-items:center;justify-content:center;
         ">
           <div style="width:8px;height:8px;background:black;border-radius:50%;transform:rotate(45deg);"></div>
@@ -154,14 +154,14 @@ export function SectorMap({ rounds, currentRound, stage }: SectorMapProps) {
 
     // Accurate GPS < 100m → bright cyan; IP-based / poor → dimmer
     const isAccurate = accuracy <= 100;
-    const dotColor   = isAccurate ? '#00BFFF' : '#4D8076';
+    const dotColor = isAccurate ? '#00BFFF' : '#4D8076';
     const ringRadius = Math.min(accuracy, 500); // cap display radius at 500m
 
     if (runnerMarkerRef.current) {
       runnerMarkerRef.current.setLatLng([lat, lng]);
       const el = runnerMarkerRef.current.getElement();
       if (el) {
-        el.innerHTML = `<div class="w-5 h-5 rounded-full border-2 border-white shadow-[0_0_15px_${dotColor}] relative" style="background-color: ${dotColor}">
+        el.innerHTML = `<div class="w-5 h-5 rounded-full border-2 border-white relative" style="background-color: ${dotColor}; box-shadow: 0 0 15px ${dotColor}">
                           <div class="absolute inset-0 rounded-full animate-ping bg-${isAccurate ? 'cyan-400' : 'slate-400'} opacity-40"></div>
                         </div>`;
       }
@@ -171,7 +171,7 @@ export function SectorMap({ rounds, currentRound, stage }: SectorMapProps) {
       // Create a solid HTML marker for the runner
       const runnerIcon = L.divIcon({
         className: 'runner-location-marker',
-        html: `<div class="w-5 h-5 rounded-full border-2 border-white shadow-[0_0_15px_${dotColor}] relative" style="background-color: ${dotColor}">
+        html: `<div class="w-5 h-5 rounded-full border-2 border-white relative" style="background-color: ${dotColor}; box-shadow: 0 0 15px ${dotColor}">
                 <div class="absolute inset-0 rounded-full animate-ping" style="background-color: ${dotColor}; opacity: 0.5;"></div>
                </div>`,
         iconSize: [20, 20],
@@ -262,14 +262,14 @@ export function SectorMap({ rounds, currentRound, stage }: SectorMapProps) {
 
   const navUrl = hasTarget
     ? runnerCoords
-    ? `https://www.google.com/maps/dir/?api=1&origin=${runnerCoords[0]},${runnerCoords[1]}&destination=${targetLat},${targetLng}&travelmode=walking`
-    : `https://www.google.com/maps/search/?api=1&query=${targetLat},${targetLng}`
+      ? `https://www.google.com/maps/dir/?api=1&origin=${runnerCoords[0]},${runnerCoords[1]}&destination=${targetLat},${targetLng}&travelmode=walking`
+      : `https://www.google.com/maps/search/?api=1&query=${targetLat},${targetLng}`
     : null;
 
   return (
     <div className="space-y-3">
       {/* Map */}
-      <div className="relative w-full h-[260px] sm:h-[320px] border border-[var(--color-accent)]/40 bg-[var(--color-bg-void)] corner-card overflow-hidden shadow-[0_0_30px_rgba(149,255,0,0.1)]">
+      <div className="relative w-full h-[260px] sm:h-[320px] border border-[var(--color-accent)]/40 bg-[var(--color-bg-void)] corner-card overflow-hidden shadow-accent-lg">
         <div ref={mapContainerRef} className="absolute inset-0 w-full h-full" />
 
         {/* Status badges */}
@@ -277,7 +277,7 @@ export function SectorMap({ rounds, currentRound, stage }: SectorMapProps) {
           {runnerCoords && (() => {
             const acc = runnerCoords[2];
             const isGood = acc <= 100;
-            const color = isGood ? '#00BFFF' : '#FFAA00';
+            const color = isGood ? '#00BFFF' : '#EE3A17';
             const label = isGood ? `GPS ±${Math.round(acc)}m` : `Approx ±${Math.round(acc)}m`;
             return (
               <div
@@ -290,7 +290,7 @@ export function SectorMap({ rounds, currentRound, stage }: SectorMapProps) {
             );
           })()}
           {hasTarget && (
-            <div className="bg-black/90 border border-[var(--color-accent)]/60 px-2 py-1 flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-widest text-[var(--color-accent)] backdrop-blur-sm shadow-[0_0_10px_rgba(149,255,0,0.2)]">
+            <div className="bg-black/90 border border-[var(--color-accent)]/60 px-2 py-1 flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-widest text-[var(--color-accent)] backdrop-blur-sm shadow-accent-xs">
               <Navigation className="h-3 w-3" />
               Target Locked
             </div>
@@ -317,7 +317,7 @@ export function SectorMap({ rounds, currentRound, stage }: SectorMapProps) {
                 }
               }
             }}
-            className="absolute bottom-3 right-3 z-[1000] bg-black/90 border border-[#00BFFF]/60 px-2 sm:px-3 py-2 flex items-center gap-1.5 sm:gap-2 font-mono text-[9px] uppercase tracking-[0.12em] sm:tracking-widest text-[#00BFFF] hover:bg-[#00BFFF]/20 transition-all pointer-events-auto backdrop-blur-sm shadow-[0_0_15px_rgba(0,191,255,0.2)] active:scale-95"
+            className="absolute bottom-3 right-3 z-[1000] bg-black/90 border border-[#EE3A17]/60 px-2 sm:px-3 py-2 flex items-center gap-1.5 sm:gap-2 font-mono text-[9px] uppercase tracking-[0.12em] sm:tracking-widest text-[#EE3A17] hover:bg-[#EE3A17]/20 transition-all pointer-events-auto backdrop-blur-sm shadow-accent-sm active:scale-95"
           >
             <LocateFixed className="h-4 w-4" />
             {geoStatus === 'watching' ? 'Recenter' : 'Locate Me'}
@@ -326,7 +326,7 @@ export function SectorMap({ rounds, currentRound, stage }: SectorMapProps) {
 
         {/* Geo error */}
         {(geoStatus === 'denied' || geoStatus === 'unavailable') && (
-          <div className="absolute bottom-3 left-3 z-[1000] bg-black/90 border border-red-500/60 px-2 py-1 flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-widest text-red-400 pointer-events-none backdrop-blur-sm">
+          <div className="absolute bottom-3 left-3 z-[1000] bg-black/90 border border-[var(--color-accent)]/20 px-2 py-1 flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-widest text-[var(--color-accent)] pointer-events-none backdrop-blur-sm">
             <AlertCircle className="h-3 w-3" />
             {geoStatus === 'denied' ? 'Location denied — enable in browser' : 'GPS unavailable'}
           </div>
@@ -351,20 +351,20 @@ export function SectorMap({ rounds, currentRound, stage }: SectorMapProps) {
         {isRunnerStage ? (
           <>
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-[var(--color-accent)] shadow-[0_0_6px_var(--color-accent)]" />
+              <div className="w-3 h-3 rounded-full bg-[var(--color-accent)] shadow-accent-xs" />
               <span className="text-[var(--color-accent)]">Target</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-[#00BFFF] shadow-[0_0_6px_#00BFFF]" />
+              <div className="w-3 h-3 rounded-full bg-[#00BFFF]" style={{ boxShadow: '0 0 6px #00BFFF' }} />
               <span className="text-[#00BFFF]">{runnerCoords ? 'You (Live)' : 'GPS Pending...'}</span>
             </div>
           </>
         ) : (
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full border border-yellow-500/50 flex items-center justify-center">
-              <div className="w-1.5 h-1.5 rounded-full bg-yellow-500/50 animate-pulse" />
+            <div className="w-3 h-3 rounded-full border border-[var(--color-accent)]/50 flex items-center justify-center">
+              <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-accent)]/50 animate-pulse" />
             </div>
-            <span className="text-yellow-500/80">Awaiting Target Coordinates</span>
+            <span className="text-[var(--color-accent)]/80">Awaiting Target Coordinates</span>
           </div>
         )}
       </div>

@@ -115,7 +115,7 @@ export function LoginScreen({
               <motion.div
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
-                className="border-l-2 border-rose-600 bg-rose-600/10 p-3 text-[10px] uppercase tracking-widest text-rose-400 font-mono"
+                className="border-l-2 border-[var(--color-accent)] bg-[var(--color-accent)]/10 p-3 text-[10px] uppercase tracking-widest text-[var(--color-accent)] font-mono"
               >
                 Error: {loginError}
               </motion.div>

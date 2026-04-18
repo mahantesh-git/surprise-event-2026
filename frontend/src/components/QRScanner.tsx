@@ -62,7 +62,7 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
   }, []);
 
   return (
-    <div className="corner-card p-8 pt-10 relative bg-[var(--color-bg-void)] border-[var(--color-accent)]/20 shadow-[0_0_50px_rgba(0,0,0,0.5)]">
+    <div className="corner-card p-8 pt-10 relative bg-[var(--color-bg-void)] border-[var(--color-accent)]/20 shadow-black-lg">
       <div className="absolute top-0 right-0 p-4 font-mono text-[8px] text-[var(--color-accent)]/20 uppercase tracking-widest pointer-events-none">
         sys.sensor.optical
       </div>
@@ -95,12 +95,15 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
         <div className="relative overflow-hidden border border-white/5 bg-[var(--color-bg-surface)]">
           <div id="qr-reader" className="w-full min-h-[300px] flex items-center justify-center">
             {errorMsg && (
-              <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/90 p-6 text-center text-rose-500 font-mono text-[11px] uppercase tracking-widest border border-rose-500/30">
-                {errorMsg}
+              <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/90 p-6">
+                <div className="px-5 py-3 rounded-full border border-[var(--color-accent)]/30 bg-[var(--color-accent)]/10 text-[var(--color-accent)] text-[10px] uppercase tracking-[0.2em] flex flex-col items-center gap-1 shadow-accent-lg text-center">
+                  <span className="opacity-40 text-[8px] font-black">System_Fault</span>
+                  {errorMsg}
+                </div>
               </div>
             )}
           </div>
-          <div className="scanner-line absolute top-0 left-0 w-full h-[1px] bg-[var(--color-accent)] shadow-[0_0_15px_var(--color-accent)] pointer-events-none z-40" />
+          <div className="scanner-line absolute top-0 left-0 w-full h-[1px] bg-[var(--color-accent)] shadow-accent-sm pointer-events-none z-40" />
         </div>
       </div>
 

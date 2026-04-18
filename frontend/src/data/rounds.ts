@@ -19,7 +19,7 @@ export const ROUNDS = [
     round: 3,
     p1: { title: "Loop Sum", code: "t = 0\nfor i in [1,2,3]:\n  t += i", hint: "Add 1+2+3 step by step.", ans: "6", output: "t = 6" },
     coord: { lat: "15.435050° N", lng: "75.647550° E", place: "Campus Canteen" },
-    volunteer: { name: "Arjun", initials: "AJ", bg: "bg-amber-900/30", color: "text-amber-300" },
+    volunteer: { name: "Arjun", initials: "AJ", bg: "bg-[var(--color-accent)]/10", color: "text-[var(--color-accent)]" },
     qrPasskey: "QUEST-R3",
     cx: 0.60, cy: 0.70
   },

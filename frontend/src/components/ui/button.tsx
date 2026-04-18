@@ -17,16 +17,16 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 
 const variantClasses: Record<ButtonVariant, string> = {
   default: 'border border-[var(--color-accent)] bg-transparent text-[var(--color-accent)] hover:bg-[var(--color-accent)] hover:text-black transition-colors duration-200',
-  primary: 'border-2 border-[var(--color-accent)] bg-[var(--color-accent)]/10 text-[var(--color-accent)] hover:bg-[var(--color-accent)] hover:text-black transition-colors duration-200 shadow-[0_0_10px_rgba(149,255,0,0.2)] hover:shadow-[0_0_20px_rgba(149,255,0,0.4)]',
-  danger: 'border border-red-500 bg-transparent text-red-500 hover:bg-red-500 hover:text-black transition-colors duration-200',
+  primary: 'border-2 border-[var(--color-accent)] bg-[var(--color-accent)]/10 text-[var(--color-accent)] hover:bg-[var(--color-accent)] hover:text-black transition-colors duration-200 shadow-accent-sm hover:shadow-accent-md',
+  danger: 'border border-[var(--color-accent)] bg-transparent text-[var(--color-accent)] hover:bg-[var(--color-accent)] hover:text-black transition-colors duration-200',
   ghost: 'bg-transparent text-[#ffffff] hover:text-[var(--color-accent)] transition-colors duration-200',
   secondary: 'border border-[rgba(255,255,255,0.2)] bg-transparent text-white hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] transition-colors duration-200',
-  sage: 'border border-[var(--color-accent)] bg-[var(--color-accent)] text-black hover:bg-[var(--color-accent)]/80 transition-colors duration-200 shadow-[0_0_15px_rgba(149,255,0,0.3)]',
+  sage: 'border border-[var(--color-accent)] bg-[var(--color-accent)] text-black hover:bg-[var(--color-accent)]/80 transition-colors duration-200 shadow-accent-md',
   ink: 'border border-[rgba(255,255,255,0.2)] bg-[#1A1D21] text-white hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] transition-colors duration-200',
   blue: 'border border-blue-500 bg-transparent text-blue-500 hover:bg-blue-500 hover:text-black transition-colors duration-200',
   emerald: 'border border-[var(--color-accent)] bg-transparent text-[var(--color-accent)] hover:bg-[var(--color-accent)] hover:text-black transition-colors duration-200',
-  amber: 'border border-amber-500 bg-transparent text-amber-500 hover:bg-amber-500 hover:text-black transition-colors duration-200',
-  rose: 'border border-rose-500 bg-transparent text-rose-500 hover:bg-rose-500 hover:text-black transition-colors duration-200',
+  amber: 'border border-[var(--color-accent)] bg-transparent text-[var(--color-accent)] hover:bg-[var(--color-accent)] hover:text-black transition-colors duration-200',
+  rose: 'border border-[var(--color-accent)] bg-transparent text-[var(--color-accent)] hover:bg-[var(--color-accent)] hover:text-black transition-colors duration-200',
   violet: 'border border-violet-500 bg-transparent text-violet-500 hover:bg-violet-500 hover:text-black transition-colors duration-200',
 };
 

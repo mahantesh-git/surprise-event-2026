@@ -38,17 +38,35 @@ export class ErrorBoundary extends React.Component<Props, State> {
       }
 
       return (
-        <div className="min-h-screen flex items-center justify-center p-4 surface-paper">
-          <div className="max-w-md w-full bg-paper p-6 border border-rose-200 text-center">
-            <AlertCircle className="h-12 w-12 text-rose-600 mx-auto mb-4" />
-            <h2 className="text-xl font-bold mb-2">Something went wrong</h2>
-            <p className="text-sm text-[rgba(33,33,33,0.6)] mb-6">{errorMessage}</p>
-            <Button 
-              onClick={() => window.location.reload()}
-              className="w-full btn-secondary"
-            >
-              Reload Application
-            </Button>
+        <div className="min-h-screen flex items-center justify-center p-6 bg-[var(--color-bg-void)]">
+          <div className="corner-card bg-[var(--color-bg-surface)] backdrop-blur-xl p-8 max-w-md w-full border border-[var(--color-accent)]/20 text-center relative">
+            <div className="absolute top-0 right-0 p-4 font-mono text-[8px] text-[var(--color-accent)]/20 uppercase tracking-widest pointer-events-none">
+              ERR_SYSTEM_FATAL
+            </div>
+            <div className="flex flex-col items-center gap-6">
+              <div className="w-16 h-16 bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/30 flex items-center justify-center">
+                <AlertCircle className="h-8 w-8 text-[var(--color-accent)]" />
+              </div>
+              <div className="space-y-2">
+                <h1 className="text-xl font-black uppercase tracking-[0.2em] text-white">System Breach</h1>
+                <div className="flex items-center justify-center gap-2">
+                  <div className="px-4 py-2 rounded-full border border-[var(--color-accent)]/30 bg-[var(--color-accent)]/10 text-[var(--color-accent)] text-[10px] uppercase tracking-widest font-mono">
+                    UNHANDLED_EXCEPTION
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-[10px] text-white/40 font-mono uppercase tracking-[0.2em] leading-relaxed max-w-[280px]">
+                The system has encountered an unhandled exception. Manual reboot required.
+              </p>
+
+              <Button
+                onClick={() => window.location.reload()}
+                className="w-full btn-primary h-14 uppercase tracking-widest font-black"
+              >
+                Reboot System
+              </Button>
+            </div>
           </div>
         </div>
       );

@@ -11,8 +11,8 @@ const badgeClasses: Record<BadgeVariant, string> = {
   default: 'bg-[#1A1D21] text-white border border-[rgba(255,255,255,0.1)]',
   secondary: 'bg-[rgba(255,255,255,0.05)] text-white/70 border border-transparent',
   outline: 'border border-[var(--color-accent)] text-[var(--color-accent)]',
-  destructive: 'bg-red-500/10 text-red-500 border border-red-500',
-  neon: 'bg-[var(--color-accent)]/10 text-[var(--color-accent)] border border-[var(--color-accent)]/50 shadow-[0_0_10px_rgba(149,255,0,0.1)]'
+  destructive: 'bg-[var(--color-accent)]/10 text-[var(--color-accent)] border border-[var(--color-accent)]/30 shadow-accent-xs',
+  neon: 'bg-[var(--color-accent)]/10 text-[var(--color-accent)] border border-[var(--color-accent)]/50 shadow-accent-sm'
 };
 
 export function Badge({ className, variant = 'default', ...props }: BadgeProps) {

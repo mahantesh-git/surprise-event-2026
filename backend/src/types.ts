@@ -22,6 +22,12 @@ export interface GameState {
   currentLng?: number | null;
 }
 
+export interface ChatMessage {
+  text: string;
+  senderRole: string;
+  timestamp: number;
+}
+
 export interface TeamDocument {
   name: string;
   nameNormalized: string;
@@ -29,6 +35,7 @@ export interface TeamDocument {
   passwordHash: string;
   gameState: GameState;
   executionAttempts?: number[];
+  lastMessage?: ChatMessage;
   createdAt: Date;
   updatedAt: Date;
   lastLoginAt?: Date;

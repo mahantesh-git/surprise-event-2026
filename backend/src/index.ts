@@ -13,6 +13,7 @@ import { createTeam, findTeamByName, verifyTeamPassword, findTeamById } from './
 import { createInitialGameState, normalizeGameState, sanitizeGameStateUpdate } from './game';
 import { DEFAULT_QUESTIONS } from './defaultQuestions';
 import { asyncHandler, createApiErrorHandler, HttpError } from './errors';
+import type { ChatMessage } from './types';
 
 const envPath = path.resolve(__dirname, '../.env');
 const fallbackEnvPath = path.resolve(__dirname, '../.env.example');
@@ -163,6 +164,28 @@ async function seedQuestionsIfEmpty() {
     await generateQuestionQrAsset(question);
   }
   await questions.insertMany(DEFAULT_QUESTIONS.map(question => ({ ...question, createdAt: now, updatedAt: now })));
+
+  // Seed default tactical phrases
+  const config = await getConfigCollection();
+  const phrasesKey = 'tacticalPhrases';
+  const existingPhrases = await config.findOne({ key: phrasesKey });
+  if (!existingPhrases) {
+    const defaultPhrases = [
+      'Node reached',
+      'Scanning QR',
+      'Need help!',
+      'Moving to next',
+      'Code solved!',
+      'Runner ready',
+      'Solver working',
+      'On my way'
+    ];
+    await config.insertOne({
+      key: phrasesKey,
+      value: defaultPhrases,
+      updatedAt: now
+    });
+  }
 }
 
 function toObjectId(value: string, label: string) {
@@ -264,12 +287,7 @@ app.get('/api/session', requireAuth, route(async (request: AuthedRequest, respon
 }));
 
 app.get('/api/game/state', requireAuth, route(async (request: AuthedRequest, response) => {
-  const auth = request.auth;
-  if (!auth) {
-    response.status(401).json({ error: 'Not authenticated' });
-    return;
-  }
-
+  const auth = request.auth!;
   const team = await findTeamById(auth.teamId);
   if (!team) {
     response.status(404).json({ error: 'Team not found' });
@@ -283,16 +301,14 @@ app.get('/api/game/state', requireAuth, route(async (request: AuthedRequest, res
     await teams.updateOne({ _id: team._id }, { $set: { gameState: normalizedState, updatedAt: new Date() } });
   }
 
-  response.json({ gameState: normalizedState });
+  response.json({ 
+    gameState: normalizedState,
+    lastMessage: team.lastMessage || null 
+  });
 }));
 
 app.patch('/api/game/state', requireAuth, route(async (request: AuthedRequest, response) => {
-  const auth = request.auth;
-  if (!auth) {
-    response.status(401).json({ error: 'Not authenticated' });
-    return;
-  }
-
+  const auth = request.auth!;
   const team = await findTeamById(auth.teamId);
   if (!team) {
     response.status(404).json({ error: 'Team not found' });
@@ -314,7 +330,10 @@ app.patch('/api/game/state', requireAuth, route(async (request: AuthedRequest, r
     { $set: { gameState: nextState, updatedAt: new Date() } },
   );
 
-  response.json({ gameState: nextState });
+  response.json({ 
+    gameState: nextState,
+    lastMessage: team.lastMessage || null
+  });
 }));
 
 app.post('/api/game/reset', requireAuth, route(async (request: AuthedRequest, response) => {
@@ -339,7 +358,10 @@ app.post('/api/game/reset', requireAuth, route(async (request: AuthedRequest, re
     { $set: { gameState: nextState, updatedAt: new Date() } },
   );
 
-  response.json({ gameState: nextState });
+  response.json({ 
+    gameState: nextState,
+    lastMessage: team.lastMessage || null
+  });
 }));
 
 app.get('/api/game/final-qr', requireAuth, route(async (request: AuthedRequest, response) => {
@@ -728,7 +750,6 @@ app.post('/api/runner/verify-final-qr', requireAuth, route(async (request: Authe
   response.json({ ok: true, gameState: nextState });
 }));
 
-// Runner GPS location update — called frequently by runner's device
 app.put('/api/runner/location', requireAuth, route(async (request: AuthedRequest, response) => {
   const auth = request.auth!;
   if (auth.role !== 'runner') {
@@ -796,6 +817,36 @@ app.put('/api/admin/config', requireAdmin, route(async (request: AdminAuthedRequ
     { upsert: true }
   );
   response.json({ ok: true });
+}));
+
+app.get('/api/chat/phrases', requireAuth, route(async (_request: AuthedRequest, response) => {
+  const config = await getConfigCollection();
+  const phrases = await config.findOne({ key: 'tacticalPhrases' });
+  response.json({ phrases: phrases?.value || [] });
+}));
+
+app.post('/api/chat/send', requireAuth, route(async (request: AuthedRequest, response) => {
+  const auth = request.auth!;
+  const { text } = request.body as { text?: string };
+
+  if (!text || typeof text !== 'string') {
+    response.status(400).json({ error: 'Message text is required' });
+    return;
+  }
+
+  const teams = await getTeamsCollection();
+  const lastMessage: ChatMessage = {
+    text,
+    senderRole: auth.role,
+    timestamp: Date.now()
+  };
+
+  await teams.updateOne(
+    { _id: toObjectId(auth.teamId, 'team id') },
+    { $set: { lastMessage, updatedAt: new Date() } }
+  );
+
+  response.json({ ok: true, lastMessage });
 }));
 
 app.post('/api/admin/login', (request, response) => {

@@ -95,12 +95,12 @@ function MapView({ teams, questions, now }: { teams: LeaderboardTeam[], question
       }
 
       const pulse = !team.finishTime && isInField && hasRealGps;
-      const color = hasRealGps ? 'rgba(149,255,0,0.9)' : 'rgba(149,255,0,0.5)';
+      const color = hasRealGps ? 'rgba(238, 58, 23, 0.9)' : 'rgba(238, 58, 23, 0.5)';
       const durStr = formatDuration(team.startTime, team.finishTime, now);
 
       const html = `
         <div style="position:relative;display:flex;flex-direction:column;align-items:center;transform:translate(0,-16px);pointer-events:none;">
-          <div style="background:rgba(0,0,0,0.85);border:1px solid rgba(149,255,0,0.4);border-radius:4px;padding:4px 8px;margin-bottom:6px;box-shadow:0 0 10px rgba(0,0,0,0.9);display:flex;flex-direction:column;align-items:center;white-space:nowrap;backdrop-filter:blur(4px);">
+          <div style="background:rgba(0,0,0,0.85);border:1px solid rgba(238, 58, 23, 0.4);border-radius:4px;padding:4px 8px;margin-bottom:6px;box-shadow:0 0 10px rgba(0,0,0,0.9);display:flex;flex-direction:column;align-items:center;white-space:nowrap;backdrop-filter:blur(4px);">
              <span style="color:#fff;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:1px;text-shadow:0 0 4px rgba(255,255,255,0.3);">${team.name}</span>
              <span style="color:var(--color-accent);font-size:10px;font-family:monospace;margin-top:2px;display:flex;gap:8px;">
                <span>${team.solvedCount}/${questions.length}</span>
@@ -108,8 +108,8 @@ function MapView({ teams, questions, now }: { teams: LeaderboardTeam[], question
              </span>
           </div>
           <div style="position:relative;width:14px;height:14px;">
-            <div style="position:absolute;inset:-8px;background:rgba(149,255,0,0.25);border-radius:50%;${pulse ? 'animation:ping 1.5s cubic-bezier(0,0,0.2,1) infinite' : ''}"></div>
-            <div style="position:absolute;inset:0;background:${color};border-radius:50%;border:1px solid #000;box-shadow:0 0 8px rgba(149,255,0,0.8);"></div>
+            <div style="position:absolute;inset:-8px;background:rgba(238, 58, 23, 0.25);border-radius:50%;${pulse ? 'animation:ping 1.5s cubic-bezier(0,0,0.2,1) infinite' : ''}"></div>
+            <div style="position:absolute;inset:0;background:${color};border-radius:50%;border:1px solid #000;box-shadow:0 0 8px rgba(238, 58, 23, 0.8);"></div>
           </div>
         </div>
       `;
@@ -296,14 +296,14 @@ export function Leaderboard() {
           <div className="absolute right-2 top-2 sm:right-0 sm:top-0 flex flex-col gap-2">
             <button
               onClick={toggleFullscreen}
-              className="bg-black/80 border border-white/10 text-white/50 p-3 rounded shadow-[0_0_15px_rgba(0,0,0,0.5)] backdrop-blur-xl hover:bg-white/5 hover:text-white transition-all flex items-center justify-center group pointer-events-auto"
+              className="bg-black/80 border border-white/10 text-white/50 p-3 rounded shadow-black-sm backdrop-blur-xl hover:bg-white/5 hover:text-white transition-all flex items-center justify-center group pointer-events-auto"
               title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
             >
               {isFullscreen ? <Minimize className="w-5 h-5 group-hover:scale-110 transition-transform" /> : <Maximize className="w-5 h-5 group-hover:scale-110 transition-transform" />}
             </button>
             <button
               onClick={() => setIsListVisible(true)}
-              className="bg-black/80 border border-[var(--color-accent)]/30 text-[var(--color-accent)] p-3 rounded shadow-[0_0_15px_rgba(0,0,0,0.8)] backdrop-blur-xl hover:bg-[var(--color-accent)]/10 transition-all flex items-center justify-center group pointer-events-auto"
+              className="bg-black/80 border border-[var(--color-accent)]/30 text-[var(--color-accent)] p-3 rounded shadow-black-md backdrop-blur-xl hover:bg-[var(--color-accent)]/10 transition-all flex items-center justify-center group pointer-events-auto"
               title="Show Leaderboard"
             >
               <Trophy className="w-5 h-5 group-hover:scale-110 transition-transform" />

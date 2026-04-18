@@ -45,21 +45,8 @@ export const Navbar: React.FC<NavbarProps> = ({
           </span>
         </div>
 
-        {/* Center: Timer */}
-        {startTime !== undefined && (
-          <div className="hidden sm:block">
-            <GameTimer startTime={startTime} finishTime={finishTime || null} />
-          </div>
-        )}
-
         {/* Right: Meta & Dot */}
         <div className="flex items-center gap-3 sm:gap-4 ml-auto sm:ml-0 pl-3 sm:pl-0 border-l sm:border-l-0 border-white/10">
-          {startTime !== undefined && (
-            <div className="sm:hidden block mr-1 scale-90 origin-right">
-              <GameTimer startTime={startTime} finishTime={finishTime || null} />
-            </div>
-          )}
-
           {metaText && (
             <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.2em] text-[var(--color-accent)]">
               {metaText}
