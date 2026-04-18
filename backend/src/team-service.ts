@@ -47,5 +47,12 @@ export async function createTeam(teamName: string, password: string, email: stri
     return;
   }
 
+  const existing = await teams.findOne({ nameNormalized });
+  if (existing) {
+    const err = new Error('Team already exists');
+    (err as any).code = 11000;
+    throw err;
+  }
+
   await teams.insertOne(document);
 }

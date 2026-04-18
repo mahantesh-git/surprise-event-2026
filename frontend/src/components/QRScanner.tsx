@@ -62,25 +62,24 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
   }, []);
 
   return (
-    <div className="corner-card p-8 pt-10 relative bg-[#15171A] border-[#95FF00]/20 shadow-[0_0_50px_rgba(0,0,0,0.5)]">
-      <div className="absolute top-0 right-0 p-4 font-mono text-[8px] text-[#95FF00]/20 uppercase tracking-widest pointer-events-none">
+    <div className="corner-card p-8 pt-10 relative bg-[var(--color-bg-void)] border-[var(--color-accent)]/20 shadow-[0_0_50px_rgba(0,0,0,0.5)]">
+      <div className="absolute top-0 right-0 p-4 font-mono text-[8px] text-[var(--color-accent)]/20 uppercase tracking-widest pointer-events-none">
         sys.sensor.optical
       </div>
 
       <Button
-        variant="ink"
         size="sm"
-        className="absolute right-4 top-4 h-8 w-8 p-0 border-white/5 text-white/40 hover:text-white z-20"
+        className="btn-secondary absolute right-4 top-4 h-8 w-8 p-0 border-white/5 text-white/40 hover:text-white z-20"
         onClick={onClose}
       >
         <X className="h-3 w-3" />
       </Button>
 
       <div className="text-center mb-8 space-y-2 relative z-10">
-        <div className="flex items-center justify-center gap-3 text-[#95FF00] mb-2">
-          <div className="w-8 h-[1px] bg-[#95FF00]/30" />
+        <div className="flex items-center justify-center gap-3 text-[var(--color-accent)] mb-2">
+          <div className="w-8 h-[1px] bg-[var(--color-accent)]/30" />
           <h3 className="text-[11px] font-black tracking-[0.4em] uppercase">Optical_Input</h3>
-          <div className="w-8 h-[1px] bg-[#95FF00]/30" />
+          <div className="w-8 h-[1px] bg-[var(--color-accent)]/30" />
         </div>
         <p className="text-[9px] font-mono text-white/30 uppercase tracking-[0.2em] max-w-[200px] mx-auto">
           Align vector with target scanner node
@@ -88,12 +87,12 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
       </div>
 
       <div className="relative group">
-        <div className="absolute -top-2 -left-2 w-8 h-8 border-t-2 border-l-2 border-[#95FF00] z-20 transition-all group-hover:-top-3 group-hover:-left-3" />
-        <div className="absolute -top-2 -right-2 w-8 h-8 border-t-2 border-r-2 border-[#95FF00] z-20 transition-all group-hover:-top-3 group-hover:-right-3" />
-        <div className="absolute -bottom-2 -left-2 w-8 h-8 border-b-2 border-l-2 border-[#95FF00] z-20 transition-all group-hover:-bottom-3 group-hover:-left-3" />
-        <div className="absolute -bottom-2 -right-2 w-8 h-8 border-b-2 border-r-2 border-[#95FF00] z-20 transition-all group-hover:-bottom-3 group-hover:-right-3" />
+        <div className="absolute -top-2 -left-2 w-8 h-8 border-t-2 border-l-2 border-[var(--color-accent)] z-20 transition-all group-hover:-top-3 group-hover:-left-3" />
+        <div className="absolute -top-2 -right-2 w-8 h-8 border-t-2 border-r-2 border-[var(--color-accent)] z-20 transition-all group-hover:-top-3 group-hover:-right-3" />
+        <div className="absolute -bottom-2 -left-2 w-8 h-8 border-b-2 border-l-2 border-[var(--color-accent)] z-20 transition-all group-hover:-bottom-3 group-hover:-left-3" />
+        <div className="absolute -bottom-2 -right-2 w-8 h-8 border-b-2 border-r-2 border-[var(--color-accent)] z-20 transition-all group-hover:-bottom-3 group-hover:-right-3" />
 
-        <div className="relative overflow-hidden border border-white/5 bg-black/40">
+        <div className="relative overflow-hidden border border-white/5 bg-[var(--color-bg-surface)]">
           <div id="qr-reader" className="w-full min-h-[300px] flex items-center justify-center">
             {errorMsg && (
               <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/90 p-6 text-center text-rose-500 font-mono text-[11px] uppercase tracking-widest border border-rose-500/30">
@@ -101,7 +100,7 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
               </div>
             )}
           </div>
-          <div className="scanner-line absolute top-0 left-0 w-full h-[1px] bg-[#95FF00] shadow-[0_0_15px_#95FF00] pointer-events-none z-40" />
+          <div className="scanner-line absolute top-0 left-0 w-full h-[1px] bg-[var(--color-accent)] shadow-[0_0_15px_var(--color-accent)] pointer-events-none z-40" />
         </div>
       </div>
 

@@ -12,95 +12,75 @@ export interface NavbarProps {
   finishTime?: string | null;
 }
 
-/**
- * Navbar — minimal two-element: brand (left) + hamburger+Menu (right).
- * Transparent background, uppercase text, no border/shadow.
- */
 export const Navbar: React.FC<NavbarProps> = ({
-  brandName = 'Quest',
-  ctaText = 'Menu',
+  brandName = 'Quest : The Code Scavenger',
+  ctaText,
   onMenuOpen,
   metaText,
   className,
   startTime,
   finishTime,
 }) => {
-  return (
-    <nav
-      className={cn(
-        'reveal-up fixed top-0 left-0 right-0 z-50',
-        'flex justify-between items-center',
-        'px-3 sm:px-6 md:px-12 py-3 sm:py-5 md:py-6',
-        'bg-transparent',
-        className
-      )}
-    >
-      {/* Brand */}
-      <div
-        style={{
-          fontSize: '11px',
-          fontWeight: 700,
-          letterSpacing: '0.12em',
-          textTransform: 'uppercase',
-          color: 'inherit',
-        }}
-      >
-        {brandName}
-      </div>
+  // Use the brand name from props, or default to the requested title if it's the old 'QUEST' placeholder
+  const displayBrand = brandName === 'QUEST' ? 'Quest : The Code Scavenger' : brandName;
 
-      {/* Right side: meta + status + hamburger */}
-      <div className="flex items-center gap-2 sm:gap-4 md:gap-6">
-        <div className="hidden md:flex flex-col items-end gap-1 font-mono">
-          <div className="flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#95FF00] animate-pulse" />
-            <span className="text-[8px] uppercase tracking-[0.2em] text-[#95FF00]/60">Link_Active</span>
+  return (
+    <div className="fixed top-4 sm:top-6 left-0 right-0 z-50 flex justify-center px-4 pointer-events-none reveal-up">
+      <nav
+        className={cn(
+          'flex items-center gap-4 sm:gap-8 px-4 py-2 sm:py-2.5',
+          'bg-[var(--color-bg-surface)] border border-[var(--color-accent)]/30 rounded-full shadow-2xl pointer-events-auto',
+          className
+        )}
+      >
+        {/* Left: Brand */}
+        <div className="flex items-center gap-2.5">
+          {/* Red bars */}
+          <div className="flex gap-[3px]">
+            <div className="w-1 sm:w-1.5 h-3.5 sm:h-4 bg-[var(--color-accent)] rounded-sm"></div>
+            <div className="w-1 sm:w-1.5 h-3.5 sm:h-4 bg-[var(--color-accent)] rounded-sm"></div>
           </div>
-          <div className="text-[7px] text-white/20 uppercase tracking-[0.3em]">
-            Packet_Loss: 0.0002%
-          </div>
+          <span className="text-[10px] sm:text-[11px] font-bold tracking-[0.15em] sm:tracking-[0.2em] uppercase text-white whitespace-nowrap">
+            {displayBrand}
+          </span>
         </div>
 
-        {/* Dynamic Timer if data passed */}
+        {/* Center: Timer */}
         {startTime !== undefined && (
-          <GameTimer startTime={startTime} finishTime={finishTime || null} />
+          <div className="hidden sm:block">
+            <GameTimer startTime={startTime} finishTime={finishTime || null} />
+          </div>
         )}
 
-        {metaText && (
-          <div className="flex flex-col items-end">
-            <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.15em] sm:tracking-[0.2em] text-[#95FF00]">
+        {/* Right: Meta & Dot */}
+        <div className="flex items-center gap-3 sm:gap-4 ml-auto sm:ml-0 pl-3 sm:pl-0 border-l sm:border-l-0 border-white/10">
+          {startTime !== undefined && (
+            <div className="sm:hidden block mr-1 scale-90 origin-right">
+              <GameTimer startTime={startTime} finishTime={finishTime || null} />
+            </div>
+          )}
+
+          {metaText && (
+            <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.2em] text-[var(--color-accent)]">
               {metaText}
             </span>
-            <span className="hidden sm:block text-[7px] text-white/30 uppercase tracking-[0.1em] font-mono">
-              Vector_Assigned
-            </span>
-          </div>
-        )}
+          )}
 
-        <div className="hidden sm:block h-8 w-[1px] bg-white/10 mx-1 md:mx-2" />
+          {/* Show the menu button only if there's no metaText (like in the login screen for Admin) */}
+          {onMenuOpen && !metaText && (
+            <button
+              onClick={onMenuOpen}
+              className="text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.15em] text-white/50 hover:text-white transition-colors"
+            >
+              {ctaText || 'Menu'}
+            </button>
+          )}
 
-        <button
-          onClick={onMenuOpen}
-          className="flex items-center gap-3 bg-transparent border-none cursor-none p-0 group"
-          aria-label="Open menu"
-        >
-          <div className="hidden sm:flex flex-col items-end space-y-0.5">
-            <span className="text-[11px] font-bold uppercase tracking-[0.15em] group-hover:text-[#95FF00] transition-colors">{ctaText}</span>
-            <span className="text-[7px] font-mono text-white/20 uppercase tracking-[0.2em]">Matrix_Map</span>
-          </div>
-          <Hamburger />
-        </button>
-      </div>
-    </nav>
-  );
-};
-
-function Hamburger() {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-      <span style={{ display: 'block', width: '22px', height: '1.5px', background: 'currentColor' }} />
-      <span style={{ display: 'block', width: '22px', height: '1.5px', background: 'currentColor' }} />
+          <div className="w-2 h-2 rounded-full bg-[var(--color-accent)]"></div>
+        </div>
+      </nav>
     </div>
   );
-}
+};
 
 Navbar.displayName = 'Navbar';

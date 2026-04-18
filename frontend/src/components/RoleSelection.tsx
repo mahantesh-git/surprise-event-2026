@@ -26,25 +26,10 @@ export function RoleSelection({ onSelect }: RoleSelectionProps) {
   ];
 
   return (
-    <div className="relative min-h-screen bg-[#15171A] text-white overflow-hidden flex flex-col justify-center px-6 md:px-12 pt-20 pb-12">
+    <div className="relative min-h-screen bg-[var(--color-bg-void)] text-white overflow-hidden flex flex-col justify-center px-6 md:px-12 pt-20 pb-12">
       {/* Ambient orbs handle the background now */}
 
-      {/* Navbar simulation for landing page */}
-      <nav className="absolute top-0 left-0 right-0 z-50 flex items-center justify-between px-6 md:px-12 py-6">
-        <span className="font-mono text-[10px] tracking-[0.3em] uppercase text-[#95FF00] flex flex-row items-center gap-2">
-          <div className="w-1.5 h-1.5 rounded-full bg-[#95FF00] animate-pulse" />
-          SYSTEM.PROTOCOL <span className="text-white/40">v1.0.4</span>
-        </span>
-        <button
-          onClick={() => {
-            window.history.pushState({}, '', '/admin');
-            window.dispatchEvent(new PopStateEvent('popstate'));
-          }}
-          className="font-mono text-[10px] text-white/40 tracking-[0.2em] uppercase hover:text-[#95FF00] transition-colors border-b border-white/5 pb-1"
-        >
-          Admin_Portal
-        </button>
-      </nav>
+
 
       <div className="max-w-6xl mx-auto w-full relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
 
@@ -56,8 +41,8 @@ export function RoleSelection({ onSelect }: RoleSelectionProps) {
             transition={{ duration: 0.7, ease: "easeOut" }}
           >
             {/* Badge */}
-            <div className="mb-6 inline-flex items-center gap-2 border border-[#95FF00]/40 px-4 py-1.5 bg-[#95FF00]/5 font-mono text-[10px] uppercase tracking-[0.2em] text-[#95FF00]">
-              <span className="w-1 h-1 bg-[#95FF00]" />
+            <div className="mb-6 inline-flex items-center gap-2 border border-[var(--color-accent)]/40 px-4 py-1.5 bg-[var(--color-accent)]/5 font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--color-accent)]">
+              <span className="w-1 h-1 bg-[var(--color-accent)]" />
               Secure_Connection_Active
             </div>
 
@@ -65,11 +50,11 @@ export function RoleSelection({ onSelect }: RoleSelectionProps) {
             <h1 className="text-[clamp(3.5rem,8vw,7rem)] font-bold uppercase tracking-tighter leading-[0.85] mb-8 font-space-grotesk text-white">
               QUEST <br />
               <span className="text-white/10">THE CODE</span><br />
-              <span className="text-[#95FF00]" style={{ textShadow: '0 0 50px rgba(149,255,0,0.3)' }}>SCAVENGER</span>
+              <span className="text-[var(--color-accent)]" style={{ textShadow: '0 0 50px rgba(149,255,0,0.3)' }}>SCAVENGER</span>
             </h1>
 
             {/* Subtext */}
-            <p className="font-mono text-xs tracking-wider text-white/40 max-w-sm leading-relaxed border-l border-[#95FF00]/40 pl-6 py-2 uppercase">
+            <p className="font-mono text-xs tracking-wider text-white/40 max-w-sm leading-relaxed border-l border-[var(--color-accent)]/40 pl-6 py-2 uppercase">
               Operational synchronization required. Select your clearance role to initialize mission protocol.
             </p>
           </motion.div>
@@ -85,22 +70,22 @@ export function RoleSelection({ onSelect }: RoleSelectionProps) {
               transition={{ delay: role.delay + 0.3, duration: 0.6, ease: "easeOut" }}
               whileHover={{ x: 10 }}
               onClick={() => onSelect(role.key)}
-              className="corner-card group relative text-left bg-black/40 backdrop-blur-xl border border-white/5 hover:border-[#95FF00]/40 transition-all duration-300 cursor-crosshair overflow-hidden p-8"
+              className="corner-card group relative text-left bg-[var(--color-bg-surface)] backdrop-blur-xl border border-white/5 hover:border-[var(--color-accent)]/40 transition-all duration-300 cursor-crosshair overflow-hidden p-8"
             >
               <div className="corner-br opacity-20 group-hover:opacity-100" />
               <div className="corner-bl opacity-20 group-hover:opacity-100" />
 
               {/* Giant background number overlay */}
-              <div className="absolute -top-4 -right-2 text-[120px] font-bold opacity-[0.03] text-white group-hover:text-[#95FF00] group-hover:opacity-[0.08] transition-all duration-500 leading-none tracking-tighter pointer-events-none font-space-grotesk">
+              <div className="absolute -top-4 -right-2 text-[120px] font-bold opacity-[0.03] text-white group-hover:text-[var(--color-accent)] group-hover:opacity-[0.08] transition-all duration-500 leading-none tracking-tighter pointer-events-none font-space-grotesk">
                 0{idx + 1}
               </div>
 
               <div className="relative z-10 flex flex-col h-full">
                 <div className="flex items-center gap-5 mb-4">
-                  <div className="w-14 h-14 rounded-none bg-black border border-white/10 flex items-center justify-center text-white/40 group-hover:text-[#95FF00] group-hover:border-[#95FF00] transition-all duration-300">
+                  <div className="w-14 h-14 rounded-none bg-black border border-white/10 flex items-center justify-center text-white/40 group-hover:text-[var(--color-accent)] group-hover:border-[var(--color-accent)] transition-all duration-300">
                     {role.icon}
                   </div>
-                  <h3 className="text-4xl font-bold uppercase tracking-tight text-white group-hover:text-[#95FF00] transition-colors font-space-grotesk">
+                  <h3 className="text-4xl font-bold uppercase tracking-tight text-white group-hover:text-[var(--color-accent)] transition-colors font-space-grotesk">
                     {role.label}
                   </h3>
                 </div>
@@ -110,11 +95,11 @@ export function RoleSelection({ onSelect }: RoleSelectionProps) {
                 </p>
 
                 <div className="mt-8 flex items-center justify-between">
-                  <span className="font-mono text-[9px] uppercase tracking-[0.3em] text-[#95FF00] opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                  <span className="font-mono text-[9px] uppercase tracking-[0.3em] text-[var(--color-accent)] opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                     ACCESS_NODE_0{idx + 1}
                   </span>
-                  <div className="h-[1px] flex-1 mx-4 bg-[#95FF00]/10 scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-500" />
-                  <span className="font-mono text-sm text-[#95FF00] transition-transform duration-300 group-hover:translate-x-2">
+                  <div className="h-[1px] flex-1 mx-4 bg-[var(--color-accent)]/10 scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-500" />
+                  <span className="font-mono text-sm text-[var(--color-accent)] transition-transform duration-300 group-hover:translate-x-2">
                     [ INITIALIZE ]
                   </span>
                 </div>

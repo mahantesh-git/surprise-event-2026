@@ -121,11 +121,11 @@ export function SectorMap({ rounds, currentRound, stage }: SectorMapProps) {
         className: 'target-marker',
         html: `<div class="animate-pulse" style="
           width:32px;height:32px;
-          background:#95FF00;
+          background:var(--color-accent);
           border:4px solid #000;
           border-radius:50% 50% 50% 0;
           transform:rotate(-45deg);
-          box-shadow:0 0 20px #95FF00, 0 0 40px rgba(149, 255, 0, 0.4);
+          box-shadow:0 0 20px var(--color-accent), 0 0 40px rgba(149, 255, 0, 0.4);
           display:flex;align-items:center;justify-content:center;
         ">
           <div style="width:8px;height:8px;background:black;border-radius:50%;transform:rotate(45deg);"></div>
@@ -241,7 +241,7 @@ export function SectorMap({ rounds, currentRound, stage }: SectorMapProps) {
 
         if (coords.length > 0) {
           routeLayerRef.current = L.polyline(coords, {
-            color: '#95FF00',
+            color: 'var(--color-accent)',
             weight: 5,
             opacity: 0.9,
             dashArray: '12, 8',
@@ -255,7 +255,7 @@ export function SectorMap({ rounds, currentRound, stage }: SectorMapProps) {
         if (routeLayerRef.current) { map.removeLayer(routeLayerRef.current); }
         routeLayerRef.current = L.polyline(
           [[rLat, rLng], [targetLat!, targetLng!]],
-          { color: '#95FF00', weight: 4, opacity: 0.7, dashArray: '8, 10' }
+          { color: 'var(--color-accent)', weight: 4, opacity: 0.7, dashArray: '8, 10' }
         ).addTo(map);
       });
   }, [runnerCoords, hasTarget, targetLat, targetLng]);
@@ -269,7 +269,7 @@ export function SectorMap({ rounds, currentRound, stage }: SectorMapProps) {
   return (
     <div className="space-y-3">
       {/* Map */}
-      <div className="relative w-full h-[260px] sm:h-[320px] border border-[#95FF00]/40 bg-[#15171A] corner-card overflow-hidden shadow-[0_0_30px_rgba(149,255,0,0.1)]">
+      <div className="relative w-full h-[260px] sm:h-[320px] border border-[var(--color-accent)]/40 bg-[var(--color-bg-void)] corner-card overflow-hidden shadow-[0_0_30px_rgba(149,255,0,0.1)]">
         <div ref={mapContainerRef} className="absolute inset-0 w-full h-full" />
 
         {/* Status badges */}
@@ -290,7 +290,7 @@ export function SectorMap({ rounds, currentRound, stage }: SectorMapProps) {
             );
           })()}
           {hasTarget && (
-            <div className="bg-black/90 border border-[#95FF00]/60 px-2 py-1 flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-widest text-[#95FF00] backdrop-blur-sm shadow-[0_0_10px_rgba(149,255,0,0.2)]">
+            <div className="bg-black/90 border border-[var(--color-accent)]/60 px-2 py-1 flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-widest text-[var(--color-accent)] backdrop-blur-sm shadow-[0_0_10px_rgba(149,255,0,0.2)]">
               <Navigation className="h-3 w-3" />
               Target Locked
             </div>
@@ -338,8 +338,7 @@ export function SectorMap({ rounds, currentRound, stage }: SectorMapProps) {
         <a
           href={navUrl}
           target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center justify-center gap-2 sm:gap-3 w-full py-3 sm:py-4 border-2 border-[#95FF00]/40 bg-[#95FF00]/5 text-[#95FF00] font-mono text-[10px] sm:text-xs uppercase tracking-[0.15em] sm:tracking-[0.25em] hover:bg-[#95FF00]/20 hover:border-[#95FF00] transition-all duration-300 shadow-[0_0_20px_rgba(149,255,0,0.05)] active:scale-[0.98]"
+          rel="noopener noreferrer btn-primary flex items-center justify-center gap-2 sm:gap-3 w-full h-14"
         >
           <Navigation className="h-4 w-4" />
           {runnerCoords ? 'Navigate to Target' : 'Explore Target Site'}
@@ -352,8 +351,8 @@ export function SectorMap({ rounds, currentRound, stage }: SectorMapProps) {
         {isRunnerStage ? (
           <>
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-[#95FF00] shadow-[0_0_6px_#95FF00]" />
-              <span className="text-[#95FF00]">Target</span>
+              <div className="w-3 h-3 rounded-full bg-[var(--color-accent)] shadow-[0_0_6px_var(--color-accent)]" />
+              <span className="text-[var(--color-accent)]">Target</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-full bg-[#00BFFF] shadow-[0_0_6px_#00BFFF]" />

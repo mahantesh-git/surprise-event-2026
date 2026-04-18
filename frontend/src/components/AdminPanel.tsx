@@ -245,7 +245,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
 
   if (!token) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-4 sm:px-6 relative overflow-hidden bg-[#15171A]">
+      <div className="min-h-screen flex items-center justify-center px-4 sm:px-6 relative overflow-hidden bg-[var(--color-bg-void)]">
         {/* Decorative background number */}
         <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none select-none">
           <span className="text-[40vw] font-black leading-none">00</span>
@@ -256,22 +256,22 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
           animate={{ opacity: 1, y: 0 }}
           className="w-full max-w-md z-10"
         >
-          <div className="corner-card border-[#95FF00]/20 bg-black/40 backdrop-blur-xl p-8">
+          <div className="corner-card border-[var(--color-accent)]/20 bg-[var(--color-bg-surface)] backdrop-blur-xl p-8">
             <div className="text-center space-y-6">
-              <div className="w-16 h-16 bg-[#95FF00]/5 border border-[#95FF00]/20 flex items-center justify-center mx-auto mb-2 relative group">
-                <div className="absolute -inset-2 bg-[#95FF00]/10 blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
-                <Lock className="text-[#95FF00] w-8 h-8 relative z-10" />
+              <div className="w-16 h-16 bg-[var(--color-accent)]/5 border border-[var(--color-accent)]/20 flex items-center justify-center mx-auto mb-2 relative group">
+                <div className="absolute -inset-2 bg-[var(--color-accent)]/10 blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                <Lock className="text-[var(--color-accent)] w-8 h-8 relative z-10" />
               </div>
               <div className="space-y-2">
-                <h1 className="text-[#95FF00] tracking-[0.3em] font-black uppercase text-2xl">
+                <h1 className="text-[var(--color-accent)] tracking-[0.3em] font-black uppercase text-2xl">
                   Admin_Auth
                 </h1>
                 <div className="flex items-center gap-2 justify-center">
-                  <div className="h-[1px] w-8 bg-[#95FF00]/30" />
+                  <div className="h-[1px] w-8 bg-[var(--color-accent)]/30" />
                   <span className="uppercase tracking-[0.4em] text-[8px] text-white/40">
                     Secured_Access_Node
                   </span>
-                  <div className="h-[1px] w-8 bg-[#95FF00]/30" />
+                  <div className="h-[1px] w-8 bg-[var(--color-accent)]/30" />
                 </div>
               </div>
             </div>
@@ -287,7 +287,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                     autoCorrect="off"
                     spellCheck="false"
                     disabled={isAdminLoggingIn}
-                    className="bg-black/50 border-white/10 group-focus-within:border-[#95FF00]/50 transition-colors uppercase text-[10px] tracking-widest h-12"
+                    className="bg-black/50 border-white/10 group-focus-within:border-[var(--color-accent)]/50 transition-colors uppercase text-[10px] tracking-widest h-12"
                   />
                 </div>
                 <div className="relative group">
@@ -301,7 +301,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                     autoCorrect="off"
                     spellCheck="false"
                     disabled={isAdminLoggingIn}
-                    className="bg-black/50 border-white/10 group-focus-within:border-[#95FF00]/50 transition-colors uppercase text-[10px] tracking-widest h-12"
+                    className="bg-black/50 border-white/10 group-focus-within:border-[var(--color-accent)]/50 transition-colors uppercase text-[10px] tracking-widest h-12"
                   />
                 </div>
               </div>
@@ -314,16 +314,14 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
 
               <div className="flex gap-3 pt-4">
                 <Button
-                  variant="ink"
-                  className="flex-1 font-bold uppercase tracking-[0.2em] h-12"
+                  className="btn-secondary flex-1 font-bold uppercase tracking-[0.2em] h-12"
                   onClick={onBack}
                 >
                   <ChevronLeft className="mr-2 h-4 w-4" />
                   Terminal
                 </Button>
                 <Button
-                  variant="sage"
-                  className="flex-1 font-bold uppercase tracking-[0.2em] h-12"
+                  className="btn-primary flex-1 font-bold uppercase tracking-[0.2em] h-12"
                   onClick={handleAdminLogin}
                   disabled={isAdminLoggingIn || !email.trim() || !password.trim()}
                 >
@@ -345,7 +343,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
   }
 
   return (
-    <div className="min-h-screen bg-[#15171A] text-white px-3 sm:px-6 py-8 sm:py-12 relative overflow-hidden">
+    <div className="min-h-screen bg-[var(--color-bg-void)] text-white px-3 sm:px-6 py-8 sm:py-12 relative overflow-hidden">
       {/* Background Decorative Element */}
       <div className="fixed top-0 right-0 p-12 opacity-[0.02] pointer-events-none select-none">
         <span className="text-[20vw] font-black leading-none uppercase">Admin</span>
@@ -354,23 +352,23 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
       <div className="max-w-6xl mx-auto space-y-8 sm:space-y-12 relative z-10">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-white/5 pb-8 relative">
-          <div className="absolute -left-12 top-0 h-full w-[1px] bg-gradient-to-b from-transparent via-[#95FF00]/20 to-transparent hidden xl:block" />
+          <div className="absolute -left-12 top-0 h-full w-[1px] bg-gradient-to-b from-transparent via-[var(--color-accent)]/20 to-transparent hidden xl:block" />
           <div className="space-y-2">
-            <div className="flex items-center gap-3 text-[#95FF00]">
+            <div className="flex items-center gap-3 text-[var(--color-accent)]">
               <Database className="w-4 h-4" />
-              <div className="h-[1px] w-8 bg-[#95FF00]/50" />
-              <span className="text-[8px] uppercase font-mono tracking-[0.4em] text-[#95FF00]/60">v2.0.4.sys_admin</span>
+              <div className="h-[1px] w-8 bg-[var(--color-accent)]/50" />
+              <span className="text-[8px] uppercase font-mono tracking-[0.4em] text-[var(--color-accent)]/60">v2.0.4.sys_admin</span>
             </div>
             <h1 className="text-3xl sm:text-4xl md:text-6xl font-black uppercase tracking-tighter leading-none">
-              Control<span className="text-[#95FF00]">_</span>Center
+              Control<span className="text-[var(--color-accent)]">_</span>Center
             </h1>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             {/* Tabs */}
-            <div className="flex border border-white/10 bg-white/[0.02]">
+            <div className="flex border border-white/10 bg-[var(--color-accent-fill)]">
               <button
                 onClick={() => setActiveTab('manage')}
-                className={`px-5 h-10 text-[10px] font-bold uppercase tracking-widest transition-colors flex items-center gap-2 ${activeTab === 'manage' ? 'bg-[#95FF00]/10 text-[#95FF00]' : 'text-white/30 hover:text-white/60'
+                className={`px-5 h-10 text-[10px] font-bold uppercase tracking-widest transition-colors flex items-center gap-2 ${activeTab === 'manage' ? 'bg-[var(--color-accent)]/10 text-[var(--color-accent)]' : 'text-white/30 hover:text-white/60'
                   }`}
               >
                 <Database className="w-3 h-3" />
@@ -378,14 +376,14 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
               </button>
               <button
                 onClick={() => setActiveTab('leaderboard')}
-                className={`px-5 h-10 text-[10px] font-bold uppercase tracking-widest transition-colors flex items-center gap-2 border-l border-white/10 ${activeTab === 'leaderboard' ? 'bg-[#95FF00]/10 text-[#95FF00]' : 'text-white/30 hover:text-white/60'
+                className={`px-5 h-10 text-[10px] font-bold uppercase tracking-widest transition-colors flex items-center gap-2 border-l border-white/10 ${activeTab === 'leaderboard' ? 'bg-[var(--color-accent)]/10 text-[var(--color-accent)]' : 'text-white/30 hover:text-white/60'
                   }`}
               >
                 <Trophy className="w-3 h-3" />
                 Leaderboard
               </button>
             </div>
-            <Button variant="ink" className="font-bold uppercase tracking-[0.2em] h-10 px-6 border-white/5 bg-white/[0.02] text-[10px]" onClick={onBack}>
+            <Button className="btn-secondary font-bold uppercase tracking-[0.2em] h-10 px-6 border-white/5 bg-[var(--color-accent-fill)] text-[10px]" onClick={onBack}>
               Terminal_Exit
             </Button>
             <Button variant="ghost" className="font-bold uppercase tracking-[0.2em] h-10 px-6 border-red-500/10 text-red-500/60 hover:text-red-400 hover:bg-red-500/5 text-[10px]" onClick={handleAdminLogout}>
@@ -416,14 +414,14 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
           {/* Create Team Section */}
           <section className="space-y-4">
             <div className="flex items-center gap-4">
-              <Plus className="text-[#95FF00] w-3 h-3" />
+              <Plus className="text-[var(--color-accent)] w-3 h-3" />
               <h2 className="text-[9px] font-mono uppercase tracking-[0.5em] text-white/30">Register_New_Operative</h2>
             </div>
             <div className="corner-card border-white/5 bg-white/[0.01] p-4 flex flex-col md:flex-row gap-4">
-              <Input placeholder="OP_NAME" value={teamName} onChange={(event) => setTeamName(event.target.value)} className="bg-black/40 border-white/5 text-[10px] uppercase tracking-widest h-11 flex-1" />
-              <Input placeholder="REGISTRY_EMAIL" value={teamEmail} onChange={(event) => setTeamEmail(event.target.value)} className="bg-black/40 border-white/5 text-[10px] uppercase tracking-widest h-11 flex-1" />
-              <Input placeholder="PASSKEY" type="password" value={teamPassword} onChange={(event) => setTeamPassword(event.target.value)} className="bg-black/40 border-white/5 text-[10px] uppercase tracking-widest h-11 flex-1" />
-              <Button variant="sage" className="font-bold uppercase tracking-[0.3em] h-11 px-8" onClick={handleCreateTeam}>
+              <Input placeholder="OP_NAME" value={teamName} onChange={(event) => setTeamName(event.target.value)} className="bg-[var(--color-bg-surface)] border-white/5 text-[10px] uppercase tracking-widest h-11 flex-1" />
+              <Input placeholder="REGISTRY_EMAIL" value={teamEmail} onChange={(event) => setTeamEmail(event.target.value)} className="bg-[var(--color-bg-surface)] border-white/5 text-[10px] uppercase tracking-widest h-11 flex-1" />
+              <Input placeholder="PASSKEY" type="password" value={teamPassword} onChange={(event) => setTeamPassword(event.target.value)} className="bg-[var(--color-bg-surface)] border-white/5 text-[10px] uppercase tracking-widest h-11 flex-1" />
+              <Button className="btn-primary font-bold uppercase tracking-[0.3em] h-11 px-8" onClick={handleCreateTeam}>
                 Register
               </Button>
             </div>
@@ -432,7 +430,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
           {/* Global Event Control */}
           <section className="space-y-4">
             <div className="flex items-center gap-4">
-              <ShieldAlert className="text-[#95FF00] w-3 h-3" />
+              <ShieldAlert className="text-[var(--color-accent)] w-3 h-3" />
               <h2 className="text-[9px] font-mono uppercase tracking-[0.5em] text-white/30">Global_Event_Config</h2>
             </div>
             <div className="corner-card border-white/5 bg-white/[0.01] p-6 flex flex-row justify-between items-center gap-4">
@@ -442,7 +440,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
               </div>
               <button
                 onClick={handleToggleLogin}
-                className={`relative inline-flex h-8 w-14 items-center rounded-none transition-colors focus:outline-none focus:ring-2 focus:ring-[#95FF00] focus:ring-offset-2 focus:ring-offset-[#15171A] ${loginEnabled ? 'bg-[#95FF00]' : 'bg-white/10'
+                className={`relative inline-flex h-8 w-14 items-center rounded-none transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] focus:ring-offset-2 focus:ring-offset-[var(--color-bg-void)] ${loginEnabled ? 'bg-[var(--color-accent)]' : 'bg-white/10'
                   }`}
               >
                 <span className="sr-only">Toggle Team Login</span>
@@ -462,11 +460,11 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
               <section className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
-                    <Terminal className="text-[#95FF00] w-4 h-4" />
+                    <Terminal className="text-[var(--color-accent)] w-4 h-4" />
                     <h2 className="text-xs font-mono uppercase tracking-[0.4em] text-white/40">Active_Nodes</h2>
                   </div>
                   {teams.length > 0 && (
-                    <Button variant="ink" className="text-red-400 p-0 h-auto text-[9px] uppercase tracking-widest bg-transparent border-none hover:bg-transparent" onClick={handleDeleteAllTeams}>
+                    <Button className="btn-secondary text-red-400 p-0 h-auto text-[9px] uppercase tracking-widest bg-transparent border-none hover:bg-transparent" onClick={handleDeleteAllTeams}>
                       Wipe All
                     </Button>
                   )}
@@ -476,17 +474,16 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                     <motion.div
                       layout
                       key={team.id}
-                      className="corner-card p-4 flex items-center justify-between bg-white/[0.02] hover:bg-white/[0.05] transition-colors"
+                      className="corner-card p-4 flex items-center justify-between bg-[var(--color-accent-fill)] hover:bg-white/[0.05] transition-colors"
                     >
                       <div>
-                        <div className="text-[10px] text-[#95FF00] font-mono mb-1">{team.id.slice(-6).toUpperCase()}</div>
+                        <div className="text-[10px] text-[var(--color-accent)] font-mono mb-1">{team.id.slice(-6).toUpperCase()}</div>
                         <div className="font-bold uppercase tracking-widest text-sm">{team.name}</div>
                         <div className="text-[9px] text-white/40 font-mono tracking-tighter italic">{team.email || 'NO_IDENTIFIER'}</div>
                       </div>
                       <Button
                         variant="ghost"
-                        size="sm"
-                        className="text-white/20 hover:text-red-400 hover:bg-red-500/10"
+                        size="sm text-white/20 hover:text-red-400 hover:bg-red-500/10"
                         onClick={() => handleDeleteTeam(team.id)}
                       >
                         <Trash2 className="w-4 h-4" />
@@ -508,24 +505,24 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
               {/* Editor */}
               <section className="space-y-4">
                 <div className="flex items-center gap-4">
-                  <Edit3 className="text-[#95FF00] w-3 h-3" />
+                  <Edit3 className="text-[var(--color-accent)] w-3 h-3" />
                   <h2 className="text-[9px] font-mono uppercase tracking-[0.5em] text-white/30">
                     {editingQuestionId ? 'Modify_Simulation_Data' : 'Initialize_New_Simulation'}
                   </h2>
                 </div>
-                <div className="corner-card border-[#95FF00]/10 bg-black/40 backdrop-blur-md p-8 pt-10 relative overflow-hidden">
-                  <div className="absolute top-0 right-0 p-4 font-mono text-[8px] text-[#95FF00]/20 uppercase tracking-widest">
+                <div className="corner-card border-[var(--color-accent)]/10 bg-[var(--color-bg-surface)] backdrop-blur-md p-8 pt-10 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 p-4 font-mono text-[8px] text-[var(--color-accent)]/20 uppercase tracking-widest">
                     sys.editor.active
                   </div>
                   <div className="space-y-8">
                     <div className="grid md:grid-cols-3 gap-6">
                       <div className="space-y-2">
                         <label className="text-[8px] uppercase tracking-[0.3em] text-white/30 ml-1">Sequence_ID</label>
-                        <Input type="number" value={draftQuestion.round} onChange={(event) => setDraftQuestion({ ...draftQuestion, round: Number(event.target.value) })} className="bg-white/[0.02] border-white/5 h-11 font-mono text-xs focus:border-[#95FF00]/30 transition-colors" />
+                        <Input type="number" value={draftQuestion.round} onChange={(event) => setDraftQuestion({ ...draftQuestion, round: Number(event.target.value) })} className="bg-[var(--color-accent-fill)] border-white/5 h-11 font-mono text-xs focus:border-[var(--color-accent)]/30 transition-colors" />
                       </div>
                       <div className="md:col-span-2 space-y-2">
                         <label className="text-[8px] uppercase tracking-[0.3em] text-white/30 ml-1">Secure_Passkey_Vector</label>
-                        <Input placeholder="SCAN_KEY_00X" value={draftQuestion.qrPasskey} onChange={(event) => setDraftQuestion({ ...draftQuestion, qrPasskey: event.target.value })} className="bg-white/[0.02] border-white/5 h-11 font-mono text-xs uppercase tracking-widest focus:border-[#95FF00]/30 transition-colors" />
+                        <Input placeholder="SCAN_KEY_00X" value={draftQuestion.qrPasskey} onChange={(event) => setDraftQuestion({ ...draftQuestion, qrPasskey: event.target.value })} className="bg-[var(--color-accent-fill)] border-white/5 h-11 font-mono text-xs uppercase tracking-widest focus:border-[var(--color-accent)]/30 transition-colors" />
                       </div>
                     </div>
 
@@ -534,7 +531,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                       <Input
                         readOnly
                         value={draftQuestion.locationQrCode || buildLocationQrCode(draftQuestion.round)}
-                        className="bg-white/[0.02] border-white/5 h-11 font-mono text-xs uppercase tracking-widest text-[#95FF00] focus:border-[#95FF00]/30 transition-colors"
+                        className="bg-[var(--color-accent-fill)] border-white/5 h-11 font-mono text-xs uppercase tracking-widest text-[var(--color-accent)] focus:border-[var(--color-accent)]/30 transition-colors"
                       />
                       <p className="text-[9px] text-white/35 font-mono uppercase tracking-widest">
                         Auto-generated per question. Print a QR with this exact value for the runner&apos;s location.
@@ -545,8 +542,8 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                     <div className="grid md:grid-cols-2 gap-8 pt-4">
                       {/* Solver Side */}
                       <div className="space-y-4">
-                        <div className="flex items-center gap-2 text-[10px] text-[#95FF00] uppercase tracking-widest mb-2">
-                          <div className="w-1 h-1 bg-[#95FF00]" /> Node_Alpha
+                        <div className="flex items-center gap-2 text-[10px] text-[var(--color-accent)] uppercase tracking-widest mb-2">
+                          <div className="w-1 h-1 bg-[var(--color-accent)]" /> Node_Alpha
                         </div>
                         <Input placeholder="Objective Title" value={draftQuestion.p1.title} onChange={(event) => setDraftQuestion({ ...draftQuestion, p1: { ...draftQuestion.p1, title: event.target.value } })} className="bg-white/5 border-white/10" />
 
@@ -555,10 +552,10 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                             <select
                               value={draftQuestion.p1.language || 'python'}
                               onChange={(e) => setDraftQuestion({ ...draftQuestion, p1: { ...draftQuestion.p1, language: e.target.value } })}
-                              className="w-full bg-white/5 border border-white/10 h-10 px-3 font-mono text-[10px] text-white focus:outline-none focus:border-[#95FF00]/50 transition-colors uppercase appearance-none"
+                              className="w-full bg-white/5 border border-white/10 h-10 px-3 font-mono text-[10px] text-white focus:outline-none focus:border-[var(--color-accent)]/50 transition-colors uppercase appearance-none"
                             >
                               {LANGUAGE_OPTIONS.map(opt => (
-                                <option key={opt.id} value={opt.id} className="bg-[#15171A] text-white">
+                                <option key={opt.id} value={opt.id} className="bg-[var(--color-bg-void)] text-white">
                                   {opt.label}
                                 </option>
                               ))}
@@ -570,17 +567,16 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                           placeholder="Simulation Matrix (Code)"
                           value={draftQuestion.p1.code}
                           onChange={(event) => setDraftQuestion({ ...draftQuestion, p1: { ...draftQuestion.p1, code: event.target.value } })}
-                          className="w-full bg-white/5 border border-white/10 rounded-none p-3 font-mono text-xs min-h-[120px] focus:outline-none focus:border-[#95FF00]/50 transition-colors"
+                          className="w-full bg-white/5 border border-white/10 rounded-none p-3 font-mono text-xs min-h-[120px] focus:outline-none focus:border-[var(--color-accent)]/50 transition-colors"
                         />
 
                         {/* Test Cases Section */}
                         <div className="space-y-3 pt-4 border-t border-white/5">
                           <div className="flex items-center justify-between">
-                            <label className="text-[10px] uppercase tracking-widest text-[#95FF00]/60">Verification_Test_Suite</label>
+                            <label className="text-[10px] uppercase tracking-widest text-[var(--color-accent)]/60">Verification_Test_Suite</label>
                             <Button
                               variant="ghost"
-                              size="sm"
-                              className="h-6 px-2 text-[8px] uppercase tracking-widest text-[#95FF00] hover:bg-[#95FF00]/10 border border-[#95FF00]/20"
+                              size="sm h-6 px-2 text-[8px] uppercase tracking-widest text-[var(--color-accent)] hover:bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/20"
                               onClick={() => {
                                 const existing = draftQuestion.p1.testCases || [];
                                 setDraftQuestion({
@@ -610,8 +606,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                                 />
                                 <Button
                                   variant="ghost"
-                                  size="sm"
-                                  className="col-span-1 p-0 h-8 text-rose-500 hover:bg-rose-500/10"
+                                  size="sm col-span-1 p-0 h-8 text-rose-500 hover:bg-rose-500/10"
                                   onClick={() => {
                                     const cases = (draftQuestion.p1.testCases || []).filter((_, i) => i !== idx);
                                     setDraftQuestion({ ...draftQuestion, p1: { ...draftQuestion.p1, testCases: cases } });
@@ -627,7 +622,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                                     cases[idx].output = e.target.value;
                                     setDraftQuestion({ ...draftQuestion, p1: { ...draftQuestion.p1, testCases: cases } });
                                   }}
-                                  className="col-span-12 bg-[#95FF00]/5 border-[#95FF00]/10 h-8 font-mono text-[9px] text-[#95FF00]"
+                                  className="col-span-12 bg-[var(--color-accent)]/5 border-[var(--color-accent)]/10 h-8 font-mono text-[9px] text-[var(--color-accent)]"
                                 />
                               </div>
                             ))}
@@ -657,16 +652,14 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
 
                     <div className="flex gap-3 pt-6 border-t border-white/5">
                       <Button
-                        variant="sage"
-                        className="flex-1 font-bold uppercase tracking-[0.2em] h-12"
+                        className="btn-primary flex-1 font-bold uppercase tracking-[0.2em] h-12"
                         onClick={handleSaveQuestion}
                       >
                         <Save className="mr-2 h-4 w-4" />
                         {editingQuestionId ? 'Finalize_Update' : 'Commit_To_Database'}
                       </Button>
                       <Button
-                        variant="ink"
-                        className="font-bold uppercase tracking-[0.2em] h-12 px-6"
+                        className="btn-secondary font-bold uppercase tracking-[0.2em] h-12 px-6"
                         onClick={() => {
                           setEditingQuestionId(null);
                           setDraftQuestion(createEmptyQuestion(nextRoundNumber));
@@ -683,10 +676,10 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
               <section className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
-                    <Terminal className="text-[#95FF00] w-4 h-4" />
+                    <Terminal className="text-[var(--color-accent)] w-4 h-4" />
                     <h2 className="text-xs font-mono uppercase tracking-[0.4em] text-white/40">Active_Simulation_Sequences</h2>
                   </div>
-                  <Button variant="ink" className="text-red-400 p-0 h-auto text-[9px] uppercase tracking-widest bg-transparent border-none hover:bg-transparent" onClick={handleDeleteAllQuestions}>
+                  <Button className="btn-secondary text-red-400 p-0 h-auto text-[9px] uppercase tracking-widest bg-transparent border-none hover:bg-transparent" onClick={handleDeleteAllQuestions}>
                     Purge All
                   </Button>
                 </div>
@@ -714,9 +707,8 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                         </div>
                         <div className="flex gap-2">
                           <Button
-                            variant="ink"
-                            size="sm"
-                            className="font-mono text-[9px] uppercase tracking-widest border-white/5 h-10 px-4"
+                            className="btn-secondary"
+                            size="sm font-mono text-[9px] uppercase tracking-widest border-white/5 h-10 px-4"
                             onClick={() => handleEditQuestion(question)}
                           >
                             Modify
@@ -748,12 +740,11 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                     <ShieldAlert className="w-5 h-5" />
                     <h3 className="font-black uppercase tracking-tight">Level_0_Protocol</h3>
                   </div>
-                  <p className="text-[10px] uppercase tracking-widest text-[#95FF00]/40 max-w-md">
+                  <p className="text-[10px] uppercase tracking-widest text-[var(--color-accent)]/40 max-w-md">
                     Immediate termination of all database records including Operative accounts and Simulation data. This action is irreversible.
                   </p>
                   <Button
-                    variant="ink"
-                    className="bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20 font-bold uppercase tracking-[0.2em] h-12 w-full"
+                    className="btn-secondary bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20 font-bold uppercase tracking-[0.2em] h-12 w-full"
                     onClick={handleWipeDatabase}
                   >
                     Authorize_Nuke

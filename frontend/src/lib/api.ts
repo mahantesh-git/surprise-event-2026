@@ -1,6 +1,7 @@
 import type { GameState, HandoffDetails, Role } from '@/hooks/useGameState';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
+const host = import.meta.env.VITE_API_HOST || import.meta.env.VITE_API_BASE_URL || '';
+const API_BASE = host.endsWith('/api') ? host : `${host}/api`;
 
 export class ApiError extends Error {
   status: number;

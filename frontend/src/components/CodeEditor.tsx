@@ -131,20 +131,20 @@ function defineQuestTheme(monaco: Monaco) {
       { token: 'delimiter', foreground: '718096' },
     ],
     colors: {
-      'editor.background': '#0B0C0D',
+      'editor.background': '#1C1C1C',           // --color-bg-surface
       'editor.foreground': '#E2E8F0',
-      'editor.lineHighlightBackground': '#15171A',
-      'editor.selectionBackground': '#95FF0030',
-      'editorCursor.foreground': '#95FF00',
+      'editor.lineHighlightBackground': '#131314', // --color-bg-void
+      'editor.selectionBackground': '#EE3A1730',  // --color-accent + 30 alpha
+      'editorCursor.foreground': '#EE3A17',       // --color-accent
       'editorLineNumber.foreground': '#2D3748',
-      'editorLineNumber.activeForeground': '#95FF00',
-      'editor.inactiveSelectionBackground': '#95FF0015',
+      'editorLineNumber.activeForeground': '#EE3A17', // --color-accent
+      'editor.inactiveSelectionBackground': '#EE3A1715',
       'editorIndentGuide.background1': '#1A1D21',
       'editorIndentGuide.activeBackground1': '#2D3748',
       'scrollbarSlider.background': '#2D374850',
       'scrollbarSlider.hoverBackground': '#4A556850',
-      'editorWidget.background': '#15171A',
-      'input.background': '#15171A',
+      'editorWidget.background': '#131314',       // --color-bg-void
+      'input.background': '#131314',              // --color-bg-void
     },
   });
 }
@@ -203,9 +203,9 @@ export function CodeEditor({
   const monacoLang = LANGUAGE_OPTIONS.find(l => l.id === language)?.monacoLang ?? 'plaintext';
 
   return (
-    <div className="flex flex-col overflow-hidden border border-white/10 bg-[#0B0C0D]">
+    <div className="flex flex-col overflow-hidden border border-white/10 bg-[var(--color-bg-surface)]">
       {/* Language Tabs */}
-      <div className="flex items-center border-b border-white/10 bg-[#15171A] overflow-x-auto scrollbar-hide">
+      <div className="flex items-center border-b border-white/10 bg-[var(--color-bg-void)] overflow-x-auto scrollbar-hide">
         {LANGUAGE_OPTIONS.map(opt => {
           const active = opt.id === language;
           return (
@@ -216,7 +216,7 @@ export function CodeEditor({
                 'flex-shrink-0 px-4 py-2.5 text-[10px] font-mono uppercase tracking-widest',
                 'transition-all duration-150 border-r border-white/5',
                 active
-                  ? 'bg-[#95FF00]/10 text-[#95FF00] border-b-2 border-b-[#95FF00]'
+                  ? 'bg-[var(--color-accent)]/10 text-[var(--color-accent)] border-b-2 border-b-[var(--color-accent)]'
                   : 'text-white/30 hover:text-white/60 hover:bg-white/[0.03]',
               ].join(' ')}
             >

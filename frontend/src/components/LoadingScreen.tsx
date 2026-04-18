@@ -44,7 +44,7 @@ export function LoadingScreen({ onComplete, duration = 1600 }: LoadingScreenProp
 
   return (
     <div
-      className="fixed inset-0 z-[1000] bg-[#0B0C0D] flex flex-col items-center justify-center p-6 overflow-hidden"
+      className="fixed inset-0 z-[1000] bg-[var(--color-bg-surface)] flex flex-col items-center justify-center p-6 overflow-hidden"
       style={{
         animation: exiting ? 'fade-out 0.8s cubic-bezier(0.16, 1, 0.3, 1) both' : undefined,
         pointerEvents: exiting ? 'none' : 'all',
@@ -55,8 +55,8 @@ export function LoadingScreen({ onComplete, duration = 1600 }: LoadingScreenProp
       <div className="w-full max-w-sm space-y-8 relative">
         <div className="space-y-2 font-mono">
           <div className="flex items-center gap-3">
-            <span className="w-1.5 h-1.5 bg-[#95FF00] animate-pulse" />
-            <span className="text-[10px] uppercase tracking-[0.4em] text-[#95FF00]">Kernel_Initialize</span>
+            <span className="w-1.5 h-1.5 bg-[var(--color-accent)] animate-pulse" />
+            <span className="text-[10px] uppercase tracking-[0.4em] text-[var(--color-accent)]">Kernel_Initialize</span>
           </div>
           <div className="text-[8px] uppercase tracking-[0.2em] text-white/20 leading-relaxed">
             {count > 10 && <div>&gt; SYSCALL_CONNECT_DB_REMOTE</div>}
@@ -72,7 +72,7 @@ export function LoadingScreen({ onComplete, duration = 1600 }: LoadingScreenProp
             <SlotDigit value={tens} />
             <SlotDigit value={ones} />
           </div>
-          <span className="text-xl font-mono text-[#95FF00]/40 uppercase tracking-widest">%</span>
+          <span className="text-xl font-mono text-[var(--color-accent)]/40 uppercase tracking-widest">%</span>
         </div>
 
         <div className="space-y-1">
@@ -82,7 +82,7 @@ export function LoadingScreen({ onComplete, duration = 1600 }: LoadingScreenProp
           </div>
           <div className="h-[2px] w-full bg-white/5 relative overflow-hidden">
             <motion.div
-              className="absolute top-0 left-0 h-full bg-[#95FF00]"
+              className="absolute top-0 left-0 h-full bg-[var(--color-accent)]"
               style={{ width: `${count}%` }}
             />
             <div className="absolute top-0 left-0 h-full w-full bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer" />

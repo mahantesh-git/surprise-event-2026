@@ -45,8 +45,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
             <p className="text-sm text-[rgba(33,33,33,0.6)] mb-6">{errorMessage}</p>
             <Button 
               onClick={() => window.location.reload()}
-              className="w-full"
-              variant="ink"
+              className="w-full btn-secondary"
             >
               Reload Application
             </Button>

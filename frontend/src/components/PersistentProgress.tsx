@@ -10,7 +10,7 @@ interface PersistentProgressProps {
 
 export function PersistentProgress({ totalRounds, currentRound, roundsDone }: PersistentProgressProps) {
   return (
-    <div className="fixed top-0 left-0 right-0 z-[100] h-1 bg-[#0B0C0D] flex gap-0.5">
+    <div className="fixed top-0 left-0 right-0 z-[100] h-1 bg-[var(--color-bg-surface)] flex gap-0.5">
       {Array.from({ length: totalRounds }).map((_, i) => {
         const isDone = roundsDone[i];
         const isActive = i === currentRound;
@@ -20,7 +20,7 @@ export function PersistentProgress({ totalRounds, currentRound, roundsDone }: Pe
             <div
               className={cn(
                 "h-full w-full transition-all duration-700",
-                isDone ? "bg-[#95FF00]" : (isActive ? "bg-[#333333]" : "bg-white/5")
+                isDone ? "bg-[var(--color-accent)]" : (isActive ? "bg-[#333333]" : "bg-white/5")
               )}
             />
             {isActive && !isDone && (
@@ -28,7 +28,7 @@ export function PersistentProgress({ totalRounds, currentRound, roundsDone }: Pe
                 initial={{ x: '-100%' }}
                 animate={{ x: '100%' }}
                 transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}
-                className="absolute inset-0 bg-[#95FF00] shadow-[0_0_8px_#95FF00]"
+                className="absolute inset-0 bg-[var(--color-accent)] shadow-[0_0_8px_var(--color-accent)]"
               />
             )}
           </div>

@@ -19,7 +19,7 @@ const NAV_LINKS = [
 ];
 
 /**
- * MenuOverlay — full-screen #0B0C0D overlay with editorial nav items.
+ * MenuOverlay — full-screen var(--color-bg-surface) overlay with editorial nav items.
  * Each nav item: text slides up with green marquee band on hover.
  */
 export function MenuOverlay({ isOpen, onClose, role, teamName, onLogout, onNavigate }: MenuOverlayProps) {
@@ -51,7 +51,7 @@ export function MenuOverlay({ isOpen, onClose, role, teamName, onLogout, onNavig
             position: 'fixed',
             inset: 0,
             zIndex: 300,
-            background: '#0B0C0D',
+            background: 'var(--color-bg-surface)',
             display: 'flex',
             flexDirection: 'column',
             padding: '24px 48px',
@@ -63,7 +63,7 @@ export function MenuOverlay({ isOpen, onClose, role, teamName, onLogout, onNavig
           <div className="flex justify-between items-center mb-16 relative z-10">
             <div className="text-[12px] font-black uppercase tracking-[0.4em] text-white flex items-center gap-4">
               <div className="w-8 h-[1px] bg-white/20" />
-              Quest<span className="text-[#95FF00]">_</span>Protocol
+              Quest<span className="text-[var(--color-accent)]">_</span>Protocol
             </div>
 
             <button
@@ -71,7 +71,7 @@ export function MenuOverlay({ isOpen, onClose, role, teamName, onLogout, onNavig
               className="flex items-center gap-3 bg-transparent border border-white/10 px-4 py-2 text-[10px] tracking-[0.2em] uppercase transition-all hover:bg-white/5 hover:border-white/30"
               aria-label="Close menu"
             >
-              <X size={12} className="text-[#95FF00]" />
+              <X size={12} className="text-[var(--color-accent)]" />
               Close_Stream
             </button>
           </div>
@@ -93,7 +93,7 @@ export function MenuOverlay({ isOpen, onClose, role, teamName, onLogout, onNavig
           <div className="border-t border-white/5 pt-10 flex flex-col md:flex-row justify-between items-end gap-8 relative z-10">
             <div className="space-y-4">
               <div className="flex items-center gap-4">
-                <div className="w-1 h-3 bg-[#95FF00]" />
+                <div className="w-1 h-3 bg-[var(--color-accent)]" />
                 <span className="text-[9px] uppercase tracking-[0.4em] text-white/30 font-mono">Session_Telemetry</span>
               </div>
               <div className="grid grid-cols-2 gap-x-12 gap-y-2">
@@ -103,7 +103,7 @@ export function MenuOverlay({ isOpen, onClose, role, teamName, onLogout, onNavig
                 </div>
                 <div className="flex flex-col">
                   <span className="text-[7px] uppercase tracking-widest text-white/20 mb-1">Clearance_Level</span>
-                  <span className="text-[10px] uppercase tracking-widest font-bold text-[#95FF00]">{role?.toUpperCase() || 'EXTERNAL'}</span>
+                  <span className="text-[10px] uppercase tracking-widest font-bold text-[var(--color-accent)]">{role?.toUpperCase() || 'EXTERNAL'}</span>
                 </div>
                 <div className="flex flex-col">
                   <span className="text-[7px] uppercase tracking-widest text-white/20 mb-1">Encryption</span>
@@ -185,7 +185,7 @@ function MenuNavItem({ label, delay, onClick, active }: MenuNavItemProps) {
           fontWeight: 800,
           letterSpacing: '-0.03em',
           lineHeight: 1,
-          color: active ? '#95FF00' : '#ffffff',
+          color: active ? 'var(--color-accent)' : '#ffffff',
           transition: 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
         }}
       >
@@ -198,7 +198,7 @@ function MenuNavItem({ label, delay, onClick, active }: MenuNavItemProps) {
         style={{
           position: 'absolute',
           inset: 0,
-          background: '#95FF00',
+          background: 'var(--color-accent)',
           display: 'flex',
           alignItems: 'center',
           paddingLeft: '0',
@@ -211,7 +211,7 @@ function MenuNavItem({ label, delay, onClick, active }: MenuNavItemProps) {
             fontSize: 'clamp(32px, 6vw, 72px)',
             fontWeight: 800,
             letterSpacing: '-0.03em',
-            color: '#0B0C0D',
+            color: 'var(--color-bg-surface)',
             lineHeight: 1,
           }}
         >

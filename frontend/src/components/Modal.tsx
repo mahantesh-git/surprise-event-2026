@@ -41,14 +41,14 @@ export const Modal: React.FC<ModalProps> = ({
       >
         <div
           className={cn(
-            'corner-card relative bg-[#15171A] border-[#95FF00]/20 p-8 md:p-10 max-w-lg w-full pointer-events-auto',
+            'corner-card relative bg-[var(--color-bg-void)] border-[var(--color-accent)]/20 p-8 md:p-10 max-w-lg w-full pointer-events-auto',
             'animate-reveal-up',
             className
           )}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Decorative Corner Bracket */}
-          <div className="absolute -top-1 -left-1 w-6 h-6 border-t-2 border-l-2 border-[#95FF00]" />
+          <div className="absolute -top-1 -left-1 w-6 h-6 border-t-2 border-l-2 border-[var(--color-accent)]" />
 
           {/* Close button */}
           <button
@@ -61,14 +61,14 @@ export const Modal: React.FC<ModalProps> = ({
 
           {/* Header */}
           <div className="mb-8 pr-10">
-            <div className="flex items-center gap-3 text-[#95FF00] mb-2 opacity-50">
-              <div className="w-1 h-3 bg-[#95FF00]" />
+            <div className="flex items-center gap-3 text-[var(--color-accent)] mb-2 opacity-50">
+              <div className="w-1 h-3 bg-[var(--color-accent)]" />
               <span className="text-[8px] uppercase tracking-[0.4em] font-mono">System_Message</span>
             </div>
             <h2 className="text-2xl font-black tracking-tight uppercase leading-none text-white">
               {title.replace(' ', '_')}
             </h2>
-            <div className="h-[1px] w-full bg-gradient-to-r from-[#95FF00]/30 to-transparent mt-4" />
+            <div className="h-[1px] w-full bg-gradient-to-r from-[var(--color-accent)]/30 to-transparent mt-4" />
           </div>
 
           {/* Content */}

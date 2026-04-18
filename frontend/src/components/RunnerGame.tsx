@@ -38,9 +38,9 @@ const TapGame = ({ onComplete }: { onComplete: () => void }) => {
   if (taps >= required) return (
     <div className="text-center p-6 space-y-4">
       <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ duration: 0.5 }}>
-        <CheckCircle2 className="w-16 h-16 text-[#95FF00] mx-auto" />
+        <CheckCircle2 className="w-16 h-16 text-[var(--color-accent)] mx-auto" />
       </motion.div>
-      <h2 className="text-2xl font-bold text-[#95FF00]">Target Neutralized!</h2>
+      <h2 className="text-2xl font-bold text-[var(--color-accent)]">Target Neutralized!</h2>
       <p className="text-white/40 text-sm font-mono uppercase tracking-widest">Decrypting access...</p>
     </div>
   );
@@ -59,19 +59,19 @@ const TapGame = ({ onComplete }: { onComplete: () => void }) => {
   return (
     <div className="space-y-4">
       <div className="flex justify-between text-sm font-mono text-white/40 px-1">
-        <span>HITS: <span className="text-[#95FF00]">{taps}</span>/{required}</span>
+        <span>HITS: <span className="text-[var(--color-accent)]">{taps}</span>/{required}</span>
         <span>TIME: <span className={timeLeft <= 5 ? 'text-rose-400' : 'text-white/80'}>{timeLeft}s</span></span>
       </div>
       <div className="relative h-72 w-full bg-black rounded-xl overflow-hidden border border-white/10">
         <div className="absolute inset-0 opacity-10 bg-[linear-gradient(to_right,#374151_1px,transparent_1px),linear-gradient(to_bottom,#374151_1px,transparent_1px)] bg-[size:2rem_2rem]" />
-        <div className="absolute bottom-0 left-0 h-1 bg-[#95FF00]/20 w-full">
-          <motion.div className="h-full bg-[#95FF00]" animate={{ width: `${(taps / required) * 100}%` }} transition={{ type: 'spring', stiffness: 300 }} />
+        <div className="absolute bottom-0 left-0 h-1 bg-[var(--color-accent)]/20 w-full">
+          <motion.div className="h-full bg-[var(--color-accent)]" animate={{ width: `${(taps / required) * 100}%` }} transition={{ type: 'spring', stiffness: 300 }} />
         </div>
         <motion.button
           animate={{ left: `${target.x}%`, top: `${target.y}%` }}
           transition={{ type: 'spring', stiffness: 300, damping: 20 }}
           onClick={handleTap}
-          className="absolute w-16 h-16 bg-[#95FF00] rounded-full shadow-lg shadow-[#95FF00]/40 flex items-center justify-center -translate-x-1/2 -translate-y-1/2 active:scale-75 transition-transform"
+          className="absolute w-16 h-16 bg-[var(--color-accent)] rounded-full shadow-lg shadow-[var(--color-accent)]/40 flex items-center justify-center -translate-x-1/2 -translate-y-1/2 active:scale-75 transition-transform"
         >
           <Crosshair className="text-black w-7 h-7" />
         </motion.button>
@@ -108,9 +108,9 @@ const MemoryGame = ({ onComplete }: { onComplete: () => void }) => {
   if (solved.length === cards.length) return (
     <div className="text-center p-6 space-y-4">
       <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ duration: 0.5 }}>
-        <CheckCircle2 className="w-16 h-16 text-[#95FF00] mx-auto" />
+        <CheckCircle2 className="w-16 h-16 text-[var(--color-accent)] mx-auto" />
       </motion.div>
-      <h2 className="text-2xl font-bold text-[#95FF00]">Memory Decoded!</h2>
+      <h2 className="text-2xl font-bold text-[var(--color-accent)]">Memory Decoded!</h2>
       <p className="text-white/40 text-sm font-mono uppercase tracking-widest">Decrypting access...</p>
     </div>
   );
@@ -118,7 +118,7 @@ const MemoryGame = ({ onComplete }: { onComplete: () => void }) => {
   return (
     <div className="space-y-4">
       <div className="text-sm font-mono text-white/40 text-center">
-        MATCHED: <span className="text-[#95FF00]">{solved.length / 2}</span>/{symbols.length}
+        MATCHED: <span className="text-[var(--color-accent)]">{solved.length / 2}</span>/{symbols.length}
       </div>
       <div className="grid grid-cols-3 gap-2.5">
         {cards.map((symbol, i) => {
@@ -128,7 +128,7 @@ const MemoryGame = ({ onComplete }: { onComplete: () => void }) => {
             <motion.div
               key={i} whileTap={{ scale: 0.9 }}
               onClick={() => flipped.length < 2 && !isFlipped && !isSolved && (haptic(15), setFlipped((f) => [...f, i]))}
-              className={`h-20 rounded-xl flex items-center justify-center text-2xl cursor-pointer transition-all duration-200 select-none border ${isFlipped || isSolved ? 'bg-[#95FF00]/20 border-[#95FF00]/40 text-white scale-105' : 'bg-zinc-900 border-zinc-800 hover:bg-zinc-800'
+              className={`h-20 rounded-xl flex items-center justify-center text-2xl cursor-pointer transition-all duration-200 select-none border ${isFlipped || isSolved ? 'bg-[var(--color-accent)]/20 border-[var(--color-accent)]/40 text-white scale-105' : 'bg-zinc-900 border-zinc-800 hover:bg-zinc-800'
                 }`}
             >
               {isFlipped || isSolved ? symbol : <span className="text-zinc-600 text-lg">?</span>}
@@ -153,7 +153,7 @@ const PatternGame = ({ onComplete }: { onComplete: () => void }) => {
     { bg: 'bg-rose-500', dim: 'bg-rose-500/20 border-rose-500/30' },
     { bg: 'bg-blue-500', dim: 'bg-blue-500/20 border-blue-500/30' },
     { bg: 'bg-yellow-500', dim: 'bg-yellow-500/20 border-yellow-500/30' },
-    { bg: 'bg-[#95FF00]', dim: 'bg-[#95FF00]/20 border-[#95FF00]/30' },
+    { bg: 'bg-[var(--color-accent)]', dim: 'bg-[var(--color-accent)]/20 border-[var(--color-accent)]/30' },
   ];
 
   const start = () => {
@@ -189,9 +189,9 @@ const PatternGame = ({ onComplete }: { onComplete: () => void }) => {
   if (done) return (
     <div className="text-center p-6 space-y-4">
       <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ duration: 0.5 }}>
-        <CheckCircle2 className="w-16 h-16 text-[#95FF00] mx-auto" />
+        <CheckCircle2 className="w-16 h-16 text-[var(--color-accent)] mx-auto" />
       </motion.div>
-      <h2 className="text-2xl font-bold text-[#95FF00]">Pattern Cracked!</h2>
+      <h2 className="text-2xl font-bold text-[var(--color-accent)]">Pattern Cracked!</h2>
       <p className="text-white/40 text-sm font-mono uppercase tracking-widest">Decrypting access...</p>
     </div>
   );
@@ -239,7 +239,7 @@ export function RunnerGame({ token, currentRoundIndex, totalRounds, onRoundCompl
   const [completing, setCompleting] = useState(false);
 
   const gameInfo: Record<GameType, { title: string; icon: React.ReactNode; color: string }> = {
-    tap: { title: 'TARGET LOCK', icon: <Crosshair className="w-6 h-6 text-[#95FF00]" />, color: 'text-[#95FF00]' },
+    tap: { title: 'TARGET LOCK', icon: <Crosshair className="w-6 h-6 text-[var(--color-accent)]" />, color: 'text-[var(--color-accent)]' },
     memory: { title: 'NEURAL DECODE', icon: <Brain className="w-6 h-6 text-blue-400" />, color: 'text-blue-400' },
     pattern: { title: 'CIPHER CRACK', icon: <LayoutGrid className="w-6 h-6 text-purple-400" />, color: 'text-purple-400' },
   };
@@ -281,12 +281,12 @@ export function RunnerGame({ token, currentRoundIndex, totalRounds, onRoundCompl
       {/* ── LOCATION VERIFICATION ── */}
       {screen === 'location' && (
         <motion.div key="location" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
-          <div className="corner-card bg-black/40 backdrop-blur-xl p-8 border border-white/5 relative max-w-md mx-auto">
-            <div className="corner-br" /><div className="corner-bl" />
+          <div className="corner-card bg-[var(--color-bg-surface)] backdrop-blur-xl relative p-8 max-w-md mx-auto">
+            
             <div className="space-y-6">
               <div className="text-center space-y-3">
-                <div className="w-16 h-16 bg-[#95FF00]/10 border border-[#95FF00]/30 flex items-center justify-center mx-auto">
-                  <MapPin className="w-8 h-8 text-[#95FF00]" />
+                <div className="w-16 h-16 bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/30 flex items-center justify-center mx-auto">
+                  <MapPin className="w-8 h-8 text-[var(--color-accent)]" />
                 </div>
                 <span className="label-technical block">Location Verification</span>
                 <h2 className="text-xl font-bold tracking-widest uppercase">Arrived at Node?</h2>
@@ -303,8 +303,7 @@ export function RunnerGame({ token, currentRoundIndex, totalRounds, onRoundCompl
               )}
 
               <Button
-                className="w-full font-bold uppercase tracking-[0.2em] h-14"
-                variant="sage" size="md"
+                className="w-full font-bold uppercase tracking-[0.2em] h-14 btn-primary" size="md"
                 onClick={() => { setError(null); setScreen('qr_scanner'); }}
               >
                 <QrCode className="mr-2 h-5 w-5" /> SCAN LOCATION QR
@@ -341,12 +340,12 @@ export function RunnerGame({ token, currentRoundIndex, totalRounds, onRoundCompl
       {/* ── PASSKEY ENTRY ── */}
       {screen === 'passkey' && (
         <motion.div key="passkey" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
-          <div className="corner-card bg-black/40 backdrop-blur-xl p-8 border border-white/5 relative max-w-md mx-auto">
-            <div className="corner-br" /><div className="corner-bl" />
+          <div className="corner-card bg-[var(--color-bg-surface)] backdrop-blur-xl relative p-8 max-w-md mx-auto">
+            
             <div className="space-y-6">
               <div className="text-center space-y-3">
-                <div className="w-16 h-16 bg-[#95FF00]/10 border border-[#95FF00]/30 flex items-center justify-center mx-auto">
-                  <Shield className="w-8 h-8 text-[#95FF00]" />
+                <div className="w-16 h-16 bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/30 flex items-center justify-center mx-auto">
+                  <Shield className="w-8 h-8 text-[var(--color-accent)]" />
                 </div>
                 <span className="label-technical block">Biometric Authentication</span>
                 <h2 className="text-xl font-bold tracking-widest uppercase">Enter Location Passkey</h2>
@@ -358,7 +357,7 @@ export function RunnerGame({ token, currentRoundIndex, totalRounds, onRoundCompl
               <div className="space-y-4">
                 <div className="relative">
                   <input
-                    placeholder="PASSKEY..."
+                    placeholder="PASSKEY"
                     className="w-full high-clearance-input text-center h-16 text-xl tracking-[0.3em] uppercase"
                     value={passkey}
                     onChange={(e) => { setPasskey(e.target.value); setError(null); }}
@@ -378,8 +377,7 @@ export function RunnerGame({ token, currentRoundIndex, totalRounds, onRoundCompl
                 )}
 
                 <Button
-                  className="w-full font-bold uppercase tracking-[0.2em] h-14"
-                  variant="sage" size="md"
+                  className="w-full font-bold uppercase tracking-[0.2em] h-14 btn-primary" size="md"
                   onClick={handleVerifyPasskey}
                   disabled={verifying || !passkey.trim()}
                 >
@@ -399,7 +397,7 @@ export function RunnerGame({ token, currentRoundIndex, totalRounds, onRoundCompl
       {/* ── MINIGAME ── */}
       {screen === 'game' && (
         <motion.div key="game" initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}>
-          <div className="corner-card bg-black/40 backdrop-blur-xl border border-white/5 relative">
+          <div className="corner-card bg-[var(--color-bg-surface)] backdrop-blur-xl border border-white/5 relative">
             <div className="corner-tr" />
             {/* Game Header */}
             <div className="flex items-center justify-between p-6 border-b border-white/5">
@@ -433,26 +431,26 @@ export function RunnerGame({ token, currentRoundIndex, totalRounds, onRoundCompl
       {/* ── VICTORY ── */}
       {screen === 'victory' && (
         <motion.div key="victory" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5 }}>
-          <div className="corner-card bg-black/40 backdrop-blur-xl p-8 border border-[#95FF00]/30 relative text-center overflow-hidden">
-            <div className="corner-br" /><div className="corner-bl" />
-            <div className="absolute inset-0 bg-[#95FF00]/5 pointer-events-none" />
+          <div className="corner-card bg-[var(--color-bg-surface)] backdrop-blur-xl p-8 border border-[var(--color-accent)]/30 relative text-center overflow-hidden">
+            
+            <div className="absolute inset-0 bg-[var(--color-accent)]/5 pointer-events-none" />
             <div className="relative z-10 space-y-8">
 
               <motion.div animate={{ scale: [1, 1.05, 1], rotate: [0, 5, -5, 0] }} transition={{ duration: 2, repeat: Infinity }}>
-                <div className="w-24 h-24 bg-[#95FF00]/10 border border-[#95FF00]/30 flex items-center justify-center mx-auto">
-                  <Trophy className="w-12 h-12 text-[#95FF00]" />
+                <div className="w-24 h-24 bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/30 flex items-center justify-center mx-auto">
+                  <Trophy className="w-12 h-12 text-[var(--color-accent)]" />
                 </div>
               </motion.div>
 
               <div className="space-y-2">
-                <h2 className="text-3xl font-bold tracking-[0.3em] uppercase text-[#95FF00]">CHALLENGE COMPLETE!</h2>
+                <h2 className="text-3xl font-bold tracking-[0.3em] uppercase text-[var(--color-accent)]">CHALLENGE COMPLETE!</h2>
                 <p className="text-[10px] text-white/40 font-mono uppercase tracking-widest">
                   Round {currentRoundIndex + 1} successfully cleared.
                 </p>
               </div>
 
-              <div className="bg-[#95FF00]/5 border border-[#95FF00]/20 p-4 space-y-2">
-                <div className="flex items-center justify-center gap-2 text-[#95FF00] font-bold text-sm">
+              <div className="bg-[var(--color-accent)]/5 border border-[var(--color-accent)]/20 p-4 space-y-2">
+                <div className="flex items-center justify-center gap-2 text-[var(--color-accent)] font-bold text-sm">
                   <Sparkles className="w-4 h-4" />
                   {isLastRound ? 'FINAL ROUND COMPLETE!' : 'READY FOR NEXT ROUND'}
                 </div>
@@ -472,8 +470,7 @@ export function RunnerGame({ token, currentRoundIndex, totalRounds, onRoundCompl
               </div>
 
               <Button
-                className="w-full font-bold uppercase tracking-[0.2em] h-14"
-                variant="sage" size="md"
+                className="w-full font-bold uppercase tracking-[0.2em] h-14 btn-primary" size="md"
                 onClick={handleFinishRound}
                 disabled={completing}
               >

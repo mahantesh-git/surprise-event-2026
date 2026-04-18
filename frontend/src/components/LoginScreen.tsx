@@ -47,15 +47,15 @@ export function LoginScreen({
   onAdminClick,
 }: LoginScreenProps) {
   return (
-    <div className="relative min-h-screen bg-[#15171A] text-white overflow-hidden flex flex-col justify-between p-8 md:p-16">
+    <div className="relative min-h-screen bg-[var(--color-bg-void)] text-white overflow-hidden flex flex-col justify-between p-8 md:p-16">
       <GridBackground />
 
       {/* Top Section */}
       <div className="relative z-10">
         <LineMask delay={0.05}>
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-2 h-2 bg-[#95FF00] animate-pulse" />
-            <p className="font-mono text-[10px] uppercase tracking-[0.4em] text-[#95FF00]/80">
+            <div className="w-2 h-2 bg-[var(--color-accent)] animate-pulse" />
+            <p className="font-mono text-[10px] uppercase tracking-[0.4em] text-[var(--color-accent)]/80">
               Protocol: Authentication_Required
             </p>
           </div>
@@ -73,7 +73,7 @@ export function LoginScreen({
           initial={{ scaleX: 0 }}
           animate={{ scaleX: 1 }}
           transition={{ delay: 0.35, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-          className="h-[1px] bg-[#95FF00]/30 mt-12 origin-left scale-x-100 w-32"
+          className="h-[1px] bg-[var(--color-accent)]/30 mt-12 origin-left scale-x-100 w-32"
         />
       </div>
 
@@ -83,9 +83,8 @@ export function LoginScreen({
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.4, duration: 0.7 }}
-          className="corner-card w-full max-w-md bg-black/40 backdrop-blur-xl p-10 border border-white/5 relative"
+          className="corner-card w-full max-w-md backdrop-blur-xl relative"
         >
-          <div className="corner-br" /> <div className="corner-bl" />
 
           <div className="space-y-6">
             <div className="space-y-4">
@@ -95,7 +94,7 @@ export function LoginScreen({
                   placeholder="Team Identifier..."
                   value={teamName}
                   onChange={e => onTeamNameChange(e.target.value)}
-                  className="rounded-none border-white/10 bg-black/20 text-white font-mono placeholder:text-white/10 h-12 focus:border-[#95FF00]/50 transition-all"
+                  className="high-clearance-input w-full"
                 />
               </div>
 
@@ -107,7 +106,7 @@ export function LoginScreen({
                   value={password}
                   onChange={e => onPasswordChange(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && onLogin()}
-                  className="rounded-none border-white/10 bg-black/20 text-white font-mono placeholder:text-white/10 h-12 focus:border-[#95FF00]/50 transition-all"
+                  className="high-clearance-input w-full"
                 />
               </div>
             </div>
@@ -124,10 +123,9 @@ export function LoginScreen({
 
             <Button
               onClick={onLogin}
-              className="w-full h-14 bg-[#95FF00] hover:bg-[#85e600] text-black font-bold uppercase tracking-[0.3em] rounded-none transition-all group relative overflow-hidden"
+              className="btn-primary w-full h-14"
             >
               <span className="relative z-10">Authorize Access</span>
-              <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
             </Button>
 
             <p className="font-mono text-[9px] text-white/20 text-center uppercase tracking-widest leading-relaxed">
@@ -145,7 +143,7 @@ export function LoginScreen({
         className="relative z-10 flex items-center justify-between border-t border-white/5 pt-8"
       >
         <div className="flex items-center gap-3">
-          <Zap size={14} className="text-[#95FF00] animate-pulse" />
+          <Zap size={14} className="text-[var(--color-accent)] animate-pulse" />
           <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-white/40">
             Node: Terminal_001 <span className="text-white/20 mx-1">/</span> Latency: 24ms
           </span>
@@ -153,7 +151,7 @@ export function LoginScreen({
 
         <button
           onClick={onAdminClick}
-          className="font-mono text-[10px] text-white/40 hover:text-[#95FF00] uppercase tracking-[0.2em] transition-colors flex items-center gap-2"
+          className="font-mono text-[10px] text-white/40 hover:text-[var(--color-accent)] uppercase tracking-[0.2em] transition-colors flex items-center gap-2"
         >
           [ Bypass_Link ]
         </button>

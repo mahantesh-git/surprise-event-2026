@@ -805,7 +805,7 @@ app.post('/api/admin/teams', requireAdmin, route(async (request: AdminAuthedRequ
   const roundCount = await getRoundCount();
   try {
     await createTeam(name, password, email?.trim() || undefined, roundCount, false);
-  } catch {
+  } catch (err: any) {
     response.status(409).json({ error: 'Team already exists' });
     return;
   }

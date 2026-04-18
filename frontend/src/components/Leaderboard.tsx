@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { Trophy, Clock, Target, MapPin, ChevronRight, ChevronLeft, Maximize, Minimize } from 'lucide-react';
+import { motion } from 'motion/react';
+import { Trophy, Clock, Target, MapPin, Zap, ChevronRight, ChevronLeft, Maximize, Minimize } from 'lucide-react';
 import { getLeaderboard, getQuestions, LeaderboardTeam, RoundQuestion } from '@/lib/api';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -101,7 +102,7 @@ function MapView({ teams, questions, now }: { teams: LeaderboardTeam[], question
         <div style="position:relative;display:flex;flex-direction:column;align-items:center;transform:translate(0,-16px);pointer-events:none;">
           <div style="background:rgba(0,0,0,0.85);border:1px solid rgba(149,255,0,0.4);border-radius:4px;padding:4px 8px;margin-bottom:6px;box-shadow:0 0 10px rgba(0,0,0,0.9);display:flex;flex-direction:column;align-items:center;white-space:nowrap;backdrop-filter:blur(4px);">
              <span style="color:#fff;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:1px;text-shadow:0 0 4px rgba(255,255,255,0.3);">${team.name}</span>
-             <span style="color:#95FF00;font-size:10px;font-family:monospace;margin-top:2px;display:flex;gap:8px;">
+             <span style="color:var(--color-accent);font-size:10px;font-family:monospace;margin-top:2px;display:flex;gap:8px;">
                <span>${team.solvedCount}/${questions.length}</span>
                <span>${durStr}</span>
              </span>
@@ -222,13 +223,13 @@ export function Leaderboard() {
       <div className={`absolute top-2 left-2 right-2 sm:top-4 sm:right-4 sm:left-auto flex flex-col h-[calc(100%-1rem)] sm:h-[calc(100%-2rem)] max-h-[700px] z-10 transition-all duration-300 ${isListVisible ? 'w-auto sm:w-full sm:max-w-[360px] corner-card border border-white/10 shadow-2xl backdrop-blur-xl bg-black/60' : 'w-auto'}`}>
         {isListVisible ? (
           <>
-            <div className="px-3 sm:px-4 py-3 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
+            <div className="px-3 sm:px-4 py-3 border-b border-white/5 flex items-center justify-between bg-[var(--color-accent-fill)]">
               <div className="flex items-center gap-2">
-                <Trophy className="w-4 h-4 text-[#95FF00]" />
+                <Trophy className="w-4 h-4 text-[var(--color-accent)]" />
                 <h2 className="text-[10px] uppercase tracking-[0.2em] font-bold text-white/80">Leaderboard</h2>
               </div>
               <div className="flex items-center gap-3">
-                <span className="text-[9px] font-mono text-[#95FF00] bg-[#95FF00]/10 px-2 py-0.5 border border-[#95FF00]/20">LIVE</span>
+                <span className="text-[9px] font-mono text-[var(--color-accent)] bg-[var(--color-accent)]/10 px-2 py-0.5 border border-[var(--color-accent)]/20">LIVE</span>
 
                 <button
                   onClick={toggleFullscreen}
@@ -248,23 +249,47 @@ export function Leaderboard() {
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 scrollbar-hide">
-              {teams.map((t, idx) => (
-                <div key={t.id} className="bg-black/50 border border-white/10 p-3 relative group transition-colors hover:border-[#95FF00]/20 backdrop-blur-md">
-                  <div className="absolute right-3 top-3 opacity-10 text-[20px] font-black italic select-none">
-                    #{idx + 1}
-                  </div>
-                  <div className="pr-10">
-                    <h3 className="font-bold text-xs uppercase tracking-widest text-[#95FF00] truncate">{t.name}</h3>
-                    <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-2 text-[10px] text-white/50 uppercase tracking-widest font-mono">
-                      <span className="flex items-center gap-1"><Target className="w-3 h-3 text-[#95FF00]/50" /> {t.solvedCount}/{questions.length}</span>
-                      <span className="flex items-center gap-1"><Clock className="w-3 h-3 text-[#95FF00]/50" /> {formatDuration(t.startTime, t.finishTime, now)}</span>
-                    </div>
-                    {t.finishTime && <div className="mt-2 text-[#95FF00] font-bold text-[9px] uppercase tracking-[0.2em]">Deployment Complete ✓</div>}
-                  </div>
-                </div>
-              ))}
-              {!teams.length && <div className="text-center p-8 text-white/30 text-[10px] tracking-widest uppercase font-mono">Standby for Teams...</div>}
+            <div className="flex-1 overflow-y-auto p-2 sm:p-3 space-y-2 scrollbar-hide">
+              {teams.length === 0 ? (
+                <div className="text-center p-8 text-white/30 text-[10px] tracking-widest uppercase font-mono">Standby for Teams...</div>
+              ) : (
+                <motion.div
+                  initial="hidden"
+                  animate="show"
+                  variants={{
+                    hidden: { opacity: 0 },
+                    show: {
+                      opacity: 1,
+                      transition: { staggerChildren: 0.08 }
+                    }
+                  }}
+                  className="flex flex-col gap-2"
+                >
+                  {teams.map((t, idx) => (
+                    <motion.div
+                      key={t.id}
+                      variants={{
+                        hidden: { opacity: 0, x: -20 },
+                        show: { opacity: 1, x: 0, transition: { ease: [0.87, 0, 0.13, 1], duration: 0.6 } }
+                      }}
+                      className="corner-card bg-[var(--color-bg-surface)] border border-white/5 p-3 relative group transition-colors hover:border-[var(--color-accent)]/20 backdrop-blur-md overflow-hidden"
+                    >
+                      <div className="absolute right-0 top-0 bottom-0 w-24 bg-gradient-to-l from-white/[0.02] to-transparent pointer-events-none" />
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 opacity-10 text-3xl font-black italic select-none font-space-grotesk group-hover:opacity-20 group-hover:text-[var(--color-accent)] transition-all">
+                        #{idx + 1}
+                      </div>
+                      <div className="pr-12 relative z-10">
+                        <h3 className="font-bold text-xs uppercase tracking-widest text-[var(--color-accent)] truncate">{t.name}</h3>
+                        <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-2 text-[10px] text-white/50 uppercase tracking-widest font-mono">
+                          <span className="flex items-center gap-1.5 bg-black/40 px-2 py-0.5"><Target className="w-3 h-3 text-[var(--color-accent)]/50" /> {t.solvedCount}/{questions.length}</span>
+                          <span className="flex items-center gap-1.5 bg-black/40 px-2 py-0.5"><Clock className="w-3 h-3 text-[var(--color-accent)]/50" /> {formatDuration(t.startTime, t.finishTime, now)}</span>
+                        </div>
+                        {t.finishTime && <div className="mt-3 text-[var(--color-accent)] font-bold text-[9px] uppercase tracking-[0.2em] flex items-center gap-1"><Zap className="w-3 h-3" /> Deployment Complete</div>}
+                      </div>
+                    </motion.div>
+                  ))}
+                </motion.div>
+              )}
             </div>
           </>
         ) : (
@@ -278,7 +303,7 @@ export function Leaderboard() {
             </button>
             <button
               onClick={() => setIsListVisible(true)}
-              className="bg-black/80 border border-[#95FF00]/30 text-[#95FF00] p-3 rounded shadow-[0_0_15px_rgba(0,0,0,0.8)] backdrop-blur-xl hover:bg-[#95FF00]/10 transition-all flex items-center justify-center group pointer-events-auto"
+              className="bg-black/80 border border-[var(--color-accent)]/30 text-[var(--color-accent)] p-3 rounded shadow-[0_0_15px_rgba(0,0,0,0.8)] backdrop-blur-xl hover:bg-[var(--color-accent)]/10 transition-all flex items-center justify-center group pointer-events-auto"
               title="Show Leaderboard"
             >
               <Trophy className="w-5 h-5 group-hover:scale-110 transition-transform" />
