@@ -519,8 +519,12 @@ app.post('/api/game/compile', requireAuth, route(async (request: AuthedRequest, 
       testResults,
     });
   } catch (err) {
-    console.error('Execution failed:', err);
-    response.status(502).json({ error: 'Code execution failed. Please check your logic or try again later.' });
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    console.error('Execution failed:', errorMsg);
+    response.status(502).json({ 
+      error: 'Code execution failed. Please check the server logs or try again.',
+      details: errorMsg
+    });
   }
 }));
 
