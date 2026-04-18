@@ -1,8 +1,24 @@
 import type { GameState, HandoffDetails, Role } from '@/hooks/useGameState';
 
 let host = import.meta.env.VITE_API_HOST || import.meta.env.VITE_API_BASE_URL || '';
-if (host && !host.startsWith('http') && !host.startsWith('//')) {
-  host = `https://${host}`;
+if (host) {
+  if (!host.startsWith('http') && !host.startsWith('//')) {
+    host = `https://${host}`;
+  }
+  
+  // Render-specific fix: if the host is an internal name (no dots, not localhost),
+  // append .onrender.com so it's resolvable from the public internet.
+  try {
+    const url = new URL(host);
+    if (!url.hostname.includes('.') && url.hostname !== 'localhost' && !url.hostname.includes(':')) {
+      host = host.replace(url.hostname, `${url.hostname}.onrender.com`);
+    }
+  } catch (e) {
+    // Fallback for simple string cases
+    if (!host.includes('.') && !host.includes('localhost') && !host.includes('://localhost')) {
+      host = `${host}.onrender.com`;
+    }
+  }
 }
 const API_BASE = host.endsWith('/api') ? host : `${host}/api`;
 
