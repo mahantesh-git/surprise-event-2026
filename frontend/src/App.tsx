@@ -695,7 +695,7 @@ export default function App() {
           <AnimatePresence mode="wait">
             <motion.div key={gameState!.stage + gameState!.round} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
               {!isMyTurn && gameState!.stage !== 'complete' ? (
-                <div className="corner-card border-[var(--color-accent)]/20 bg-[var(--color-accent)]/5 p-16 text-center space-y-6">
+                <div className="corner-card border-white/10 bg-[var(--color-bg-surface)]/60 backdrop-blur-2xl p-16 text-center space-y-6">
 
                   <div className="relative w-20 h-20 mx-auto">
                     <div className="absolute inset-0 border border-[var(--color-accent)] animate-ping opacity-20" />
@@ -859,7 +859,7 @@ export default function App() {
 
                   {/* P1 Solved - Show coordinates */}
                   {gameState!.stage === 'p1_solved' && (
-                    <div className="corner-card backdrop-blur-xl relative p-8 overflow-hidden">
+                    <div className="corner-card bg-[var(--color-bg-surface)]/80 backdrop-blur-2xl relative p-8 overflow-hidden">
 
                       <div className="space-y-6">
                         <div className="text-center">
@@ -870,7 +870,7 @@ export default function App() {
 
                         <div className="space-y-4">
                           {/* Coordinates Card */}
-                          <div className="corner-card bg-[var(--color-accent)]/5 border border-[var(--color-accent)]/20 p-4 relative">
+                          <div className="corner-card bg-white/[0.03] border border-white/10 p-4 relative">
                             <div className="grid grid-cols-2 gap-4">
                               <div>
                                 <span className="text-[10px] font-bold text-[var(--color-accent)]/60 uppercase">Latitude</span>
@@ -891,7 +891,7 @@ export default function App() {
                           </div>
 
                           {/* Passkey */}
-                          <div className="corner-card bg-[var(--color-accent)]/10 border border-[var(--color-accent)] p-4 text-center">
+                          <div className="corner-card bg-white/[0.05] border border-[var(--color-accent)]/40 p-4 text-center">
                             <div className="text-[10px] font-bold text-[var(--color-accent)] uppercase tracking-[0.2em] mb-1">Passkey</div>
                             <div className="font-mono text-base sm:text-xl font-bold tracking-[0.22em] sm:tracking-[0.4em] text-white break-all">{currentRound.qrPasskey}</div>
                           </div>
@@ -930,7 +930,7 @@ export default function App() {
 
                         <div className="space-y-3">
                           {gameState!.handoff && (
-                            <div className="corner-card border-[var(--color-accent)] bg-[var(--color-accent)]/5 p-3 space-y-1.5 text-sm relative">
+                            <div className="corner-card border-white/10 bg-white/[0.03] p-3 space-y-1.5 text-sm relative">
                               <div className="corner-tr" />
                               <div><span className="text-[10px] uppercase text-[var(--color-accent)]/60 font-bold mr-2">Volunteer:</span> {gameState!.handoff.volunteer}</div>
                               <div><span className="text-[10px] uppercase text-[var(--color-accent)]/60 font-bold mr-2">Passkey:</span> <span className="font-mono text-white tracking-widest">{gameState!.handoff.passkey}</span></div>
@@ -1003,7 +1003,7 @@ export default function App() {
                   {gameState!.stage === 'final_qr' && (
                     <div className="corner-card bg-[var(--color-bg-surface)] backdrop-blur-xl p-6 sm:p-8 border border-[var(--color-accent)]/30 relative text-center overflow-hidden">
 
-                      <div className="absolute inset-0 bg-[var(--color-accent)]/5 pointer-events-none" />
+                      <div className="absolute inset-0 bg-white/[0.02] pointer-events-none" />
                       <div className="relative z-10 space-y-6">
                         <div className="space-y-2">
                           <h2 className="text-xl sm:text-2xl font-bold tracking-widest uppercase text-[var(--color-accent)]">Final Authentication</h2>
@@ -1077,7 +1077,7 @@ export default function App() {
                   {gameState!.stage === 'complete' && (
                     <div className="corner-card bg-[var(--color-bg-surface)] backdrop-blur-xl p-8 border border-[var(--color-accent)]/30 relative text-center overflow-hidden">
 
-                      <div className="absolute inset-0 bg-[var(--color-accent)]/5 pointer-events-none" />
+                      <div className="absolute inset-0 bg-white/[0.02] pointer-events-none" />
                       <div className="relative z-10 space-y-8">
                         <div>
                           <Zap className="h-16 w-16 text-[var(--color-accent)] fill-[var(--color-accent)] mx-auto mb-6 animate-pulse" />

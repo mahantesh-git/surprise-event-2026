@@ -11,7 +11,7 @@
   --color-bg-surface: #1C1C1C;
   --color-accent: #EE3A17;
   --color-accent-muted: rgba(236, 94, 42, 0.7);
-  --color-accent-fill: rgba(238, 58, 23, 0.3);
+  --color-accent-fill: rgba(238, 58, 23, 0.05);
   --color-accent-tertiary: #F7BD14;
   --color-text-primary: #E3E3E3;
   --color-grid: rgba(238, 58, 23, 0.05);
@@ -153,7 +153,7 @@
     transform: translateX(-50%);
     width: 600px;
     height: 600px;
-    background: radial-gradient(circle, rgba(238, 58, 23, 0.15) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(238, 58, 23, 0.08) 0%, transparent 70%);
     filter: blur(60px);
   }
 
@@ -172,7 +172,7 @@
   }
 
   .corner-card {
-    @apply relative w-full border border-[var(--color-accent)]/20 bg-[var(--color-accent-fill)] p-6;
+    @apply relative w-full border border-white/10 bg-[var(--color-bg-surface)] p-6;
     clip-path: var(--clip-oct);
   }
 
@@ -212,11 +212,11 @@
   }
 
   .high-clearance-input {
-    @apply font-mono text-[14px] uppercase tracking-[0.1em] border border-[var(--color-accent)] bg-[var(--color-accent-fill)] outline-none px-4 py-3 transition-all placeholder:text-[var(--color-accent-muted)] rounded-[10px] text-white;
+    @apply font-mono text-[14px] uppercase tracking-[0.1em] border border-white/10 bg-[var(--color-bg-surface)] outline-none px-4 py-3 transition-all placeholder:text-white/20 rounded-[10px] text-white;
   }
 
   .high-clearance-input:focus {
-    @apply border-white bg-[rgba(238,58,23,0.5)];
+    @apply border-[var(--color-accent)]/40 bg-white/[0.03] shadow-[0_0_20px_rgba(238,58,23,0.1)];
   }
 
   #qr-reader__dashboard {

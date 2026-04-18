@@ -365,7 +365,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             {/* Tabs */}
-            <div className="flex border border-white/10 bg-[var(--color-accent-fill)]">
+            <div className="flex border border-white/10 bg-white/[0.03]">
               <button
                 onClick={() => setActiveTab('manage')}
                 className={`px-5 h-10 text-[10px] font-bold uppercase tracking-widest transition-colors flex items-center gap-2 ${activeTab === 'manage' ? 'bg-[var(--color-accent)]/10 text-[var(--color-accent)]' : 'text-white/30 hover:text-white/60'
@@ -383,7 +383,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                 Leaderboard
               </button>
             </div>
-            <Button className="btn-secondary font-bold uppercase tracking-[0.2em] h-10 px-6 border-white/5 bg-[var(--color-accent-fill)] text-[10px]" onClick={onBack}>
+            <Button className="btn-secondary font-bold uppercase tracking-[0.2em] h-10 px-6 border-white/5 bg-white/[0.05] text-[10px]" onClick={onBack}>
               Terminal_Exit
             </Button>
             <Button variant="ghost" className="font-bold uppercase tracking-[0.2em] h-10 px-6 border-red-500/10 text-red-500/60 hover:text-red-400 hover:bg-red-500/5 text-[10px]" onClick={handleAdminLogout}>
@@ -474,7 +474,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                     <motion.div
                       layout
                       key={team.id}
-                      className="corner-card p-4 flex items-center justify-between bg-[var(--color-accent-fill)] hover:bg-white/[0.05] transition-colors"
+                      className="corner-card p-4 flex items-center justify-between bg-white/[0.02] hover:bg-white/[0.05] transition-colors"
                     >
                       <div>
                         <div className="text-[10px] text-[var(--color-accent)] font-mono mb-1">{team.id.slice(-6).toUpperCase()}</div>
@@ -518,11 +518,11 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                     <div className="grid md:grid-cols-3 gap-6">
                       <div className="space-y-2">
                         <label className="text-[8px] uppercase tracking-[0.3em] text-white/30 ml-1">Sequence_ID</label>
-                        <Input type="number" value={draftQuestion.round} onChange={(event) => setDraftQuestion({ ...draftQuestion, round: Number(event.target.value) })} className="bg-[var(--color-accent-fill)] border-white/5 h-11 font-mono text-xs focus:border-[var(--color-accent)]/30 transition-colors" />
+                        <Input type="number" value={draftQuestion.round} onChange={(event) => setDraftQuestion({ ...draftQuestion, round: Number(event.target.value) })} className="bg-white/5 border-white/5 h-11 font-mono text-xs focus:border-[var(--color-accent)]/30 transition-colors" />
                       </div>
                       <div className="md:col-span-2 space-y-2">
                         <label className="text-[8px] uppercase tracking-[0.3em] text-white/30 ml-1">Secure_Passkey_Vector</label>
-                        <Input placeholder="SCAN_KEY_00X" value={draftQuestion.qrPasskey} onChange={(event) => setDraftQuestion({ ...draftQuestion, qrPasskey: event.target.value })} className="bg-[var(--color-accent-fill)] border-white/5 h-11 font-mono text-xs uppercase tracking-widest focus:border-[var(--color-accent)]/30 transition-colors" />
+                        <Input placeholder="SCAN_KEY_00X" value={draftQuestion.qrPasskey} onChange={(event) => setDraftQuestion({ ...draftQuestion, qrPasskey: event.target.value })} className="bg-white/5 border-white/5 h-11 font-mono text-xs uppercase tracking-widest focus:border-[var(--color-accent)]/30 transition-colors" />
                       </div>
                     </div>
 
@@ -531,7 +531,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                       <Input
                         readOnly
                         value={draftQuestion.locationQrCode || buildLocationQrCode(draftQuestion.round)}
-                        className="bg-[var(--color-accent-fill)] border-white/5 h-11 font-mono text-xs uppercase tracking-widest text-[var(--color-accent)] focus:border-[var(--color-accent)]/30 transition-colors"
+                        className="bg-white/5 border-white/5 h-11 font-mono text-xs uppercase tracking-widest text-[var(--color-accent)] focus:border-[var(--color-accent)]/30 transition-colors"
                       />
                       <p className="text-[9px] text-white/35 font-mono uppercase tracking-widest">
                         Auto-generated per question. Print a QR with this exact value for the runner&apos;s location.
