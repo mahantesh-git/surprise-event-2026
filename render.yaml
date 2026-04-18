@@ -44,6 +44,4 @@ services:
           # Render will automatically append /api via frontend code logic, 
           # but we can explicitly pass the full path if needed:
           # Render automatically passes the base URL like https://quest-backend.onrender.com
-      # You need to provide your Gemini API key in the Render Dashboard
-      - key: GEMINI_API_KEY
-        sync: false
+
