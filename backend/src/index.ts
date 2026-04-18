@@ -471,7 +471,7 @@ app.post('/api/game/compile', requireAuth, route(async (request: AuthedRequest, 
           console.log(`Trying Piston at: ${url}`);
           const res = await axios.post(url, {
             language: pistonCfg.language,
-            version: pistonCfg.version,
+            version: '*',
             files: [{ name: pistonCfg.fileName, content: code }],
             stdin: tc.input || '',
             args: [],
