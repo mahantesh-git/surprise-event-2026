@@ -437,6 +437,7 @@ app.post('/api/game/compile', requireAuth, route(async (request: AuthedRequest, 
   // 2. Fetch Question for Verification
   const questions = await getQuestionsCollection();
   const question = await questions.findOne({ _id: toObjectId(questionId, 'questionId') });
+  
   if (!question) {
     response.status(404).json({ error: 'Question not found' });
     return;
@@ -444,32 +445,54 @@ app.post('/api/game/compile', requireAuth, route(async (request: AuthedRequest, 
 
   const testCases = question.p1.testCases || [];
   if (testCases.length === 0) {
-    // Fallback for legacy questions without test cases (though we should migrate them)
     testCases.push({ input: '', output: question.p1.ans });
   }
 
   try {
-    const pistonUrl = process.env.PISTON_API_URL || 'http://127.0.0.1:2000/api/v2/execute';
+    const pistonUrls = [
+      process.env.PISTON_API_URL || 'https://emkc.org/api/v2/piston/execute',
+      'http://127.0.0.1:2000/api/v2/execute'
+    ];
+    
     const testResults = [];
     let allPassed = true;
+    let activeUrlIndex = 0;
 
     for (const tc of testCases) {
-      const pistonRes = await fetch(pistonUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          language: pistonCfg.language,
-          version: pistonCfg.version,
-          files: [{ name: pistonCfg.fileName, content: code }],
-          stdin: tc.input || '',
-          args: [],
-          run_timeout: 5000,
-          compile_timeout: 5000,
-        }),
-      });
+      let pistonRes = null;
+      let lastError = '';
 
-      if (!pistonRes.ok) {
-        throw new Error(`Piston API error: ${await pistonRes.text()}`);
+      while (activeUrlIndex < pistonUrls.length) {
+        const url = pistonUrls[activeUrlIndex];
+        try {
+          const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              language: pistonCfg.language,
+              version: pistonCfg.version,
+              files: [{ name: pistonCfg.fileName, content: code }],
+              stdin: tc.input || '',
+              args: [],
+              run_timeout: 5000,
+              compile_timeout: 5000,
+            }),
+          });
+
+          if (res.ok) {
+            pistonRes = res;
+            break;
+          }
+          const errorText = await res.text();
+          lastError = `Status ${res.status}: ${errorText}`;
+        } catch (err) {
+          lastError = err instanceof Error ? err.message : String(err);
+        }
+        activeUrlIndex++;
+      }
+
+      if (!pistonRes) {
+        throw new Error(`Piston API error (all endpoints failed): ${lastError}`);
       }
 
       const data = await pistonRes.json() as any;

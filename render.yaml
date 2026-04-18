@@ -21,7 +21,7 @@ services:
         sync: false
       # Point to public Piston API for code execution since Docker in Render can't run Piston privileged
       - key: PISTON_API_URL
-        value: https://emkc.org/api/v2/execute
+        value: https://emkc.org/api/v2/piston/execute
 
   - type: web
     name: quest-frontend
