@@ -216,7 +216,7 @@
   }
 
   .high-clearance-input:focus {
-    @apply border-white bg-[rgba(238, 58, 23, 0.5)];
+    @apply border-white bg-[rgba(238,58,23,0.5)];
   }
 
   #qr-reader__dashboard {
