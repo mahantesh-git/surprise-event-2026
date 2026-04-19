@@ -1,77 +1,54 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Lock, LogOut, Plus, Trash2, Edit3, Save, X, Database, ShieldAlert, ChevronLeft, Terminal, Trophy, AlertCircle } from 'lucide-react';
-import { motion } from 'framer-motion';
-import { Leaderboard } from '@/components/Leaderboard';
+import {
+  Lock,
+  Database,
+  Trophy,
+  Users,
+  Terminal,
+  Settings,
+  ChevronLeft,
+  LogOut,
+  ShieldAlert,
+  AlertCircle
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   adminLogin,
   getAdminTeams,
-  createAdminTeam,
-  deleteAdminTeam,
-  deleteAllAdminTeams,
   getAdminQuestions,
-  createAdminQuestion,
-  updateAdminQuestion,
-  deleteAdminQuestion,
-  deleteAllAdminQuestions,
-  wipeAdminDatabase,
   getAdminConfig,
-  updateAdminConfig,
   isAuthError,
   type RoundQuestion
 } from '@/lib/api';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { LANGUAGE_OPTIONS } from '@/components/CodeEditor';
-import type { QuestionLanguage } from '@/lib/api';
+import { cn } from '@/lib/utils';
+
+// Sub-components
+import { TeamManagement } from '@/components/admin/TeamManagement';
+import { QuestionManagement } from '@/components/admin/QuestionManagement';
+import { ConfigManagement } from '@/components/admin/ConfigManagement';
+import { LeaderboardView } from '@/components/admin/LeaderboardView';
+import { TacticalStatus } from '@/components/TacticalStatus';
 
 const ADMIN_SESSION_KEY = 'quest-admin-session';
 
-function buildLocationQrCode(round: number) {
-  return `QUEST-LOC-R${Math.max(1, Math.trunc(round || 1))}`;
-}
+type AdminPage = 'teams' | 'questions' | 'leaderboard' | 'config';
 
-function createEmptyQuestion(nextRound: number): RoundQuestion {
-  return {
-    id: '',
-    round: nextRound,
-    p1: { title: '', code: '', hint: '', ans: '', output: '', language: 'python', testCases: [] },
-    coord: { lat: '', lng: '', place: '' },
-    volunteer: { name: '', initials: '', bg: 'bg-indigo-100', color: 'text-indigo-700' },
-    qrPasskey: '',
-    locationQrCode: '',
-    cx: 0.5,
-    cy: 0.5,
-  };
-}
-
-interface AdminPanelProps {
-  onBack: () => void;
-}
-
-export function AdminPanel({ onBack }: AdminPanelProps) {
+export function AdminPanel({ onBack }: { onBack: () => void }) {
   const [token, setToken] = useState<string | null>(() => window.localStorage.getItem(ADMIN_SESSION_KEY));
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isAdminLoggingIn, setIsAdminLoggingIn] = useState(false);
 
-  const [teams, setTeams] = useState<Array<{ id: string; name: string; email: string; createdAt: string; lastLoginAt: string | null }>>([]);
-  const [questions, setQuestions] = useState<RoundQuestion[]>([]);
+  const [activePage, setActivePage] = useState<AdminPage>('leaderboard');
   const [loading, setLoading] = useState(false);
-  const [loginEnabled, setLoginEnabled] = useState(false);
-  const [activeTab, setActiveTab] = useState<'manage' | 'leaderboard'>('manage');
 
-  const [teamName, setTeamName] = useState('');
-  const [teamEmail, setTeamEmail] = useState('');
-  const [teamPassword, setTeamPassword] = useState('');
-
-  const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
-  const [draftQuestion, setDraftQuestion] = useState<RoundQuestion>(createEmptyQuestion(1));
-
-  const nextRoundNumber = useMemo(() => {
-    return Math.max(1, ...questions.map((question) => question.round)) + 1;
-  }, [questions]);
+  // Data states shared across pages
+  const [teams, setTeams] = useState<any[]>([]);
+  const [questions, setQuestions] = useState<RoundQuestion[]>([]);
+  const [config, setConfig] = useState<any>(null);
 
   const refreshData = async (sessionToken: string) => {
     try {
@@ -83,18 +60,15 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
 
       setTeams(teamsResponse?.teams || []);
       const qArr = questionsResponse?.questions || (Array.isArray(questionsResponse) ? questionsResponse : []);
-      const sorted = [...qArr].sort((a, b) => (a.round || 0) - (b.round || 0));
-      setQuestions(sorted);
-      setLoginEnabled(!!configResponse?.loginEnabled);
+      setQuestions([...qArr].sort((a, b) => (a.round || 0) - (b.round || 0)));
+      setConfig(configResponse);
       setError(null);
     } catch (refreshError) {
       if (isAuthError(refreshError)) {
-        window.localStorage.removeItem(ADMIN_SESSION_KEY);
-        setToken(null);
+        handleAdminLogout();
         setError('Admin session expired. Please sign in again.');
         return;
       }
-
       setError('Failed to refresh data from server');
     }
   };
@@ -126,200 +100,60 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
     setError(null);
   };
 
-  const handleToggleLogin = async () => {
-    if (!token) return;
-    setError(null);
-    try {
-      const newVal = !loginEnabled;
-      await updateAdminConfig(token, 'loginEnabled', newVal);
-      setLoginEnabled(newVal);
-    } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : 'Failed to update config');
-    }
-  };
-
-  const handleCreateTeam = async () => {
-    if (!token) return;
-    setError(null);
-    try {
-      await createAdminTeam(token, { name: teamName, email: teamEmail, password: teamPassword });
-      setTeamName('');
-      setTeamEmail('');
-      setTeamPassword('');
-      await refreshData(token);
-    } catch (createError) {
-      setError(createError instanceof Error ? createError.message : 'Failed to create team');
-    }
-  };
-
-  const handleDeleteTeam = async (teamId: string) => {
-    if (!token) return;
-    setError(null);
-    try {
-      await deleteAdminTeam(token, teamId);
-      await refreshData(token);
-    } catch (deleteError) {
-      setError(deleteError instanceof Error ? deleteError.message : 'Failed to delete team');
-    }
-  };
-
-  const handleDeleteAllTeams = async () => {
-    if (!token) return;
-    const confirmed = window.confirm('Delete all teams? This will clear all team progress.');
-    if (!confirmed) return;
-
-    setError(null);
-    try {
-      await deleteAllAdminTeams(token);
-      await refreshData(token);
-    } catch (deleteError) {
-      setError(deleteError instanceof Error ? deleteError.message : 'Failed to delete all teams');
-    }
-  };
-
-  const handleEditQuestion = (question: RoundQuestion) => {
-    setEditingQuestionId(question.id || null);
-    setDraftQuestion({ ...question, locationQrCode: question.locationQrCode || buildLocationQrCode(question.round) });
-  };
-
-  const handleSaveQuestion = async () => {
-    if (!token) return;
-    setError(null);
-    try {
-      if (editingQuestionId) {
-        await updateAdminQuestion(token, editingQuestionId, draftQuestion);
-      } else {
-        await createAdminQuestion(token, draftQuestion);
-      }
-
-      setEditingQuestionId(null);
-      setDraftQuestion(createEmptyQuestion(nextRoundNumber));
-      await refreshData(token);
-    } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : 'Failed to save question');
-    }
-  };
-
-  const handleDeleteQuestion = async (questionId: string | undefined) => {
-    if (!token || !questionId) return;
-    setError(null);
-    try {
-      await deleteAdminQuestion(token, questionId);
-      await refreshData(token);
-    } catch (deleteError) {
-      setError(deleteError instanceof Error ? deleteError.message : 'Failed to delete question');
-    }
-  };
-
-  const handleDeleteAllQuestions = async () => {
-    if (!token) return;
-    const confirmed = window.confirm('Delete all questions? This cannot be undone.');
-    if (!confirmed) return;
-
-    setError(null);
-    try {
-      await deleteAllAdminQuestions(token);
-      setEditingQuestionId(null);
-      setDraftQuestion(createEmptyQuestion(1));
-      await refreshData(token);
-    } catch (deleteError) {
-      setError(deleteError instanceof Error ? deleteError.message : 'Failed to delete all questions');
-    }
-  };
-
-  const handleWipeDatabase = async () => {
-    if (!token) return;
-    const confirmed = window.confirm('Delete ALL teams and ALL questions from database? This is irreversible.');
-    if (!confirmed) return;
-
-    setError(null);
-    try {
-      await wipeAdminDatabase(token);
-      setEditingQuestionId(null);
-      setDraftQuestion(createEmptyQuestion(1));
-      await refreshData(token);
-    } catch (wipeError) {
-      setError(wipeError instanceof Error ? wipeError.message : 'Failed to wipe database');
-    }
-  };
-
   if (!token) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-4 sm:px-6 relative overflow-hidden bg-[var(--color-bg-void)]">
-        {/* Decorative background number */}
+      <div className="min-h-screen flex items-center justify-center px-4 sm:px-6 relative overflow-hidden">
         <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none select-none">
           <span className="text-[40vw] font-black leading-none">00</span>
         </div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="w-full max-w-md z-10"
-        >
-          <div className="corner-card border-[var(--color-accent)]/20 bg-[var(--color-bg-surface)] backdrop-blur-xl p-8">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md z-10">
+          <div className="corner-card glass-morphism p-8">
             <div className="text-center space-y-6">
               <div className="w-16 h-16 bg-[var(--color-accent)]/5 border border-[var(--color-accent)]/20 flex items-center justify-center mx-auto mb-2 relative group">
                 <div className="absolute -inset-2 bg-[var(--color-accent)]/10 blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
                 <Lock className="text-[var(--color-accent)] w-8 h-8 relative z-10" />
               </div>
               <div className="space-y-2">
-                <h1 className="text-[var(--color-accent)] tracking-[0.3em] font-black uppercase text-2xl">
-                  Admin_Auth
-                </h1>
+                <h1 className="text-[var(--color-accent)] tracking-[0.3em] font-black uppercase text-2xl">Admin_Auth</h1>
                 <div className="flex items-center gap-2 justify-center">
                   <div className="h-[1px] w-8 bg-[var(--color-accent)]/30" />
-                  <span className="uppercase tracking-[0.4em] text-[8px] text-white/40">
-                    Secured_Access_Node
-                  </span>
+                  <span className="uppercase tracking-[0.4em] text-[8px] text-white/40">Secured_Access_Node</span>
                   <div className="h-[1px] w-8 bg-[var(--color-accent)]/30" />
                 </div>
               </div>
             </div>
             <div className="space-y-4 pt-4">
               <div className="space-y-4">
-                <div className="relative group">
-                  <Input
-                    type="email"
-                    placeholder="Admin Email"
-                    value={email}
-                    onChange={(event) => setEmail(event.target.value)}
-                    autoCapitalize="none"
-                    autoCorrect="off"
-                    spellCheck="false"
-                    disabled={isAdminLoggingIn}
-                    className="bg-black/50 border-white/10 group-focus-within:border-[var(--color-accent)]/50 transition-colors uppercase text-[10px] tracking-widest h-12"
-                  />
-                </div>
-                <div className="relative group">
-                  <Input
-                    placeholder="Security Key"
-                    type="password"
-                    value={password}
-                    onChange={(event) => setPassword(event.target.value)}
-                    onKeyDown={(event) => event.key === 'Enter' && !isAdminLoggingIn && handleAdminLogin()}
-                    autoCapitalize="none"
-                    autoCorrect="off"
-                    spellCheck="false"
-                    disabled={isAdminLoggingIn}
-                    className="bg-black/50 border-white/10 group-focus-within:border-[var(--color-accent)]/50 transition-colors uppercase text-[10px] tracking-widest h-12"
-                  />
-                </div>
+                <Input
+                  type="email"
+                  placeholder="Admin Email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={isAdminLoggingIn}
+                  className="bg-black/50 border-white/10 text-[10px] uppercase tracking-widest h-12"
+                />
+                <Input
+                  placeholder="Security Key"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && !isAdminLoggingIn && handleAdminLogin()}
+                  disabled={isAdminLoggingIn}
+                  className="bg-black/50 border-white/10 text-[10px] uppercase tracking-widest h-12"
+                />
               </div>
-
               {error && (
                 <div className="flex justify-center">
-                  <div className="px-4 py-2.5 rounded-full border border-[var(--color-accent)]/30 bg-[var(--color-accent)]/10 text-[var(--color-accent)] text-[10px] uppercase tracking-widest flex items-center gap-2.5 shadow-accent-md">
-                    <AlertCircle className="w-3.5 h-3.5" />
-                    {error}
-                  </div>
+                  <TacticalStatus
+                    tone="error"
+                    label="Authentication Error"
+                    message={error}
+                    icon={AlertCircle}
+                  />
                 </div>
               )}
-
               <div className="flex gap-3 pt-4">
-                <Button
-                  className="btn-secondary flex-1 font-bold uppercase tracking-[0.2em] h-12"
-                  onClick={onBack}
-                >
+                <Button className="btn-secondary flex-1 font-bold uppercase tracking-[0.2em] h-12" onClick={onBack}>
                   <ChevronLeft className="mr-2 h-4 w-4" />
                   Terminal
                 </Button>
@@ -328,14 +162,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                   onClick={handleAdminLogin}
                   disabled={isAdminLoggingIn || !email.trim() || !password.trim()}
                 >
-                  {isAdminLoggingIn ? (
-                    <span className="flex items-center gap-2">
-                      <span className="w-3 h-3 border border-black/50 border-t-transparent rounded-full animate-spin" />
-                      Authenticating...
-                    </span>
-                  ) : (
-                    'Authenticate'
-                  )}
+                  {isAdminLoggingIn ? 'Authenticating...' : 'Authenticate'}
                 </Button>
               </div>
             </div>
@@ -345,425 +172,146 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
     );
   }
 
-  return (
-    <div className="min-h-screen bg-[var(--color-bg-void)] text-white px-3 sm:px-6 py-8 sm:py-12 relative overflow-hidden">
-      {/* Background Decorative Element */}
-      <div className="fixed top-0 right-0 p-12 opacity-[0.02] pointer-events-none select-none">
-        <span className="text-[20vw] font-black leading-none uppercase">Admin</span>
-      </div>
+  const navItems = [
+    { id: 'leaderboard', label: 'Live HUD', icon: Trophy },
+    { id: 'teams', label: 'Operatives', icon: Users },
+    { id: 'questions', label: 'Sequences', icon: Terminal },
+    { id: 'config', label: 'Systems', icon: Settings },
+  ] as const;
 
-      <div className="max-w-6xl mx-auto space-y-8 sm:space-y-12 relative z-10">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-white/5 pb-8 relative">
-          <div className="absolute -left-12 top-0 h-full w-[1px] bg-gradient-to-b from-transparent via-[var(--color-accent)]/20 to-transparent hidden xl:block" />
-          <div className="space-y-2">
-            <div className="flex items-center gap-3 text-[var(--color-accent)]">
+  return (
+    <div className="fixed inset-0 text-white flex flex-col md:flex-row overflow-hidden z-10 bg-black">
+      {/* Sidebar Navigation */}
+      <aside className="w-full md:w-64 h-auto md:h-full border-b md:border-b-0 md:border-r border-white/5 glass-morphism flex flex-col z-20 flex-shrink-0">
+        <div className="p-4 md:p-8 border-b border-white/5 flex items-center justify-between md:block">
+          <div>
+            <div className="flex items-center gap-2 md:gap-3 text-[var(--color-accent)] mb-1 md:mb-2">
               <Database className="w-4 h-4" />
-              <div className="h-[1px] w-8 bg-[var(--color-accent)]/50" />
-              <span className="text-[8px] uppercase font-mono tracking-[0.4em] text-[var(--color-accent)]/60">v2.0.4.sys_admin</span>
+              <span className="hidden md:inline text-[10px] font-mono tracking-[0.3em] uppercase opacity-60">Admin_Panel</span>
             </div>
-            <h1 className="text-3xl sm:text-4xl md:text-6xl font-black uppercase tracking-tighter leading-none">
+            <h2 className="text-xl md:text-2xl font-black uppercase tracking-tighter leading-none">
               Control<span className="text-[var(--color-accent)]">_</span>Center
-            </h1>
+            </h2>
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            {/* Tabs */}
-            <div className="flex border border-white/10 bg-white/[0.03]">
-              <button
-                onClick={() => setActiveTab('manage')}
-                className={`px-5 h-10 text-[10px] font-bold uppercase tracking-widest transition-colors flex items-center gap-2 ${activeTab === 'manage' ? 'bg-[var(--color-accent)]/10 text-[var(--color-accent)]' : 'text-white/30 hover:text-white/60'
-                  }`}
-              >
-                <Database className="w-3 h-3" />
-                Manage
-              </button>
-              <button
-                onClick={() => setActiveTab('leaderboard')}
-                className={`px-5 h-10 text-[10px] font-bold uppercase tracking-widest transition-colors flex items-center gap-2 border-l border-white/10 ${activeTab === 'leaderboard' ? 'bg-[var(--color-accent)]/10 text-[var(--color-accent)]' : 'text-white/30 hover:text-white/60'
-                  }`}
-              >
-                <Trophy className="w-3 h-3" />
-                Leaderboard
-              </button>
-            </div>
-            <Button className="btn-secondary font-bold uppercase tracking-[0.2em] h-10 px-6 border-white/5 bg-white/[0.05] text-[10px]" onClick={onBack}>
-              Terminal_Exit
+          
+          {/* Mobile Actions */}
+          <div className="flex md:hidden items-center gap-2">
+            <Button variant="ghost" className="h-8 w-8 p-0 text-white/40 hover:text-white" onClick={onBack}>
+              <ChevronLeft className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" className="font-bold uppercase tracking-[0.2em] h-10 px-6 border-[var(--color-accent)]/10 text-[var(--color-accent)]/60 hover:text-[var(--color-accent)] hover:bg-[var(--color-accent)]/5 text-[10px]" onClick={handleAdminLogout}>
-              <LogOut className="mr-2 h-3 w-3" />
-              Disconnect
+            <Button variant="ghost" className="h-8 w-8 p-0 text-[var(--color-accent)]/60 hover:text-[var(--color-accent)]" onClick={handleAdminLogout}>
+              <LogOut className="h-4 w-4" />
             </Button>
           </div>
         </div>
 
-        {error && (
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="flex justify-center"
-          >
-            <div className="px-5 py-3 rounded-full border border-[var(--color-accent)]/30 bg-[var(--color-accent)]/10 text-[var(--color-accent)] text-[11px] uppercase tracking-widest flex items-center gap-3 shadow-accent-lg">
-              <ShieldAlert className="w-4 h-4" />
-              {error}
-            </div>
-          </motion.div>
-        )}
-
-        {activeTab === 'leaderboard' && (
-          <div className="-mx-3 sm:-mx-6 h-[calc(100vh-160px)] min-h-[420px] sm:h-[calc(100vh-200px)] sm:min-h-[500px] relative">
-            <Leaderboard />
-          </div>
-        )}
-
-        {activeTab === 'manage' && (<>
-          {/* Create Team Section */}
-          <section className="space-y-4">
-            <div className="flex items-center gap-4">
-              <Plus className="text-[var(--color-accent)] w-3 h-3" />
-              <h2 className="text-[9px] font-mono uppercase tracking-[0.5em] text-white/30">Register_New_Operative</h2>
-            </div>
-            <div className="corner-card border-white/5 bg-white/[0.01] p-4 flex flex-col md:flex-row gap-4">
-              <Input placeholder="OP_NAME" value={teamName} onChange={(event) => setTeamName(event.target.value)} className="bg-[var(--color-bg-surface)] border-white/5 text-[10px] uppercase tracking-widest h-11 flex-1" />
-              <Input placeholder="REGISTRY_EMAIL" value={teamEmail} onChange={(event) => setTeamEmail(event.target.value)} className="bg-[var(--color-bg-surface)] border-white/5 text-[10px] uppercase tracking-widest h-11 flex-1" />
-              <Input placeholder="PASSKEY" type="password" value={teamPassword} onChange={(event) => setTeamPassword(event.target.value)} className="bg-[var(--color-bg-surface)] border-white/5 text-[10px] uppercase tracking-widest h-11 flex-1" />
-              <Button className="btn-primary font-bold uppercase tracking-[0.3em] h-11 px-8" onClick={handleCreateTeam}>
-                Register
-              </Button>
-            </div>
-          </section>
-
-          {/* Global Event Control */}
-          <section className="space-y-4">
-            <div className="flex items-center gap-4">
-              <ShieldAlert className="text-[var(--color-accent)] w-3 h-3" />
-              <h2 className="text-[9px] font-mono uppercase tracking-[0.5em] text-white/30">Global_Event_Config</h2>
-            </div>
-            <div className="corner-card border-white/5 bg-white/[0.01] p-6 flex flex-row justify-between items-center gap-4">
-              <div>
-                <h3 className="font-bold uppercase tracking-widest">Enable Team Login</h3>
-                <p className="text-white/50 text-xs font-mono tracking-tighter">Controls whether operatives can authenticate into the system and start their timer.</p>
-              </div>
+        <nav className="flex md:flex-col md:flex-1 p-2 md:p-4 gap-1 md:gap-2 overflow-x-auto md:overflow-y-auto custom-scrollbar">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const active = activePage === item.id;
+            return (
               <button
-                onClick={handleToggleLogin}
-                className={`relative inline-flex h-8 w-14 items-center rounded-none transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] focus:ring-offset-2 focus:ring-offset-[var(--color-bg-void)] ${loginEnabled ? 'bg-[var(--color-accent)]' : 'bg-white/10'
-                  }`}
+                key={item.id}
+                onClick={() => setActivePage(item.id)}
+                className={cn(
+                  "flex-shrink-0 flex items-center gap-2 md:gap-4 px-3 md:px-4 py-2.5 md:py-3 text-[9px] md:text-[10px] font-bold uppercase tracking-[0.2em] transition-all relative group rounded-md md:rounded-none",
+                  active
+                    ? "bg-[var(--color-accent)]/10 text-[var(--color-accent)] border-b-2 md:border-b-0 md:border-l-2 border-[var(--color-accent)]"
+                    : "text-white/40 hover:text-white/70 hover:bg-white/[0.02]"
+                )}
               >
-                <span className="sr-only">Toggle Team Login</span>
-                <span
-                  className={`inline-block h-6 w-6 transform bg-white transition-transform ${loginEnabled ? 'translate-x-7 bg-black' : 'translate-x-1'
-                    }`}
-                />
+                <Icon className={cn("w-3.5 h-3.5 md:w-4 md:h-4", active ? "text-[var(--color-accent)]" : "text-white/20 group-hover:text-white/40")} />
+                <span className="whitespace-nowrap">{item.label}</span>
+                {active && (
+                  <motion.div
+                    layoutId="active-nav"
+                    className="absolute inset-0 bg-gradient-to-r from-[var(--color-accent)]/5 to-transparent pointer-events-none hidden md:block"
+                  />
+                )}
               </button>
-            </div>
-          </section>
+            );
+          })}
+        </nav>
 
-          {/* Main Workspace Layout */}
-          <div className="grid lg:grid-cols-3 gap-12">
+        {/* Desktop Actions */}
+        <div className="hidden md:block p-4 pb-8 border-t border-white/5 space-y-2 glass-morphism flex-shrink-0">
+          <Button variant="ghost" className="w-full justify-start text-[9px] uppercase tracking-widest text-white/30 hover:text-white hover:bg-white/5" onClick={onBack}>
+            <ChevronLeft className="mr-2 h-3 w-3" />
+            Exit Terminal
+          </Button>
+          <Button variant="ghost" className="w-full justify-start text-[9px] uppercase tracking-widest text-[var(--color-accent)]/60 hover:text-[var(--color-accent)] hover:bg-[var(--color-accent)]/5" onClick={handleAdminLogout}>
+            <LogOut className="mr-2 h-3 w-3" />
+            Disconnect
+          </Button>
+        </div>
+      </aside>
 
-            {/* Left Column: Team Management */}
-            <div className="space-y-8">
-              <section className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <Terminal className="text-[var(--color-accent)] w-4 h-4" />
-                    <h2 className="text-xs font-mono uppercase tracking-[0.4em] text-white/40">Active_Nodes</h2>
-                  </div>
-                  {teams.length > 0 && (
-                    <Button className="btn-secondary text-[var(--color-accent)] p-0 h-auto text-[9px] uppercase tracking-widest bg-transparent border-none hover:bg-transparent" onClick={handleDeleteAllTeams}>
-                      Wipe All
-                    </Button>
-                  )}
-                </div>
-                <div className="space-y-3">
-                  {teams.map((team) => (
-                    <motion.div
-                      layout
-                      key={team.id}
-                      className="corner-card p-4 flex items-center justify-between bg-white/[0.02] hover:bg-white/[0.05] transition-colors"
-                    >
-                      <div>
-                        <div className="text-[10px] text-[var(--color-accent)] font-mono mb-1">{team.id.slice(-6).toUpperCase()}</div>
-                        <div className="font-bold uppercase tracking-widest text-sm">{team.name}</div>
-                        <div className="text-[9px] text-white/40 font-mono tracking-tighter italic">{team.email || 'NO_IDENTIFIER'}</div>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-white/20 hover:text-[var(--color-accent)] hover:bg-[var(--color-accent)]/10"
-                        onClick={() => handleDeleteTeam(team.id)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </motion.div>
-                  ))}
-                  {!teams.length && !loading && (
-                    <div className="text-[10px] uppercase tracking-widest text-white/20 border border-white/5 p-8 text-center bg-black/20">
-                      No nodes prioritized
-                    </div>
-                  )}
-                </div>
-              </section>
-            </div>
+      {/* Main Content Area */}
+      <main className="flex-1 h-full flex flex-col relative overflow-hidden">
+        {/* Background Decorative Element */}
+        <div className="fixed top-0 right-0 p-12 opacity-[0.02] pointer-events-none select-none">
+          <span className="text-[15vw] font-black leading-none uppercase">{activePage}</span>
+        </div>
 
-            {/* Right Columns: Question Management */}
-            <div className="lg:col-span-2 space-y-12">
-
-              {/* Editor */}
-              <section className="space-y-4">
-                <div className="flex items-center gap-4">
-                  <Edit3 className="text-[var(--color-accent)] w-3 h-3" />
-                  <h2 className="text-[9px] font-mono uppercase tracking-[0.5em] text-white/30">
-                    {editingQuestionId ? 'Modify_Simulation_Data' : 'Initialize_New_Simulation'}
-                  </h2>
-                </div>
-                <div className="corner-card border-[var(--color-accent)]/10 bg-[var(--color-bg-surface)] backdrop-blur-md p-8 pt-10 relative overflow-hidden">
-                  <div className="absolute top-0 right-0 p-4 font-mono text-[8px] text-[var(--color-accent)]/20 uppercase tracking-widest">
-                    sys.editor.active
-                  </div>
-                  <div className="space-y-8">
-                    <div className="grid md:grid-cols-3 gap-6">
-                      <div className="space-y-2">
-                        <label className="text-[8px] uppercase tracking-[0.3em] text-white/30 ml-1">Sequence_ID</label>
-                        <Input type="number" value={draftQuestion.round} onChange={(event) => setDraftQuestion({ ...draftQuestion, round: Number(event.target.value) })} className="bg-white/5 border-white/5 h-11 font-mono text-xs focus:border-[var(--color-accent)]/30 transition-colors" />
-                      </div>
-                      <div className="md:col-span-2 space-y-2">
-                        <label className="text-[8px] uppercase tracking-[0.3em] text-white/30 ml-1">Secure_Passkey_Vector</label>
-                        <Input placeholder="SCAN_KEY_00X" value={draftQuestion.qrPasskey} onChange={(event) => setDraftQuestion({ ...draftQuestion, qrPasskey: event.target.value })} className="bg-white/5 border-white/5 h-11 font-mono text-xs uppercase tracking-widest focus:border-[var(--color-accent)]/30 transition-colors" />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="text-[8px] uppercase tracking-[0.3em] text-white/30 ml-1">Location_QR_Payload</label>
-                      <Input
-                        readOnly
-                        value={draftQuestion.locationQrCode || buildLocationQrCode(draftQuestion.round)}
-                        className="bg-white/5 border-white/5 h-11 font-mono text-xs uppercase tracking-widest text-[var(--color-accent)] focus:border-[var(--color-accent)]/30 transition-colors"
-                      />
-                      <p className="text-[9px] text-white/35 font-mono uppercase tracking-widest">
-                        Auto-generated per question. Print a QR with this exact value for the runner&apos;s location.
-                      </p>
-                    </div>
-
-                    {/* Component A & B */}
-                    <div className="grid md:grid-cols-2 gap-8 pt-4">
-                      {/* Solver Side */}
-                      <div className="space-y-4">
-                        <div className="flex items-center gap-2 text-[10px] text-[var(--color-accent)] uppercase tracking-widest mb-2">
-                          <div className="w-1 h-1 bg-[var(--color-accent)]" /> Node_Alpha
-                        </div>
-                        <Input placeholder="Objective Title" value={draftQuestion.p1.title} onChange={(event) => setDraftQuestion({ ...draftQuestion, p1: { ...draftQuestion.p1, title: event.target.value } })} className="bg-white/5 border-white/10" />
-
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="relative">
-                            <select
-                              value={draftQuestion.p1.language || 'python'}
-                              onChange={(e) => setDraftQuestion({ ...draftQuestion, p1: { ...draftQuestion.p1, language: e.target.value } })}
-                              className="w-full bg-white/5 border border-white/10 h-10 px-3 font-mono text-[10px] text-white focus:outline-none focus:border-[var(--color-accent)]/50 transition-colors uppercase appearance-none"
-                            >
-                              {LANGUAGE_OPTIONS.map(opt => (
-                                <option key={opt.id} value={opt.id} className="bg-[var(--color-bg-void)] text-white">
-                                  {opt.label}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                          <Input placeholder="Expected Output" value={draftQuestion.p1.ans} onChange={(event) => setDraftQuestion({ ...draftQuestion, p1: { ...draftQuestion.p1, ans: event.target.value } })} className="bg-white/5 border-white/10 font-mono text-[10px]" />
-                        </div>
-                        <textarea
-                          placeholder="Simulation Matrix (Code)"
-                          value={draftQuestion.p1.code}
-                          onChange={(event) => setDraftQuestion({ ...draftQuestion, p1: { ...draftQuestion.p1, code: event.target.value } })}
-                          className="w-full bg-white/5 border border-white/10 rounded-none p-3 font-mono text-xs min-h-[120px] focus:outline-none focus:border-[var(--color-accent)]/50 transition-colors"
-                        />
-
-                        {/* Test Cases Section */}
-                        <div className="space-y-3 pt-4 border-t border-white/5">
-                          <div className="flex items-center justify-between">
-                            <label className="text-[10px] uppercase tracking-widest text-[var(--color-accent)]/60">Verification_Test_Suite</label>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 px-2 text-[8px] uppercase tracking-widest text-[var(--color-accent)] hover:bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/20"
-                              onClick={() => {
-                                const existing = draftQuestion.p1.testCases || [];
-                                setDraftQuestion({
-                                  ...draftQuestion,
-                                  p1: {
-                                    ...draftQuestion.p1,
-                                    testCases: [...existing, { input: '', output: '' }]
-                                  }
-                                });
-                              }}
-                            >
-                              <Plus className="w-3 h-3 mr-1" /> Add Case
-                            </Button>
-                          </div>
-                          <div className="space-y-2 max-h-[200px] overflow-y-auto custom-scrollbar pr-2">
-                            {(draftQuestion.p1.testCases || []).map((tc, idx) => (
-                              <div key={idx} className="grid grid-cols-12 gap-2">
-                                <Input
-                                  placeholder="Input"
-                                  value={tc.input}
-                                  onChange={(e) => {
-                                    const cases = [...(draftQuestion.p1.testCases || [])];
-                                    cases[idx].input = e.target.value;
-                                    setDraftQuestion({ ...draftQuestion, p1: { ...draftQuestion.p1, testCases: cases } });
-                                  }}
-                                  className="col-span-11 bg-white/5 border-white/5 h-8 font-mono text-[9px]"
-                                />
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="col-span-1 p-0 h-8 text-[var(--color-accent)] hover:bg-[var(--color-accent)]/10"
-                                  onClick={() => {
-                                    const cases = (draftQuestion.p1.testCases || []).filter((_, i) => i !== idx);
-                                    setDraftQuestion({ ...draftQuestion, p1: { ...draftQuestion.p1, testCases: cases } });
-                                  }}
-                                >
-                                  <Trash2 className="w-3 h-3" />
-                                </Button>
-                                <Input
-                                  placeholder="Expected Output"
-                                  value={tc.output}
-                                  onChange={(e) => {
-                                    const cases = [...(draftQuestion.p1.testCases || [])];
-                                    cases[idx].output = e.target.value;
-                                    setDraftQuestion({ ...draftQuestion, p1: { ...draftQuestion.p1, testCases: cases } });
-                                  }}
-                                  className="col-span-12 bg-[var(--color-accent)]/5 border-[var(--color-accent)]/10 h-8 font-mono text-[9px] text-[var(--color-accent)]"
-                                />
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-
-                        <Input placeholder="Intel Hint" value={draftQuestion.p1.hint} onChange={(event) => setDraftQuestion({ ...draftQuestion, p1: { ...draftQuestion.p1, hint: event.target.value } })} className="bg-white/5 border-white/10 text-xs italic" />
-                      </div>
-
-                      {/* Runner Side */}
-                      <div className="space-y-4">
-                        <div className="flex items-center gap-2 text-[10px] text-white/40 uppercase tracking-widest mb-2">
-                          <div className="w-1 h-1 bg-white/40" /> Node_Beta
-                        </div>
-                        <Input placeholder="Vector Destination" value={draftQuestion.coord.place} onChange={(event) => setDraftQuestion({ ...draftQuestion, coord: { ...draftQuestion.coord, place: event.target.value } })} className="bg-white/5 border-white/10" />
-                        <div className="grid grid-cols-2 gap-2">
-                          <Input placeholder="Lat" value={draftQuestion.coord.lat} onChange={(event) => setDraftQuestion({ ...draftQuestion, coord: { ...draftQuestion.coord, lat: event.target.value } })} className="bg-white/5 border-white/10 font-mono text-[10px]" />
-                          <Input placeholder="Lng" value={draftQuestion.coord.lng} onChange={(event) => setDraftQuestion({ ...draftQuestion, coord: { ...draftQuestion.coord, lng: event.target.value } })} className="bg-white/5 border-white/10 font-mono text-[10px]" />
-                        </div>
-                        <Input placeholder="Field Operative" value={draftQuestion.volunteer.name} onChange={(event) => setDraftQuestion({ ...draftQuestion, volunteer: { ...draftQuestion.volunteer, name: event.target.value } })} className="bg-white/5 border-white/10" />
-                        <div className="flex gap-2">
-                          <Input placeholder="Initials" value={draftQuestion.volunteer.initials} onChange={(event) => setDraftQuestion({ ...draftQuestion, volunteer: { ...draftQuestion.volunteer, initials: event.target.value } })} className="bg-white/5 border-white/10 w-24" />
-                          <Input placeholder="Accent_Color (HEX)" value={draftQuestion.volunteer.color} onChange={(event) => setDraftQuestion({ ...draftQuestion, volunteer: { ...draftQuestion.volunteer, color: event.target.value } })} className="bg-white/5 border-white/10 flex-1" />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex gap-3 pt-6 border-t border-white/5">
-                      <Button
-                        className="btn-primary flex-1 font-bold uppercase tracking-[0.2em] h-12"
-                        onClick={handleSaveQuestion}
-                      >
-                        <Save className="mr-2 h-4 w-4" />
-                        {editingQuestionId ? 'Finalize_Update' : 'Commit_To_Database'}
-                      </Button>
-                      <Button
-                        className="btn-secondary font-bold uppercase tracking-[0.2em] h-12 px-6"
-                        onClick={() => {
-                          setEditingQuestionId(null);
-                          setDraftQuestion(createEmptyQuestion(nextRoundNumber));
-                        }}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </section>
-
-              {/* List */}
-              <section className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <Terminal className="text-[var(--color-accent)] w-4 h-4" />
-                    <h2 className="text-xs font-mono uppercase tracking-[0.4em] text-white/40">Active_Simulation_Sequences</h2>
-                  </div>
-                  <Button className="btn-secondary text-[var(--color-accent)] p-0 h-auto text-[9px] uppercase tracking-widest bg-transparent border-none hover:bg-transparent" onClick={handleDeleteAllQuestions}>
-                    Purge All
-                  </Button>
-                </div>
-                <div className="grid gap-3">
-                  {questions
-                    .slice()
-                    .sort((a, b) => a.round - b.round)
-                    .map((question) => (
-                      <motion.div
-                        key={question.id || question.round}
-                        className="corner-card p-6 flex flex-col md:flex-row md:items-center justify-between gap-6 border-white/5 bg-white/[0.01]"
-                      >
-                        <div className="flex gap-6 items-center">
-                          <div className="w-12 h-12 bg-white/5 border border-white/10 flex items-center justify-center font-black text-xl">
-                            {question.round}
-                          </div>
-                          <div>
-                            <div className="font-bold uppercase tracking-widest mb-1">{question.p1.title}</div>
-                            <div className="text-[10px] text-white/30 font-mono flex gap-4 uppercase">
-                              <span>Target: {question.coord.place}</span>
-                              <span>Key: {question.qrPasskey}</span>
-                              <span>QR: {question.locationQrCode || buildLocationQrCode(question.round)}</span>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex gap-2">
-                            <Button
-                              className="btn-secondary font-mono text-[9px] uppercase tracking-widest border-white/5 h-10 px-4"
-                              size="sm"
-                              onClick={() => handleEditQuestion(question)}
-                            >
-                            Modify
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-white/20 hover:text-[var(--color-accent)] hover:bg-[var(--color-accent)]/10 h-10 w-10 p-0"
-                            onClick={() => handleDeleteQuestion(question.id)}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </motion.div>
-                    ))
-                  }
-                  {!questions.length && !loading && (
-                    <div className="text-[10px] uppercase tracking-widest text-white/20 border border-white/5 p-12 text-center bg-black/10">
-                      No simulation data detected
-                    </div>
-                  )}
-                </div>
-              </section>
-
-              {/* Final Danger Zone */}
-              <section className="pt-12">
-                <div className="border-[var(--color-accent)]/20 bg-[var(--color-accent)]/[0.02] p-8 space-y-4">
-                  <div className="flex items-center gap-3 text-[var(--color-accent)]">
-                    <ShieldAlert className="w-5 h-5" />
-                    <h3 className="font-black uppercase tracking-tight">Level_0_Protocol</h3>
-                  </div>
-                  <p className="text-[10px] uppercase tracking-widest text-[var(--color-accent)]/40 max-w-md">
-                    Immediate termination of all database records including Operative accounts and Simulation data. This action is irreversible.
-                  </p>
-                  <Button
-                    className="btn-secondary bg-[var(--color-accent)]/10 border-[var(--color-accent)]/30 text-[var(--color-accent)] hover:bg-[var(--color-accent)]/20 font-bold uppercase tracking-[0.2em] h-12 w-full"
-                    onClick={handleWipeDatabase}
-                  >
-                    Authorize_Nuke
-                  </Button>
-                </div>
-              </section>
-            </div>
-
+        <header className="h-20 border-b border-white/5 px-8 flex items-center justify-between glass-morphism z-10 flex-shrink-0">
+          <div className="flex items-center gap-4">
+            <div className="h-1 w-8 bg-[var(--color-accent)]/50" />
+            <h3 className="text-xs font-mono uppercase tracking-[0.5em] text-white/40">
+              {navItems.find(i => i.id === activePage)?.label}_Protocol
+            </h3>
           </div>
-        </>)}
-      </div>
+
+          {error && (
+            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
+              <TacticalStatus
+                tone="error"
+                label="System Alert"
+                message={error}
+                icon={ShieldAlert}
+              />
+            </motion.div>
+          )}
+        </header>
+
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-8">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activePage}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2 }}
+              className="h-full relative"
+            >
+              {activePage === 'leaderboard' && <LeaderboardView />}
+              {activePage === 'teams' && (
+                <TeamManagement
+                  token={token}
+                  teams={teams}
+                  onRefresh={() => refreshData(token!)}
+                  onError={setError}
+                />
+              )}
+              {activePage === 'questions' && (
+                <QuestionManagement
+                  token={token}
+                  questions={questions}
+                  onRefresh={() => refreshData(token!)}
+                  onError={setError}
+                />
+              )}
+              {activePage === 'config' && (
+                <ConfigManagement
+                  token={token}
+                  config={config}
+                  onRefresh={() => refreshData(token!)}
+                  onError={setError}
+                />
+              )}
+            </motion.div>
+          </AnimatePresence>
+        </div>
+      </main>
     </div>
   );
 }

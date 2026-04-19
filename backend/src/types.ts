@@ -20,6 +20,7 @@ export interface GameState {
   finishTime?: string | null;
   currentLat?: number | null;
   currentLng?: number | null;
+  currentHeading?: number | null;
 }
 
 export interface ChatMessage {

@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { getChatPhrases, sendChatMessage, ChatMessage } from '@/lib/api';
+import { TacticalStatus } from './TacticalStatus';
 
 interface TacticalCommsProps {
   token: string;
@@ -57,7 +58,7 @@ export function TacticalComms({ token, role, isOpen, onClose, lastMessage }: Tac
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100]"
+            className="fixed inset-0 bg-white/[0.04] glass-morphism backdrop-blur-sm z-[100]"
           />
 
           {/* Dialog */}
@@ -67,7 +68,7 @@ export function TacticalComms({ token, role, isOpen, onClose, lastMessage }: Tac
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             className="fixed left-4 right-4 bottom-4 md:left-auto md:right-8 md:bottom-8 md:w-[400px] z-[101]"
           >
-            <Card className="border-[var(--color-accent)]/30 bg-black/90 shadow-accent-md">
+            <Card className="glass-morphism shadow-accent-md">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-full bg-[var(--color-accent)]/20 flex items-center justify-center">
@@ -116,7 +117,7 @@ export function TacticalComms({ token, role, isOpen, onClose, lastMessage }: Tac
                             "disabled:opacity-50 disabled:cursor-not-allowed"
                           )}
                         >
-                          <span className="text-sm font-medium text-rose-100 group-hover:text-[var(--color-accent)] transition-colors">
+                          <span className="text-sm font-medium text-white group-hover:text-[var(--color-accent)] transition-colors">
                             {phrase}
                           </span>
                           {sending === phrase ? (
@@ -139,7 +140,7 @@ export function TacticalComms({ token, role, isOpen, onClose, lastMessage }: Tac
                     </div>
 
                     {/* Notification feed */}
-                    {lastMessage && (
+                    {lastMessage && lastMessage.senderRole !== role && (
                       <div className="mt-8 space-y-3">
                         <div className="flex items-center gap-2">
                           <div className="h-[1px] flex-1 bg-[var(--color-accent)]/20" />
@@ -147,29 +148,13 @@ export function TacticalComms({ token, role, isOpen, onClose, lastMessage }: Tac
                           <div className="h-[1px] flex-1 bg-[var(--color-accent)]/20" />
                         </div>
 
-                        <div
-                          className={cn(
-                            "p-4 border-l-2 bg-[var(--color-accent)]/10 border-[var(--color-accent)]/20 text-rose-100",
-                            "animate-in fade-in slide-in-from-left-4 duration-500"
-                          )}
-                        >
-                          <div className="flex items-center gap-3.5">
-                            <div className="flex items-center justify-center w-8 h-8 rounded-full shrink-0 bg-[var(--color-accent)]/20">
-                              <CheckCircle2 className="h-4 w-4 text-[var(--color-accent)]" />
-                            </div>
-                            <div className="flex-1 space-y-0.5">
-                              <div className="flex items-center justify-between">
-                                <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--color-accent)]/60">
-                                  {lastMessage.senderRole === 'runner' ? 'Field Agent (Runner)' : lastMessage.senderRole === 'solver' ? 'HQ (Solver)' : 'Command (Admin)'}
-                                </p>
-                                <span className="text-[9px] opacity-40 font-mono">
-                                  {new Date(lastMessage.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                                </span>
-                              </div>
-                              <p className="text-xs font-medium tracking-tight leading-relaxed">{lastMessage.text}</p>
-                            </div>
-                          </div>
-                        </div>
+                        <TacticalStatus
+                          tone="success"
+                          label={lastMessage.senderRole === 'runner' ? 'Comms [Runner]' : lastMessage.senderRole === 'solver' ? 'Comms [HQ]' : 'Comms [Command]'}
+                          message={lastMessage.text}
+                          icon={CheckCircle2}
+                          className="animate-in fade-in slide-in-from-left-4 duration-500"
+                        />
                       </div>
                     )}
 

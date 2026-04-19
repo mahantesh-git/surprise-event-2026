@@ -757,16 +757,25 @@ app.put('/api/runner/location', requireAuth, route(async (request: AuthedRequest
     return;
   }
 
-  const { lat, lng } = request.body as { lat?: unknown; lng?: unknown };
+  const { lat, lng, heading } = request.body as { lat?: unknown; lng?: unknown; heading?: unknown };
   if (typeof lat !== 'number' || typeof lng !== 'number' || isNaN(lat) || isNaN(lng)) {
     response.status(400).json({ error: 'lat and lng must be valid numbers' });
     return;
   }
 
+  const h = (typeof heading === 'number' && !isNaN(heading)) ? heading : null;
+
   const teams = await getTeamsCollection();
   await teams.updateOne(
     { _id: toObjectId(auth.teamId, 'team id') },
-    { $set: { 'gameState.currentLat': lat, 'gameState.currentLng': lng, updatedAt: new Date() } }
+    { 
+      $set: { 
+        'gameState.currentLat': lat, 
+        'gameState.currentLng': lng, 
+        'gameState.currentHeading': h,
+        updatedAt: new Date() 
+      } 
+    }
   );
 
   response.json({ ok: true });
@@ -788,6 +797,7 @@ app.get('/api/leaderboard', route(async (_request, response) => {
       finishTime: team.gameState.finishTime,
       currentLat: team.gameState.currentLat ?? null,
       currentLng: team.gameState.currentLng ?? null,
+      currentHeading: team.gameState.currentHeading ?? null,
     };
   });
 

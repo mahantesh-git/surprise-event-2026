@@ -131,9 +131,9 @@ function defineQuestTheme(monaco: Monaco) {
       { token: 'delimiter', foreground: '444444' },
     ],
     colors: {
-      'editor.background': '#1C1C1C',           // --color-bg-surface
+      'editor.background': '#00000000',           // Fully transparent to let wrapper glass show through
       'editor.foreground': '#E2E8F0',
-      'editor.lineHighlightBackground': '#131314', // --color-bg-void
+      'editor.lineHighlightBackground': '#EE3A1708', // Subtle accent highlight
       'editor.selectionBackground': '#EE3A1730',  // --color-accent + 30 alpha
       'editorCursor.foreground': '#EE3A17',       // --color-accent
       'editorLineNumber.foreground': '#2D3748',
@@ -141,10 +141,12 @@ function defineQuestTheme(monaco: Monaco) {
       'editor.inactiveSelectionBackground': '#EE3A1715',
       'editorIndentGuide.background1': '#1A1D21',
       'editorIndentGuide.activeBackground1': '#2D3748',
-      'scrollbarSlider.background': '#2D374850',
-      'scrollbarSlider.hoverBackground': '#4A556850',
-      'editorWidget.background': '#131314',       // --color-bg-void
+      'scrollbarSlider.background': '#EE3A1710',
+      'scrollbarSlider.hoverBackground': '#EE3A1720',
+      'editorWidget.background': '#080101F0',       // Dark glass for widgets
       'input.background': '#131314',              // --color-bg-void
+      'focusBorder': '#000000',                 // Black focus border
+      'editor.focusBorder': '#000000',
     },
   });
 }
@@ -203,9 +205,9 @@ export function CodeEditor({
   const monacoLang = LANGUAGE_OPTIONS.find(l => l.id === language)?.monacoLang ?? 'plaintext';
 
   return (
-    <div className="flex flex-col overflow-hidden border border-white/10 bg-[var(--color-bg-surface)]">
+    <div className="flex flex-col overflow-hidden glass-morphism rounded-lg">
       {/* Language Tabs */}
-      <div className="flex items-center border-b border-white/10 bg-[var(--color-bg-void)] overflow-x-auto scrollbar-hide">
+      <div className="flex items-center glass-morphism-bar overflow-x-auto scrollbar-hide">
         {LANGUAGE_OPTIONS.map(opt => {
           const active = opt.id === language;
           return (
@@ -213,14 +215,21 @@ export function CodeEditor({
               key={opt.id}
               onClick={() => handleLanguageSwitch(opt.id)}
               className={[
-                'flex-shrink-0 px-4 py-2.5 text-[10px] font-mono uppercase tracking-widest',
-                'transition-all duration-150 border-r border-white/5',
+                'flex-shrink-0 px-5 py-3 text-[10px] font-mono uppercase tracking-widest relative overflow-hidden transition-all duration-200',
+                'border-r border-white/5',
                 active
-                  ? 'bg-[var(--color-accent)]/10 text-[var(--color-accent)] border-b-2 border-b-[var(--color-accent)]'
-                  : 'text-white/30 hover:text-white/60 hover:bg-white/[0.03]',
+                  ? 'text-white'
+                  : 'text-white/20 hover:text-white/50 hover:bg-white/[0.02]',
               ].join(' ')}
             >
-              {opt.label}
+              {active && (
+                <>
+                  <div className="absolute inset-0 bg-black/60" />
+                  <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-black" />
+                  <div className="absolute top-0 left-0 right-0 h-[1px] bg-white/5" />
+                </>
+              )}
+              <span className="relative z-10">{opt.label}</span>
             </button>
           );
         })}
@@ -229,44 +238,46 @@ export function CodeEditor({
         </div>
       </div>
 
-      {/* Monaco Editor */}
-      <MonacoEditor
-        height={height}
-        language={monacoLang}
-        value={value}
-        onChange={v => onChange(v ?? '')}
-        beforeMount={defineQuestTheme}
-        onMount={handleMount}
-        theme="quest-dark"
-        options={{
-          minimap: { enabled: false },
-          fontSize: 13,
-          fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace",
-          fontLigatures: true,
-          lineHeight: 22,
-          padding: { top: 14, bottom: 14 },
-          scrollBeyondLastLine: false,
-          wordWrap: 'on',
-          tabSize: 4,
-          automaticLayout: true,
-          cursorStyle: 'line',
-          cursorBlinking: 'phase',
-          renderLineHighlight: 'line',
-          renderWhitespace: 'none',
-          smoothScrolling: true,
-          scrollbar: { verticalScrollbarSize: 6, horizontalScrollbarSize: 6 },
-          overviewRulerLanes: 0,
-          hideCursorInOverviewRuler: true,
-          overviewRulerBorder: false,
-          lineNumbers: 'on',
-          glyphMargin: false,
-          folding: true,
-          contextmenu: false,
-          quickSuggestions: true,
-          suggestOnTriggerCharacters: true,
-          acceptSuggestionOnEnter: 'on',
-        }}
-      />
+      {/* Monaco Editor Wrapper */}
+      <div className="glass-morphism-editor border-t-0 [&_textarea]:caret-transparent">
+        <MonacoEditor
+          height={height}
+          language={monacoLang}
+          value={value}
+          onChange={v => onChange(v ?? '')}
+          beforeMount={defineQuestTheme}
+          onMount={handleMount}
+          theme="quest-dark"
+          options={{
+            minimap: { enabled: false },
+            fontSize: 13,
+            fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace",
+            fontLigatures: true,
+            lineHeight: 22,
+            padding: { top: 14, bottom: 14 },
+            scrollBeyondLastLine: false,
+            wordWrap: 'on',
+            tabSize: 4,
+            automaticLayout: true,
+            cursorStyle: 'line',
+            cursorBlinking: 'phase',
+            renderLineHighlight: 'line',
+            renderWhitespace: 'none',
+            smoothScrolling: true,
+            scrollbar: { verticalScrollbarSize: 6, horizontalScrollbarSize: 6 },
+            overviewRulerLanes: 0,
+            hideCursorInOverviewRuler: true,
+            overviewRulerBorder: false,
+            lineNumbers: 'on',
+            glyphMargin: false,
+            folding: true,
+            contextmenu: false,
+            quickSuggestions: true,
+            suggestOnTriggerCharacters: true,
+            acceptSuggestionOnEnter: 'on',
+          }}
+        />
+      </div>
     </div>
   );
 }

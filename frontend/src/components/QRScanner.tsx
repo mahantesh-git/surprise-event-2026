@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Html5Qrcode, Html5QrcodeScannerState } from 'html5-qrcode';
 import { Button } from '@/components/ui/button';
-import { X } from 'lucide-react';
+import { X, AlertCircle } from 'lucide-react';
+import { TacticalStatus } from './TacticalStatus';
 
 interface QRScannerProps {
   onScan: (decodedText: string) => void;
@@ -95,11 +96,13 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
         <div className="relative overflow-hidden border border-white/5 bg-[var(--color-bg-surface)]">
           <div id="qr-reader" className="w-full min-h-[300px] flex items-center justify-center">
             {errorMsg && (
-              <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/90 p-6">
-                <div className="px-5 py-3 rounded-full border border-[var(--color-accent)]/30 bg-[var(--color-accent)]/10 text-[var(--color-accent)] text-[10px] uppercase tracking-[0.2em] flex flex-col items-center gap-1 shadow-accent-lg text-center">
-                  <span className="opacity-40 text-[8px] font-black">System_Fault</span>
-                  {errorMsg}
-                </div>
+              <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-6">
+                <TacticalStatus
+                  tone="error"
+                  label="System Fault"
+                  message={errorMsg}
+                  icon={AlertCircle}
+                />
               </div>
             )}
           </div>

@@ -1,10 +1,8 @@
 import React from 'react';
-import { motion } from 'motion/react';
-import { Zap } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { GridBackground } from './GridBackground';
+import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/lib/utils';
+import { Shield, Activity, ChevronRight, Lock, Command, AlertCircle } from 'lucide-react';
+import { TacticalStatus } from './TacticalStatus';
 
 interface LoginScreenProps {
   role: string;
@@ -15,27 +13,9 @@ interface LoginScreenProps {
   onPasswordChange: (v: string) => void;
   onLogin: () => void;
   onAdminClick: () => void;
+  isLoggingIn?: boolean;
 }
 
-/** LineMask — per-line reveal */
-function LineMask({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
-  return (
-    <div style={{ overflow: 'hidden' }}>
-      <motion.div
-        initial={{ translateY: '105%' }}
-        animate={{ translateY: '0%' }}
-        transition={{ delay, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-      >
-        {children}
-      </motion.div>
-    </div>
-  );
-}
-
-/**
- * LoginScreen — extracted from App.tsx.
- * Editorial two-block layout: large role label (top) + compact form (bottom).
- */
 export function LoginScreen({
   role,
   teamName,
@@ -45,117 +25,142 @@ export function LoginScreen({
   onPasswordChange,
   onLogin,
   onAdminClick,
+  isLoggingIn = false,
 }: LoginScreenProps) {
   return (
-    <div className="relative min-h-screen bg-[var(--color-bg-void)] text-white overflow-hidden flex flex-col justify-between p-8 md:p-16">
-      <GridBackground />
+    <div className="relative min-h-screen overflow-hidden select-none font-sans text-white flex flex-col justify-between">
 
-      {/* Top Section */}
-      <div className="relative z-10">
-        <LineMask delay={0.05}>
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-2 h-2 bg-[var(--color-accent)] animate-pulse" />
-            <p className="font-mono text-[10px] uppercase tracking-[0.4em] text-[var(--color-accent)]/80">
-              Protocol: Authentication_Required
-            </p>
-          </div>
-        </LineMask>
-
-        <h1 className="text-[clamp(48px,12vw,120px)] font-bold uppercase tracking-tighter leading-[0.85] flex flex-col font-space-grotesk">
-          {[role.toUpperCase(), 'PROTOCOL'].map((word, i) => (
-            <LineMask key={word} delay={0.1 + i * 0.1}>
-              <span className={cn(i === 0 ? "text-white" : "text-white/10")}>{word}</span>
-            </LineMask>
-          ))}
-        </h1>
-
+      {/* TOP BAR */}
+      <div className="relative z-10 p-8 flex items-center gap-3">
         <motion.div
-          initial={{ scaleX: 0 }}
-          animate={{ scaleX: 1 }}
-          transition={{ delay: 0.35, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-          className="h-[1px] bg-[var(--color-accent)]/30 mt-12 origin-left scale-x-100 w-32"
+          animate={{ opacity: [1, 0, 1] }}
+          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+          className="w-2 h-2 bg-[#ff4500]"
         />
+        <span className="font-mono text-[11px] uppercase tracking-[0.3em] text-[#ff4500]">
+          PROTOCOL: AUTHENTICATION_REQUIRED
+        </span>
       </div>
 
-      {/* Middle Section - Form Card */}
-      <div className="flex-1 flex items-center justify-center relative z-10 py-12">
+      {/* MAIN CONTENT AREA */}
+      <div className="relative z-10 flex-1 flex flex-col md:flex-row items-center justify-between px-8 md:px-20 py-12">
+        {/* LEFT SECTION: TITLES */}
+        <div className="w-full md:w-auto mb-12 md:mb-0">
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+          >
+            <h1 className="text-[80px] md:text-[120px] font-black uppercase leading-[0.8] tracking-tighter mb-2 opacity-95">
+              {role.toUpperCase()}
+            </h1>
+            <h2 className="text-[60px] md:text-[80px] font-black uppercase leading-[0.8] tracking-tighter opacity-[0.15]">
+              PROTOCOL
+            </h2>
+          </motion.div>
+        </div>
+
+        {/* RIGHT SECTION: LOGIN CARD */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.4, duration: 0.7 }}
-          className="corner-card w-full max-w-md backdrop-blur-xl relative"
+          initial={{ opacity: 0, scale: 0.98, x: 20 }}
+          animate={{ opacity: 1, scale: 1, x: 0 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+          className="w-full max-w-[460px] glass-morphism px-11 py-10 rounded-[6px] shadow-2xl"
         >
-
-          <div className="space-y-6">
-            <div className="space-y-4">
-              <div className="space-y-1.5">
-                <label className="font-mono text-[9px] uppercase tracking-widest text-white/40 ml-1">Identity_Buffer</label>
-                <Input
-                  placeholder="Team Identifier..."
-                  value={teamName}
-                  onChange={e => onTeamNameChange(e.target.value)}
-                  className="high-clearance-input w-full"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="font-mono text-[9px] uppercase tracking-widest text-white/40 ml-1">Access_Key</label>
-                <Input
-                  placeholder="Passcode..."
-                  type="password"
-                  value={password}
-                  onChange={e => onPasswordChange(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && onLogin()}
-                  className="high-clearance-input w-full"
-                />
-              </div>
+          <div className="space-y-8">
+            {/* Team Name Input */}
+            <div className="space-y-2.5">
+              <label className="block font-mono text-[11px] uppercase tracking-[0.2em] text-[#888]">
+                IDENTITY_BUFFER
+              </label>
+              <input
+                type="text"
+                value={teamName}
+                onChange={(e) => onTeamNameChange(e.target.value)}
+                placeholder="UNIDENTIFIED_UNIT"
+                className="w-full high-clearance-input p-4"
+              />
+            </div>
+ 
+            {/* Password Input */}
+            <div className="space-y-2.5">
+              <label className="block font-mono text-[11px] uppercase tracking-[0.2em] text-[#888]">
+                ACCESS_KEY
+              </label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => onPasswordChange(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && onLogin()}
+                placeholder="********"
+                className="w-full high-clearance-input p-4"
+              />
             </div>
 
             {loginError && (
               <motion.div
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="border-l-2 border-[var(--color-accent)] bg-[var(--color-accent)]/10 p-3 text-[10px] uppercase tracking-widest text-[var(--color-accent)] font-mono"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="flex justify-center w-full"
               >
-                Error: {loginError}
+                <TacticalStatus
+                  tone="error"
+                  label="Auth Error"
+                  message={loginError}
+                  icon={AlertCircle}
+                  className="w-full"
+                />
               </motion.div>
             )}
 
-            <Button
+            {/* Login Button */}
+            <button
               onClick={onLogin}
-              className="btn-primary w-full h-14"
+              disabled={isLoggingIn}
+              className="group relative w-full py-4 border-y border-[#ff4500]/50 hover:bg-[#ff4500]/5 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <span className="relative z-10">Authorize Access</span>
-            </Button>
+              <span className="relative z-10 font-mono text-[13px] uppercase tracking-[0.3em] text-[#ff4500] group-hover:text-[#ff6a33]">
+                {isLoggingIn ? 'AUTHORIZING...' : 'AUTHORIZE ACCESS'}
+              </span>
+              <div className="absolute inset-0 bg-[#ff4500]/0 group-hover:bg-[#ff4500]/5 transition-colors" />
+            </button>
 
-            <p className="font-mono text-[9px] text-white/20 text-center uppercase tracking-widest leading-relaxed">
-              * Verification module engaged. Unauthorized access attempts are logged.
+            {/* Disclaimer */}
+            <p className="font-mono text-[9px] text-[#555] text-center uppercase tracking-[0.1em] leading-relaxed opacity-80">
+              VERIFICATION MODULE ENGAGED. UNAUTHORIZED ACCESS ATTEMPTS ARE LOGGED.
             </p>
           </div>
         </motion.div>
       </div>
 
-      {/* Bottom Section */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.6, duration: 0.5 }}
-        className="relative z-10 flex items-center justify-between border-t border-white/5 pt-8"
-      >
-        <div className="flex items-center gap-3">
-          <Zap size={14} className="text-[var(--color-accent)] animate-pulse" />
-          <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-white/40">
-            Node: Terminal_001 <span className="text-white/20 mx-1">/</span> Latency: 24ms
-          </span>
+      {/* BOTTOM STATUS BAR */}
+      <div className="relative z-10 p-6 flex items-center justify-between">
+        <div className="font-mono text-[11px] text-[#ff4500] opacity-80 tracking-widest flex items-center gap-2">
+          NODE: TERMINAL_001 / LATENCY: 24MS
         </div>
 
         <button
           onClick={onAdminClick}
-          className="font-mono text-[10px] text-white/40 hover:text-[var(--color-accent)] uppercase tracking-[0.2em] transition-colors flex items-center gap-2"
+          className="font-mono text-[11px] text-[#ff4500] opacity-60 hover:opacity-100 tracking-widest transition-all px-4 py-2 hover:bg-[#ff4500]/5 rounded"
         >
-          [ Bypass_Link ]
+          [ BYPASS_LINK ]
         </button>
-      </motion.div>
+      </div>
+
+      <style dangerouslySetInnerHTML={{
+        __html: `
+        @keyframes scanline {
+          from { background-position: 0 0; }
+          to { background-position: 0 100%; }
+        }
+        ::selection {
+          background: #ff4500;
+          color: white;
+        }
+        ::-webkit-scrollbar {
+          display: none;
+        }
+      `}} />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { RoundQuestion } from '@/lib/api';
-import { Navigation, ExternalLink, LocateFixed, AlertCircle } from 'lucide-react';
+import { Navigation, ExternalLink, LocateFixed, AlertCircle, Maximize, Minimize } from 'lucide-react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -13,7 +13,26 @@ L.Icon.Default.mergeOptions({
 });
 
 function parseCoord(raw: string): number {
-  return parseFloat(raw.replace(/[°NSEW\s]/g, ''));
+  if (typeof raw !== 'string') return Number(raw) || 0;
+  const clean = raw.trim();
+  
+  // Capture degrees, minutes, seconds, and direction
+  // Matches: 15° 26' 03.4" N, 15.4348° N, 15°26'N, 15 26 03 N, etc.
+  const parts = clean.match(/([\d.]+)[°\s]*([\d.]*)['\s]*([\d.]*)["\s]*([NSEW]?)/i);
+  if (!parts) return 0;
+  
+  const d = parseFloat(parts[1] || '0');
+  const m = parseFloat(parts[2] || '0');
+  const s = parseFloat(parts[3] || '0');
+  const dir = (parts[4] || '').toUpperCase();
+  
+  let decimal = d + (m / 60) + (s / 3600);
+  if (dir === 'S' || dir === 'W') decimal = -decimal;
+  
+  // Final safeguard: if result is clearly an integer that was meant to be DMS 
+  // but failed (e.g. 1526 instead of 15.43), we don't want to send it.
+  // But our new parser handles 15°26' as 15.4333, so 1526 shouldn't happen anymore.
+  return decimal;
 }
 
 interface SectorMapProps {
@@ -21,11 +40,12 @@ interface SectorMapProps {
   currentRound: number;
   roundsDone: boolean[];
   stage: string;
+  visible?: boolean;
 }
 
 type GeoStatus = 'idle' | 'watching' | 'denied' | 'unavailable';
 
-export function SectorMap({ rounds, currentRound, stage }: SectorMapProps) {
+export function SectorMap({ rounds, currentRound, stage, visible }: SectorMapProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const targetMarkerRef = useRef<L.Marker | null>(null);
@@ -33,7 +53,10 @@ export function SectorMap({ rounds, currentRound, stage }: SectorMapProps) {
   const runnerRingRef = useRef<L.Circle | null>(null);
   const watchIdRef = useRef<number | null>(null);
   const routeLayerRef = useRef<L.Polyline | null>(null);
+  const routeGlowRef = useRef<L.Polyline | null>(null);
+  const [routeCoords, setRouteCoords] = useState<L.LatLngTuple[]>([]); // live route path for cone bearing
   const hasCenteredRef = useRef<boolean>(false);
+  const [isFullScreen, setIsFullScreen] = useState(false);
 
   const isComplete = stage === 'complete';
   const isRunnerStage = ['runner_travel', 'runner_game', 'runner_done'].includes(stage);
@@ -41,7 +64,8 @@ export function SectorMap({ rounds, currentRound, stage }: SectorMapProps) {
   const visibleRoundIndex = isRunnerStage ? currentRound : currentRound - 1;
   const current = visibleRoundIndex >= 0 ? rounds?.[Math.min(visibleRoundIndex, rounds.length - 1)] : null;
 
-  const [runnerCoords, setRunnerCoords] = useState<[number, number, number] | null>(null);
+  const [runnerCoords, setRunnerCoords] = useState<[number, number, number, number | null] | null>(null);
+  const [rotation, setRotation] = useState<number | null>(null);
   const [geoStatus, setGeoStatus] = useState<GeoStatus>('idle');
 
   const targetLat = current?.coord?.lat ? parseCoord(current.coord.lat) : null;
@@ -62,13 +86,45 @@ export function SectorMap({ rounds, currentRound, stage }: SectorMapProps) {
     setGeoStatus('watching');
     watchIdRef.current = navigator.geolocation.watchPosition(
       (pos) => {
-        setRunnerCoords([pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy]);
+        setRunnerCoords([
+          pos.coords.latitude,
+          pos.coords.longitude,
+          pos.coords.accuracy,
+          pos.coords.heading
+        ]);
       },
       (err) => {
         setGeoStatus(err.code === 1 ? 'denied' : 'unavailable');
       },
       { enableHighAccuracy: true, maximumAge: 3000, timeout: 15000 }
     );
+
+    // Orientation listener for "rotating"
+    const handleOrientation = (e: any) => {
+      // iOS Webkit support
+      if (e.webkitCompassHeading !== undefined) {
+        setRotation(e.webkitCompassHeading);
+      } else if (e.alpha !== null) {
+        // Android / standard: alpha is 0 at North, counter-clockwise
+        setRotation(360 - e.alpha);
+      }
+    };
+
+    if (typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
+      (DeviceOrientationEvent as any).requestPermission()
+        .then((resp: string) => {
+          if (resp === 'granted') {
+            window.addEventListener('deviceorientation', handleOrientation, true);
+          }
+        })
+        .catch(console.error);
+    } else {
+      window.addEventListener('deviceorientation', handleOrientation, true);
+    }
+
+    return () => {
+      window.removeEventListener('deviceorientation', handleOrientation);
+    };
   };
 
   const stopWatching = () => {
@@ -80,12 +136,16 @@ export function SectorMap({ rounds, currentRound, stage }: SectorMapProps) {
 
   // Auto-start watching when runner's turn
   useEffect(() => {
+    let cleanup: (() => void) | undefined;
     if (isRunnerStage) {
-      startWatching();
+      cleanup = startWatching();
     } else {
       stopWatching();
     }
-    return stopWatching;
+    return () => {
+      stopWatching();
+      if (cleanup) cleanup();
+    };
   }, [isRunnerStage]);
 
   // ── Init Leaflet map ────────────────────────────────────────
@@ -105,6 +165,29 @@ export function SectorMap({ rounds, currentRound, stage }: SectorMapProps) {
     mapRef.current = map;
     return () => { map.remove(); mapRef.current = null; };
   }, []);
+
+  // ── Invalidate size when panel becomes visible ───────────────
+  // When hidden via CSS (display:none) Leaflet renders into 0x0;
+  // call invalidateSize() the moment the container is shown again.
+  useEffect(() => {
+    if (visible && mapRef.current) {
+      // Small delay to let the browser repaint the container first
+      const t = setTimeout(() => {
+        mapRef.current?.invalidateSize();
+      }, 50);
+      return () => clearTimeout(t);
+    }
+  }, [visible]);
+
+  // Handle invalidate size when toggling fullscreen
+  useEffect(() => {
+    if (mapRef.current) {
+      const t = setTimeout(() => {
+        mapRef.current?.invalidateSize();
+      }, 50);
+      return () => clearTimeout(t);
+    }
+  }, [isFullScreen]);
 
   // ── Update target marker ────────────────────────────────────
   useEffect(() => {
@@ -150,45 +233,154 @@ export function SectorMap({ rounds, currentRound, stage }: SectorMapProps) {
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !runnerCoords) return;
-    const [lat, lng, accuracy] = runnerCoords;
+    const [lat, lng, accuracy, heading] = runnerCoords;
+
+    // Use compass heading if available, fall back to GPS heading, then null
+    const finalRot = rotation !== null ? rotation : (heading !== null ? heading : null);
+    const hasRealHeading = finalRot !== null;
+
+    // Compute bearing from runner → next path node (or target) as a directional fallback
+    // so the cone always points along the road even when compass/GPS heading is unavailable.
+    let targetBearing: number | null = null;
+    if (!hasRealHeading && hasTarget && targetLat !== null && targetLng !== null) {
+      let nextLat = targetLat;
+      let nextLng = targetLng;
+      
+      if (routeCoords && routeCoords.length > 1) {
+        // Find a point at least 5 meters ahead for a stable bearing
+        for (let i = 1; i < routeCoords.length; i++) {
+          nextLat = routeCoords[i][0];
+          nextLng = routeCoords[i][1];
+          // use simple distance check, approx: 1 deg = 111km
+          const dY = (nextLat - lat) * 111000;
+          const dX = (nextLng - lng) * 111000 * Math.cos(lat * Math.PI / 180);
+          const dist = Math.sqrt(dX * dX + dY * dY);
+          if (dist > 5) break; // found a point sufficiently ahead
+        }
+      }
+
+      const dLng = (nextLng - lng) * (Math.PI / 180);
+      const φ1 = lat * (Math.PI / 180);
+      const φ2 = nextLat * (Math.PI / 180);
+      const y = Math.sin(dLng) * Math.cos(φ2);
+      const x = Math.cos(φ1) * Math.sin(φ2) - Math.sin(φ1) * Math.cos(φ2) * Math.cos(dLng);
+      targetBearing = (Math.atan2(y, x) * (180 / Math.PI) + 360) % 360;
+    }
+
+    // displayRot: real heading → target bearing → null (no cone)
+    const displayRot = finalRot ?? targetBearing;
+    const hasAnyCone = displayRot !== null;
 
     // Accurate GPS < 100m → bright cyan; IP-based / poor → dimmer
     const isAccurate = accuracy <= 100;
     const dotColor = isAccurate ? '#00BFFF' : '#4D8076';
-    const ringRadius = Math.min(accuracy, 500); // cap display radius at 500m
+    const ringRadius = Math.min(accuracy, 500);
+
+    // Cone color: cyan = real heading | amber = computed target bearing
+    const coneColor = hasRealHeading ? dotColor : '#F59E0B';
+    const coneLabel = hasRealHeading ? '' : `
+      <div style="
+        position:absolute;
+        bottom:-18px;
+        left:50%;transform:translateX(-50%);
+        font-size:8px;font-family:monospace;
+        color:#F59E0B;opacity:0.8;white-space:nowrap;letter-spacing:0.05em;
+      ">ALONG PATH</div>`;
+
+    const markerHtml = `
+      <div style="width:64px;height:64px;position:relative;display:flex;align-items:center;justify-content:center;">
+        ${hasAnyCone ? `
+          <!-- Direction cone (cyan=real heading, amber=target bearing) -->
+          <div style="
+            position:absolute;
+            inset:0;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            transform: rotate(${displayRot}deg);
+            transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
+          ">
+            <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+              <!-- Outer glow cone -->
+              <path d="M32 32 L18 4 A30 30 0 0 1 46 4 Z"
+                fill="${coneColor}" fill-opacity="0.18" />
+              <!-- Inner solid cone -->
+              <path d="M32 32 L22 10 A14 14 0 0 1 42 10 Z"
+                fill="${coneColor}" fill-opacity="${hasRealHeading ? '0.55' : '0.35'}" />
+              <!-- Arrowhead tip -->
+              <polygon points="32,3 26,15 38,15"
+                fill="${coneColor}" opacity="0.95"/>
+            </svg>
+          </div>
+          ${coneLabel}
+        ` : `
+          <!-- No cone possible: plain outer ring -->
+          <div style="
+            position:absolute;
+            width:48px;height:48px;
+            border-radius:50%;
+            border:1.5px solid ${dotColor};
+            opacity:0.25;
+          "></div>
+        `}
+
+        <!-- Center dot -->
+        <div style="
+          position:relative;
+          width:16px;height:16px;
+          border-radius:50%;
+          background:${dotColor};
+          border:2.5px solid #ffffff;
+          box-shadow:0 0 0 3px ${dotColor}40, 0 0 18px ${dotColor};
+          z-index:2;
+        "></div>
+        <!-- Pulse ring -->
+        <div style="
+          position:absolute;
+          width:16px;height:16px;
+          border-radius:50%;
+          background:${dotColor};
+          opacity:0.4;
+          animation:ping 1.4s cubic-bezier(0,0,0.2,1) infinite;
+          z-index:1;
+        "></div>
+      </div>
+      <style>
+        @keyframes ping {
+          0%   { transform: scale(1);   opacity: 0.4; }
+          70%  { transform: scale(2.5); opacity: 0;   }
+          100% { transform: scale(2.5); opacity: 0;   }
+        }
+      </style>
+    `;
 
     if (runnerMarkerRef.current) {
       runnerMarkerRef.current.setLatLng([lat, lng]);
       const el = runnerMarkerRef.current.getElement();
       if (el) {
-        el.innerHTML = `<div class="w-5 h-5 rounded-full border-2 border-white relative" style="background-color: ${dotColor}; box-shadow: 0 0 15px ${dotColor}">
-                          <div class="absolute inset-0 rounded-full animate-ping bg-${isAccurate ? 'cyan-400' : 'slate-400'} opacity-40"></div>
-                        </div>`;
+        el.innerHTML = markerHtml;
       }
       runnerRingRef.current?.setLatLng([lat, lng]);
       runnerRingRef.current?.setRadius(ringRadius);
     } else {
-      // Create a solid HTML marker for the runner
       const runnerIcon = L.divIcon({
         className: 'runner-location-marker',
-        html: `<div class="w-5 h-5 rounded-full border-2 border-white relative" style="background-color: ${dotColor}; box-shadow: 0 0 15px ${dotColor}">
-                <div class="absolute inset-0 rounded-full animate-ping" style="background-color: ${dotColor}; opacity: 0.5;"></div>
-               </div>`,
-        iconSize: [20, 20],
-        iconAnchor: [10, 10],
+        html: markerHtml,
+        iconSize: [64, 64],
+        iconAnchor: [32, 32],
       });
 
       runnerMarkerRef.current = L.marker([lat, lng], { icon: runnerIcon, zIndexOffset: 1000 })
         .addTo(map)
         .bindPopup(`📍 Your Location<br/><span style="font-size:11px;opacity:0.6">${isAccurate ? `±${Math.round(accuracy)}m` : 'Approximate'}</span>`);
 
-      // Accuracy ring sized to real accuracy
+      // Accuracy ring
       runnerRingRef.current = L.circle([lat, lng], {
         radius: ringRadius,
         color: dotColor,
         fillColor: dotColor,
-        fillOpacity: 0.1,
-        weight: 1.5,
+        fillOpacity: 0.07,
+        weight: 1,
         dashArray: isAccurate ? undefined : '5, 5',
       }).addTo(map);
     }
@@ -213,7 +405,7 @@ export function SectorMap({ rounds, currentRound, stage }: SectorMapProps) {
       }
       hasCenteredRef.current = true;
     }
-  }, [runnerCoords, hasTarget, targetLat, targetLng]);
+  }, [runnerCoords, rotation, hasTarget, targetLat, targetLng, routeCoords]);
 
   // ── Draw walking route via OSRM ─────────────────────────────
   useEffect(() => {
@@ -228,35 +420,60 @@ export function SectorMap({ rounds, currentRound, stage }: SectorMapProps) {
       .then((r) => r.json())
       .then((data) => {
         if (!mapRef.current) return;
-        const coords: L.LatLngTuple[] =
+        const rawCoords: L.LatLngTuple[] =
           data.routes?.[0]?.geometry?.coordinates?.map(
             ([lng, lat]: [number, number]) => [lat, lng] as L.LatLngTuple
           ) ?? [];
 
-        // Remove old route
+        // Ensure the path meets the markers exactly by adding 
+        // the precise runner and target coordinates to the OSRM results.
+        const coords: L.LatLngTuple[] = [[rLat, rLng], ...rawCoords, [targetLat!, targetLng!]];
+        setRouteCoords(coords);
+
+        // Remove old route layers
+        if (routeGlowRef.current) {
+          mapRef.current.removeLayer(routeGlowRef.current);
+          routeGlowRef.current = null;
+        }
         if (routeLayerRef.current) {
           mapRef.current.removeLayer(routeLayerRef.current);
           routeLayerRef.current = null;
         }
 
-        if (coords.length > 0) {
+        if (coords.length > 1) {
+          // Layer 1: wide glow beneath the line
+          routeGlowRef.current = L.polyline(coords, {
+            color: '#ffffff',
+            weight: 14,
+            opacity: 0.08,
+            lineCap: 'round',
+            lineJoin: 'round',
+          }).addTo(mapRef.current);
+
+          // Layer 2: crisp solid line on top
           routeLayerRef.current = L.polyline(coords, {
-            color: 'var(--color-accent)',
-            weight: 5,
-            opacity: 0.9,
-            dashArray: '12, 8',
+            color: '#ffffff',
+            weight: 3,
+            opacity: 0.85,
+            lineCap: 'round',
+            lineJoin: 'round',
           }).addTo(mapRef.current);
         }
       })
       .catch(() => {
-        // Fallback: straight dashed line
+        // Fallback: straight line with glow
         const map = mapRef.current;
         if (!map) return;
-        if (routeLayerRef.current) { map.removeLayer(routeLayerRef.current); }
-        routeLayerRef.current = L.polyline(
-          [[rLat, rLng], [targetLat!, targetLng!]],
-          { color: 'var(--color-accent)', weight: 4, opacity: 0.7, dashArray: '8, 10' }
-        ).addTo(map);
+        if (routeGlowRef.current) { map.removeLayer(routeGlowRef.current); routeGlowRef.current = null; }
+        if (routeLayerRef.current) { map.removeLayer(routeLayerRef.current); routeLayerRef.current = null; }
+        const fallbackCoords: L.LatLngTuple[] = [[rLat, rLng], [targetLat!, targetLng!]];
+        setRouteCoords(fallbackCoords);
+        routeGlowRef.current = L.polyline(fallbackCoords, {
+          color: '#ffffff', weight: 14, opacity: 0.08, lineCap: 'round', lineJoin: 'round',
+        }).addTo(map);
+        routeLayerRef.current = L.polyline(fallbackCoords, {
+          color: '#ffffff', weight: 3, opacity: 0.7, lineCap: 'round', lineJoin: 'round',
+        }).addTo(map);
       });
   }, [runnerCoords, hasTarget, targetLat, targetLng]);
 
@@ -267,70 +484,117 @@ export function SectorMap({ rounds, currentRound, stage }: SectorMapProps) {
     : null;
 
   return (
-    <div className="space-y-3">
+    <div className={isFullScreen ? "" : "space-y-3"}>
+      {isFullScreen && (
+        <style>{`
+          body { overflow: hidden !important; }
+          .corner-card { 
+            clip-path: none !important; 
+            transform: none !important; 
+            backdrop-filter: none !important; 
+            -webkit-backdrop-filter: none !important; 
+            filter: none !important; 
+          }
+          .reveal-up { 
+            transform: none !important; 
+            animation: none !important; 
+            backdrop-filter: none !important; 
+            -webkit-backdrop-filter: none !important; 
+            filter: none !important; 
+          }
+          .min-h-screen {
+            transform: none !important;
+            contain: none !important;
+            perspective: none !important;
+          }
+          #root {
+            transform: none !important;
+            contain: none !important;
+            perspective: none !important;
+          }
+        `}</style>
+      )}
       {/* Map */}
-      <div className="relative w-full h-[260px] sm:h-[320px] border border-[var(--color-accent)]/40 bg-[var(--color-bg-void)] corner-card overflow-hidden shadow-accent-lg">
+      <div className={
+        isFullScreen 
+        ? "fixed inset-0 z-[9999] bg-black/90 backdrop-blur-md" 
+        : "relative w-full h-[360px] sm:h-[420px] glass-morphism corner-card overflow-hidden shadow-black-lg"
+      }>
         <div ref={mapContainerRef} className="absolute inset-0 w-full h-full" />
 
-        {/* Status badges */}
-        <div className="absolute top-3 left-3 z-[1000] flex flex-col gap-1 pointer-events-none">
-          {runnerCoords && (() => {
-            const acc = runnerCoords[2];
-            const isGood = acc <= 100;
-            const color = isGood ? '#00BFFF' : '#EE3A17';
-            const label = isGood ? `GPS ±${Math.round(acc)}m` : `Approx ±${Math.round(acc)}m`;
-            return (
-              <div
-                className="bg-black/90 px-2 py-1 flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-widest border backdrop-blur-sm"
-                style={{ borderColor: `${color}88`, color }}
-              >
-                <LocateFixed className="h-3 w-3 animate-pulse" />
-                {label}
-              </div>
-            );
-          })()}
-          {hasTarget && (
-            <div className="bg-black/90 border border-[var(--color-accent)]/60 px-2 py-1 flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-widest text-[var(--color-accent)] backdrop-blur-sm shadow-accent-xs">
-              <Navigation className="h-3 w-3" />
-              Target Locked
-            </div>
+        {/* Fullscreen Toggle */}
+        <button
+          onClick={() => setIsFullScreen(!isFullScreen)}
+          className={`absolute right-4 z-[1000] p-2 bg-black/60 backdrop-blur-sm border border-white/10 rounded-lg text-white hover:bg-white/10 transition-colors shadow-black-lg ${
+            isFullScreen ? 'top-20 sm:top-24' : 'top-4'
+          }`}
+          aria-label="Toggle Fullscreen"
+        >
+          {isFullScreen ? <Minimize className="h-5 w-5" /> : <Maximize className="h-5 w-5" />}
+        </button>
+
+        {/* Single bottom HUD bar — all status in one row, never overlaps */}
+        <div className="absolute bottom-0 left-0 right-0 z-[1000] flex items-center justify-between gap-2 px-3 py-2 bg-black/60 backdrop-blur-sm border-t border-white/10">
+          {/* Left: status chips */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {runnerCoords && (() => {
+              const acc = runnerCoords[2];
+              const isGood = acc <= 100;
+              const color = isGood ? '#00BFFF' : '#EE3A17';
+              const label = isGood ? `GPS ±${Math.round(acc)}m` : `~±${Math.round(acc)}m`;
+              return (
+                <span
+                  className="flex items-center gap-1 font-mono text-[9px] uppercase tracking-widest"
+                  style={{ color }}
+                >
+                  <LocateFixed className="h-3 w-3 animate-pulse shrink-0" />
+                  {label}
+                </span>
+              );
+            })()}
+
+            {hasTarget && (
+              <span className="flex items-center gap-1 font-mono text-[9px] uppercase tracking-widest text-white/60">
+                <Navigation className="h-3 w-3 shrink-0" />
+                Target Locked
+              </span>
+            )}
+
+            {(geoStatus === 'denied' || geoStatus === 'unavailable') && (
+              <span className="flex items-center gap-1 font-mono text-[9px] uppercase tracking-widest text-red-400">
+                <AlertCircle className="h-3 w-3 shrink-0" />
+                {geoStatus === 'denied' ? 'Location denied' : 'GPS unavailable'}
+              </span>
+            )}
+          </div>
+
+          {/* Right: recenter button */}
+          {isRunnerStage && (
+            <button
+              onClick={() => {
+                if (geoStatus !== 'watching') {
+                  startWatching();
+                } else if (mapRef.current && runnerCoords) {
+                  const [lat, lng, accuracy] = runnerCoords;
+                  if (accuracy < 1000) {
+                    if (hasTarget && targetLat !== null && targetLng !== null) {
+                      const bounds = L.latLngBounds([[lat, lng], [targetLat, targetLng]]);
+                      mapRef.current.fitBounds(bounds, { padding: [60, 60], maxZoom: 19 });
+                    } else {
+                      mapRef.current.setView([lat, lng], accuracy < 200 ? 18 : 15);
+                    }
+                  } else if (targetLat !== null && targetLng !== null) {
+                    mapRef.current.setView([targetLat, targetLng], 18);
+                  }
+                }
+              }}
+              className="flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-widest text-white/80 hover:text-white transition-colors active:scale-95 shrink-0"
+            >
+              <LocateFixed className="h-3.5 w-3.5" />
+              {geoStatus === 'watching' ? 'Recenter' : 'Locate Me'}
+            </button>
           )}
         </div>
-
-        {/* Locate Me / Recenter button (manual trigger) */}
-        {isRunnerStage && (
-          <button
-            onClick={() => {
-              if (geoStatus !== 'watching') {
-                startWatching();
-              } else if (mapRef.current && runnerCoords) {
-                const [lat, lng, accuracy] = runnerCoords;
-                if (accuracy < 1000) {
-                  if (hasTarget && targetLat !== null && targetLng !== null) {
-                    const bounds = L.latLngBounds([[lat, lng], [targetLat, targetLng]]);
-                    mapRef.current.fitBounds(bounds, { padding: [60, 60], maxZoom: 19 });
-                  } else {
-                    mapRef.current.setView([lat, lng], accuracy < 200 ? 18 : 15);
-                  }
-                } else if (targetLat !== null && targetLng !== null) {
-                  mapRef.current.setView([targetLat, targetLng], 18);
-                }
-              }
-            }}
-            className="absolute bottom-3 right-3 z-[1000] bg-black/90 border border-[#EE3A17]/60 px-2 sm:px-3 py-2 flex items-center gap-1.5 sm:gap-2 font-mono text-[9px] uppercase tracking-[0.12em] sm:tracking-widest text-[#EE3A17] hover:bg-[#EE3A17]/20 transition-all pointer-events-auto backdrop-blur-sm shadow-accent-sm active:scale-95"
-          >
-            <LocateFixed className="h-4 w-4" />
-            {geoStatus === 'watching' ? 'Recenter' : 'Locate Me'}
-          </button>
-        )}
-
-        {/* Geo error */}
-        {(geoStatus === 'denied' || geoStatus === 'unavailable') && (
-          <div className="absolute bottom-3 left-3 z-[1000] bg-black/90 border border-[var(--color-accent)]/20 px-2 py-1 flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-widest text-[var(--color-accent)] pointer-events-none backdrop-blur-sm">
-            <AlertCircle className="h-3 w-3" />
-            {geoStatus === 'denied' ? 'Location denied — enable in browser' : 'GPS unavailable'}
-          </div>
-        )}
       </div>
 
       {/* Navigate button */}
@@ -338,7 +602,8 @@ export function SectorMap({ rounds, currentRound, stage }: SectorMapProps) {
         <a
           href={navUrl}
           target="_blank"
-          rel="noopener noreferrer btn-primary flex items-center justify-center gap-2 sm:gap-3 w-full h-14"
+          rel="noopener noreferrer"
+          className="btn-primary flex items-center justify-center gap-2 sm:gap-3 w-full h-14 border-white/20 text-white hover:border-white hover:bg-white hover:text-black transition-all"
         >
           <Navigation className="h-4 w-4" />
           {runnerCoords ? 'Navigate to Target' : 'Explore Target Site'}
@@ -347,27 +612,29 @@ export function SectorMap({ rounds, currentRound, stage }: SectorMapProps) {
       )}
 
       {/* Legend */}
-      <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-6 py-3 border-t border-white/5 bg-black/20 text-[9px] font-mono uppercase tracking-widest">
-        {isRunnerStage ? (
-          <>
+      {!isFullScreen && (
+        <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-6 py-3 border-t border-white/5 bg-white/[0.04] glass-morphism text-[9px] font-mono uppercase tracking-widest">
+          {isRunnerStage ? (
+            <>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-[var(--color-accent)] shadow-accent-xs" />
+                <span className="text-[var(--color-accent)]">Target</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-[#00BFFF]" style={{ boxShadow: '0 0 6px #00BFFF' }} />
+                <span className="text-[#00BFFF]">{runnerCoords ? 'You (Live)' : 'GPS Pending...'}</span>
+              </div>
+            </>
+          ) : (
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-[var(--color-accent)] shadow-accent-xs" />
-              <span className="text-[var(--color-accent)]">Target</span>
+              <div className="w-3 h-3 rounded-full border border-[var(--color-accent)]/50 flex items-center justify-center">
+                <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-accent)]/50 animate-pulse" />
+              </div>
+              <span className="text-[var(--color-accent)]/80">Awaiting Target Coordinates</span>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-[#00BFFF]" style={{ boxShadow: '0 0 6px #00BFFF' }} />
-              <span className="text-[#00BFFF]">{runnerCoords ? 'You (Live)' : 'GPS Pending...'}</span>
-            </div>
-          </>
-        ) : (
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full border border-[var(--color-accent)]/50 flex items-center justify-center">
-              <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-accent)]/50 animate-pulse" />
-            </div>
-            <span className="text-[var(--color-accent)]/80">Awaiting Target Coordinates</span>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

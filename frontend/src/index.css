@@ -73,7 +73,7 @@
   --shadow-accent-md: 0 0 20px rgba(238, 58, 23, 0.25);
   --shadow-accent-lg: 0 0 30px rgba(238, 58, 23, 0.3);
   --shadow-accent-xl: 0 0 50px rgba(238, 58, 23, 0.4);
-  
+
   --shadow-black-sm: 0 4px 10px rgba(0, 0, 0, 0.3);
   --shadow-black-md: 0 8px 20px rgba(0, 0, 0, 0.5);
   --shadow-black-lg: 0 0 50px rgba(0, 0, 0, 0.6);
@@ -299,4 +299,30 @@
   .syntax-op {
     color: #EE3A17;
   }
+}
+
+@keyframes marker-pulse {
+
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.4;
+  }
+
+  50% {
+    transform: scale(1.3);
+    opacity: 0.8;
+  }
+}
+
+/* Smoothly animate Leaflet markers for real-time movement */
+.leaflet-marker-pane .leaflet-marker-icon {
+  transition: transform 2s linear;
+}
+
+/* Disable transition during map zoom/pan to prevent markers from sliding out of place */
+.leaflet-zoom-anim .leaflet-marker-icon,
+.leaflet-pan-anim .leaflet-marker-icon,
+.leaflet-zoom-dragging .leaflet-marker-icon {
+  transition: none !important;
 }

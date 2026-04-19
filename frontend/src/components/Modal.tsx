@@ -30,7 +30,7 @@ export const Modal: React.FC<ModalProps> = ({
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-md"
+        className="fixed inset-0 z-[100] bg-white/[0.04] glass-morphism backdrop-blur-sm"
         onClick={onClose}
         role="presentation"
       />
@@ -41,7 +41,7 @@ export const Modal: React.FC<ModalProps> = ({
       >
         <div
           className={cn(
-            'corner-card relative bg-[var(--color-bg-void)] border-[var(--color-accent)]/20 p-8 md:p-10 max-w-lg w-full pointer-events-auto',
+            'corner-card relative glass-morphism p-8 md:p-10 max-w-lg w-full pointer-events-auto',
             'animate-reveal-up',
             className
           )}

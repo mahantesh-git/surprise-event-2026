@@ -29,12 +29,12 @@ export const Navbar: React.FC<NavbarProps> = ({
       <nav
         className={cn(
           'flex items-center gap-4 sm:gap-8 px-4 py-2 sm:py-2.5',
-          'bg-[var(--color-bg-surface)] border border-[var(--color-accent)]/30 rounded-full shadow-2xl pointer-events-auto',
+          'glass-morphism rounded-full shadow-2xl pointer-events-auto',
           className
         )}
       >
         {/* Left: Brand */}
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2.5 shrink-0">
           {/* Red bars */}
           <div className="flex gap-[3px]">
             <div className="w-1 sm:w-1.5 h-3.5 sm:h-4 bg-[var(--color-accent)] rounded-sm"></div>
@@ -45,8 +45,21 @@ export const Navbar: React.FC<NavbarProps> = ({
           </span>
         </div>
 
+        {/* Center: Timer */}
+        {startTime && (
+          <div className="hidden sm:flex items-center border-l border-white/10 pl-8">
+            <GameTimer startTime={startTime ?? null} finishTime={finishTime ?? null} />
+          </div>
+        )}
+
         {/* Right: Meta & Dot */}
-        <div className="flex items-center gap-3 sm:gap-4 ml-auto sm:ml-0 pl-3 sm:pl-0 border-l sm:border-l-0 border-white/10">
+        <div className="flex items-center gap-3 sm:gap-4 ml-auto pl-3 sm:pl-8 sm:border-l border-white/10">
+          {startTime && (
+            <div className="flex sm:hidden">
+              <GameTimer startTime={startTime ?? null} finishTime={finishTime ?? null} />
+            </div>
+          )}
+
           {metaText && (
             <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.2em] text-[var(--color-accent)]">
               {metaText}

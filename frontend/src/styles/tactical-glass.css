@@ -1,0 +1,90 @@
+/* --- Tactical Glassmorphism Design System --- */
+
+.glass-morphism {
+  background: rgba(15, 3, 3, 0.45) !important;
+  backdrop-filter: blur(14px) saturate(1.4) !important;
+  -webkit-backdrop-filter: blur(14px) saturate(1.4) !important;
+  border: 1px solid rgba(200, 50, 20, 0.18) !important;
+  position: relative;
+  overflow: hidden;
+}
+
+.glass-morphism::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.04) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.glass-morphism-dark {
+  background: rgba(8, 1, 1, 0.6) !important;
+  backdrop-filter: blur(16px) saturate(1.4) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(1.4) !important;
+  border: 1px solid rgba(200, 50, 20, 0.15) !important;
+}
+
+.glass-morphism-inner {
+  background: rgba(180, 30, 10, 0.08) !important;
+  border: 1px solid rgba(200, 50, 20, 0.2) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+}
+
+.glass-morphism-editor {
+  background: rgba(8, 1, 1, 0.4) !important;
+  backdrop-filter: blur(20px) saturate(1.4) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(1.4) !important;
+  border: 1px solid rgba(200, 50, 20, 0.15) !important;
+}
+
+.glass-morphism-bar {
+  background: rgba(10, 2, 2, 0.65) !important;
+  backdrop-filter: blur(18px) saturate(1.4) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(1.4) !important;
+  border: 1px solid rgba(200, 50, 20, 0.2) !important;
+}
+
+.custom-scrollbar {
+  scrollbar-width: thin !important;
+  scrollbar-color: rgba(200, 50, 20, 0.2) transparent !important;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px !important;
+  height: 6px !important;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(200, 50, 20, 0.2) !important;
+  border-radius: 3px !important;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(200, 50, 20, 0.4) !important;
+}
+
+/* Input Overrides */
+.high-clearance-input {
+  background: rgba(180, 30, 10, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  backdrop-filter: blur(4px) !important;
+  -webkit-backdrop-filter: blur(4px) !important;
+  color: white !important;
+}
+
+.high-clearance-input:focus {
+  border: 1px solid rgba(238, 58, 23, 0.4) !important;
+  background: rgba(238, 58, 23, 0.08) !important;
+  box-shadow: 0 0 20px rgba(238, 58, 23, 0.15) !important;
+}
+
+/* Ensure Admin Panel content has smooth transition */
+.admin-content-transition {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}

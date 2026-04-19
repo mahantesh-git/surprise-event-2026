@@ -1,12 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
-  Zap,
+  Shield,
+  Activity,
   CheckCircle2,
   MapPin,
   QrCode,
   RefreshCw,
-  MessageSquare
+  MessageSquare,
+  AlertCircle,
+  ShieldAlert
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -27,6 +30,9 @@ import { RunnerGame } from '@/components/RunnerGame';
 import { Leaderboard } from '@/components/Leaderboard';
 import { QRScanner } from '@/components/QRScanner';
 import { TacticalComms } from '@/components/TacticalComms';
+import { LoginScreen } from '@/components/LoginScreen';
+import { TacticalBackground } from '@/components/TacticalBackground';
+import { TacticalStatus } from '@/components/TacticalStatus';
 
 const SOLVER_FULLSCREEN_EXIT_KEY = import.meta.env.VITE_SOLVER_EXIT_KEY || 'quest-exit';
 
@@ -52,6 +58,7 @@ export default function App() {
   const [finalQrError, setFinalQrError] = useState<string | null>(null);
   const [finalQrScannerOpen, setFinalQrScannerOpen] = useState(false);
   const [isVerifyingFinalQr, setIsVerifyingFinalQr] = useState(false);
+  const [runnerTab, setRunnerTab] = useState<'intel' | 'map'>('intel');
   const [consoleOutput, setConsoleOutput] = useState<{
     stdout: string;
     stderr: string;
@@ -71,10 +78,6 @@ export default function App() {
   const lastRunnerHandoffNoticeRef = useRef<string>('');
   const lastSolverCompleteNoticeRef = useRef(false);
   const notificationTimerRef = useRef<number | null>(null);
-  const solverExitAuthorizedRef = useRef(false);
-  const wasFullscreenRef = useRef(false);
-  const lastMessageNoticeRef = useRef<number>(Date.now());
-
   const requestAppFullscreen = async () => {
     const root = document.documentElement as HTMLElement & {
       webkitRequestFullscreen?: () => Promise<void> | void;
@@ -89,6 +92,34 @@ export default function App() {
       return false;
     }
   };
+
+  const handleLogin = async () => {
+    if (isLoggingIn) return;
+    setLoginError(null);
+    setIsLoggingIn(true);
+    try {
+      await login(teamName, password);
+      if (role === 'solver' || role === 'runner') {
+        await requestAppFullscreen();
+        wasFullscreenRef.current = !!document.fullscreenElement;
+      }
+    } catch (error) {
+      setLoginError(error instanceof Error ? error.message : 'Login failed');
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
+  const handleLogout = () => {
+    logout();
+    setPassword('');
+    setLoginError(null);
+  };
+
+  const solverExitAuthorizedRef = useRef(false);
+  const wasFullscreenRef = useRef(false);
+  const lastMessageNoticeRef = useRef<number>(0);
+
 
   // Stream runner GPS to backend while in field stages
   useRunnerGps(
@@ -227,11 +258,16 @@ export default function App() {
     previousRoundStateRef.current = gameState.round;
 
     // Tactical Comms Notification
-    if (gameState.lastMessage && gameState.lastMessage.timestamp > lastMessageNoticeRef.current) {
-      if (gameState.lastMessage.senderRole !== role) {
-        pushNotification(`COMMS [${gameState.lastMessage.senderRole.toUpperCase()}]: ${gameState.lastMessage.text}`, 'success');
+    if (gameState.lastMessage) {
+      // Initialize ref on first message load to avoid old notifications
+      if (lastMessageNoticeRef.current === 0) {
+        lastMessageNoticeRef.current = gameState.lastMessage.timestamp;
+      } else if (gameState.lastMessage.timestamp > lastMessageNoticeRef.current) {
+        if (gameState.lastMessage.senderRole !== session.role) {
+          pushNotification(`COMMS [${gameState.lastMessage.senderRole.toUpperCase()}]: ${gameState.lastMessage.text}`, 'success');
+        }
+        lastMessageNoticeRef.current = gameState.lastMessage.timestamp;
       }
-      lastMessageNoticeRef.current = gameState.lastMessage.timestamp;
     }
   }, [gameState, role, session]);
 
@@ -240,6 +276,21 @@ export default function App() {
       if (notificationTimerRef.current) {
         window.clearTimeout(notificationTimerRef.current);
       }
+    };
+  }, []);
+
+  // Global Scrollbar Hide
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.id = 'hide-scrollbar-style';
+    style.textContent = `
+      *::-webkit-scrollbar { display: none !important; }
+      * { -ms-overflow-style: none !important; scrollbar-width: none !important; }
+    `;
+    document.head.appendChild(style);
+    return () => {
+      const existing = document.getElementById('hide-scrollbar-style');
+      if (existing) document.head.removeChild(existing);
     };
   }, []);
 
@@ -274,45 +325,75 @@ export default function App() {
 
   if (pathname === '/admin') {
     return (
-      <AdminPanel
-        onBack={() => {
-          window.history.pushState({}, '', '/');
-          setPathname('/');
-        }}
-      />
+      <>
+        <TacticalBackground />
+        <AdminPanel
+          onBack={() => {
+            window.history.pushState({}, '', '/');
+            setPathname('/');
+          }}
+        />
+      </>
     );
   }
 
-  if (!role) {
+  if (!session || !role) {
     return (
-      <RoleSelection
-        onSelect={(selectedRole: Role) => {
-          const nextPath = `/${selectedRole}`;
-          window.history.pushState({}, '', nextPath);
-          setPathname(nextPath);
-        }}
-      />
+      <>
+        <TacticalBackground />
+        <AnimatePresence mode="wait">
+          {!role ? (
+            <motion.div
+              key="role-selection"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.5 }}
+            >
+              <RoleSelection
+                onSelect={(selectedRole: Role) => {
+                  const nextPath = `/${selectedRole}`;
+                  window.history.pushState({}, '', nextPath);
+                  setPathname(nextPath);
+                }}
+              />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="login-screen"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.5 }}
+            >
+              <LoginScreen
+                role={role!}
+                teamName={teamName}
+                password={password}
+                onTeamNameChange={setTeamName}
+                onPasswordChange={setPassword}
+                onLogin={handleLogin}
+                isLoggingIn={isLoggingIn}
+                loginError={loginError}
+                onAdminClick={() => {
+                  window.history.pushState({}, '', '/admin');
+                  setPathname('/admin');
+                }}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </>
     );
   }
 
-  if (loading || roundsLoading) return <div className="min-h-screen flex items-center justify-center text-white bg-[var(--color-bg-surface)]"><Zap className="animate-pulse text-[var(--color-accent)]" /></div>;
+  if (loading || roundsLoading) return (
+    <div className="min-h-screen flex items-center justify-center text-white">
+      <TacticalBackground />
+      <Activity className="animate-pulse text-[var(--color-accent)] z-10" />
+    </div>
+  );
 
-  const handleLogin = async () => {
-    if (isLoggingIn) return;
-    setLoginError(null);
-    setIsLoggingIn(true);
-    try {
-      await login(teamName, password);
-      if (role === 'solver' || role === 'runner') {
-        await requestAppFullscreen();
-        wasFullscreenRef.current = !!document.fullscreenElement;
-      }
-    } catch (error) {
-      setLoginError(error instanceof Error ? error.message : 'Login failed');
-    } finally {
-      setIsLoggingIn(false);
-    }
-  };
 
   const handleAllowFullscreenExit = async () => {
     if (fullscreenExitKeyInput.trim() !== SOLVER_FULLSCREEN_EXIT_KEY) {
@@ -354,110 +435,61 @@ export default function App() {
     setFullscreenExitError('Unable to re-enter fullscreen automatically. Try again.');
   };
 
-  const handleLogout = () => {
-    logout();
-    setPassword('');
-    setLoginError(null);
-  };
 
-  if (!session) {
+
+  if (roundsError) {
     return (
       <>
-        <GridBackground />
-
-        <div className="min-h-screen flex items-center justify-center px-4 sm:px-6 pt-20 relative z-10 text-white bg-[var(--color-bg-void)] reveal-up">
-          <div className="corner-card w-full max-w-md bg-[var(--color-bg-surface)] backdrop-blur-xl p-8 border border-white/5">
-
-            <CardHeader className="border-[var(--color-accent)] pb-0">
-              <div className="text-center space-y-6 mb-8 pt-4">
-                <div className="flex flex-col items-center gap-2">
-                  <div className="flex items-center gap-2">
-                    <Zap className="h-4 w-4 fill-[var(--color-accent)] text-[var(--color-accent)] animate-pulse" />
-                    <span className="font-mono text-[10px] tracking-[0.3em] text-[var(--color-accent)] uppercase">Authorized Access Only</span>
-                  </div>
-                  <h1 className="text-5xl font-bold uppercase tracking-tighter font-space-grotesk leading-none">
-                    <span className="text-white/20 line-through decoration-[var(--color-accent)] decoration-[4px]">QUEST</span><br />
-                    <span className="text-white">LOGIN</span>
-                  </h1>
-                </div>
-                <div className="inline-flex items-center gap-2 border border-white/5 bg-white/5 px-3 py-1 font-mono text-[10px] uppercase tracking-widest text-white/40">
-                  Role: {role}
-                </div>
-              </div>
+        <TacticalBackground />
+        <div className="relative z-10 min-h-screen flex items-center justify-center px-4 sm:px-6 text-white reveal-up">
+          <Card className="max-w-md w-full border-[#ff4500]/30 bg-[#141419]/85 backdrop-blur-xl shadow-[0_0_50px_rgba(255,69,0,0.1)]">
+            <CardHeader>
+              <CardTitle className="text-[#ff4500] font-mono tracking-tighter uppercase">Connection Failed</CardTitle>
+              <CardDescription className="text-white/60 font-mono text-xs">{roundsError}</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <input
-                placeholder="TEAM_NAME"
-                value={teamName}
-                onChange={(event) => setTeamName(event.target.value)}
-                className="w-full high-clearance-input text-center h-14"
-                autoComplete="off"
-                spellCheck="false"
-                disabled={isLoggingIn}
-              />
-              <input
-                placeholder="ACCESS_PASSWORD"
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                onKeyDown={(event) => event.key === 'Enter' && !isLoggingIn && handleLogin()}
-                className="w-full high-clearance-input text-center h-14"
-                autoComplete="off"
-                disabled={isLoggingIn}
-              />
-              {loginError && (
-                <div className="px-4 py-2.5 rounded-full border border-[var(--color-accent)]/30 bg-[var(--color-accent)]/10 text-[var(--color-accent)] text-[10px] uppercase tracking-widest text-center font-mono backdrop-blur-sm">
-                  {loginError}
-                </div>
-              )}
+            <CardContent>
               <Button
-                className="w-full font-bold uppercase tracking-[0.2em] h-14 mt-4 btn-primary"
-                size="md"
-                onClick={handleLogin}
-                disabled={isLoggingIn || !teamName.trim() || !password.trim()}
+                onClick={() => window.location.reload()}
+                className="w-full bg-[#ff4500] hover:bg-[#ff4500]/80 text-white font-bold uppercase tracking-widest text-xs h-12"
               >
-                {isLoggingIn ? (
-                  <span className="flex items-center gap-2">
-                    <span className="w-3 h-3 border border-black/50 border-t-transparent rounded-full animate-spin" />
-                    CONNECTING...
-                  </span>
-                ) : (
-                  'Establish Connection'
-                )}
+                Reconnect Protocol
               </Button>
-              <p className="text-[10px] font-mono text-center text-white/30 leading-relaxed uppercase tracking-tighter pt-4">
-                Protocol: Secure Auth / Node: 0{role === 'solver' ? '1' : '2'}
-              </p>
             </CardContent>
-          </div>
+          </Card>
         </div>
       </>
     );
   }
 
-  if (roundsError) {
-    return (
-      <div className="min-h-screen flex items-center justify-center px-4 sm:px-6 text-white bg-[var(--color-bg-surface)] reveal-up">
-        <Card className="max-w-md w-full">
-          <CardHeader>
-            <CardTitle>Unable to load questions</CardTitle>
-            <CardDescription>{roundsError}</CardDescription>
-          </CardHeader>
-        </Card>
-      </div>
-    );
-  }
-
   if (!rounds.length) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-4 sm:px-6 text-white bg-[var(--color-bg-surface)] reveal-up">
-        <Card className="max-w-md w-full">
-          <CardHeader>
-            <CardTitle>No questions configured</CardTitle>
-            <CardDescription>Ask admin to add at least one round in the admin panel.</CardDescription>
-          </CardHeader>
-        </Card>
-      </div>
+      <>
+        <div className="relative z-10 min-h-screen flex items-center justify-center px-4 sm:px-6 text-white reveal-up">
+          <Card className="max-w-md w-full border-[#ff4500]/30 bg-[#141419]/85 backdrop-blur-xl shadow-[0_0_50px_rgba(255,69,0,0.1)]">
+            <CardHeader>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-2 h-2 bg-[#ff4500] animate-pulse" />
+                <span className="font-mono text-[10px] uppercase tracking-widest text-[#ff4500]">System Warning</span>
+              </div>
+              <CardTitle className="text-2xl font-black uppercase tracking-tighter mb-2">No Questions Configured</CardTitle>
+              <CardDescription className="text-white/60 font-mono text-xs uppercase leading-relaxed">
+                Terminal is active but mission parameters are missing. Authorized administrators must initialize mission rounds via the control console.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button
+                onClick={() => {
+                  window.history.pushState({}, '', '/admin');
+                  setPathname('/admin');
+                }}
+                className="w-full bg-white/5 hover:bg-white/10 text-white border border-white/10 font-bold uppercase tracking-widest text-xs h-12 transition-all"
+              >
+                Access Admin Panel
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </>
     );
   }
 
@@ -572,6 +604,7 @@ export default function App() {
 
   return (
     <>
+      <TacticalBackground />
       <AnimatePresence>
         {showFullscreenExitGate && (role === 'solver' || role === 'runner') && (
           <motion.div
@@ -607,8 +640,13 @@ export default function App() {
                 />
 
                 {fullscreenExitError && (
-                  <div className="px-4 py-2 rounded-full border border-[var(--color-accent)]/60 bg-[var(--color-accent)]/20 text-[var(--color-accent)] text-[10px] uppercase tracking-widest text-center backdrop-blur-sm">
-                    {fullscreenExitError}
+                  <div className="flex justify-center">
+                    <TacticalStatus
+                      tone="error"
+                      label="Security Alert"
+                      message={fullscreenExitError}
+                      icon={AlertCircle}
+                    />
                   </div>
                 )}
 
@@ -641,33 +679,14 @@ export default function App() {
             animate={{ opacity: 1, y: 0, scaleX: 1, scaleY: 1, filter: 'blur(0px)' }}
             exit={{ opacity: 0, y: -60, scaleX: 0.6, scaleY: 0.4, filter: 'blur(4px)' }}
             transition={{ type: "spring", stiffness: 500, damping: 30, mass: 0.5 }}
-            className={cn(
-              'fixed top-[70px] sm:top-[84px] left-1/2 -translate-x-1/2 z-[40] w-[calc(100%-2rem)] sm:w-auto sm:min-w-[320px] max-w-md px-3 sm:px-4 py-2 sm:py-2.5 rounded-full shadow-black-xl backdrop-blur-3xl border',
-              notification.tone === 'success'
-                ? 'bg-[var(--color-accent)]/15 border-[var(--color-accent)]/30 text-[var(--color-accent)]'
-                : 'bg-[var(--color-bg-void)]/90 border-white/10 text-white'
-            )}
+            className="fixed top-[70px] sm:top-[84px] left-1/2 -translate-x-1/2 z-[40] w-max max-w-[calc(100vw-32px)]"
           >
-            <div className="flex items-center gap-3.5">
-              <div className={cn(
-                "flex items-center justify-center w-8 h-8 rounded-full shrink-0",
-                notification.tone === 'success' ? "bg-[var(--color-accent)]/20" : "bg-white/10"
-              )}>
-                {notification.tone === 'success' ? (
-                  <CheckCircle2 className="h-4 w-4 text-[var(--color-accent)]" />
-                ) : (
-                  <Zap className="h-4 w-4 text-white" />
-                )}
-              </div>
-              <div className="flex-1 space-y-0.5">
-                <p className="text-[10px] font-bold uppercase tracking-[0.15em] opacity-60">
-                  {notification.tone === 'success' ? 'System Success' : 'System Notice'}
-                </p>
-                <p className="text-xs sm:text-sm font-medium tracking-wide leading-snug">
-                  {notification.message}
-                </p>
-              </div>
-            </div>
+            <TacticalStatus
+              tone={notification.tone}
+              label={notification.tone === 'success' ? 'System Success' : 'System Notice'}
+              message={notification.message}
+              icon={notification.tone === 'success' ? CheckCircle2 : Activity}
+            />
           </motion.div>
         )}
       </AnimatePresence>
@@ -675,7 +694,7 @@ export default function App() {
       <PersistentProgress totalRounds={rounds.length} currentRound={gameState?.round ?? 0} roundsDone={gameState?.roundsDone ?? []} />
       <GridBackground />
       <Navbar
-        brandName="QUEST"
+        brandName={`QUEST : THE ${session.team.name}`}
         ctaText="SYSTEM"
         metaText={role?.toUpperCase()}
         onMenuOpen={() => { }}
@@ -683,14 +702,14 @@ export default function App() {
         finishTime={gameState?.finishTime}
       />
 
-      <div className="min-h-screen pt-16 pb-8 px-4 sm:px-6 relative z-10 text-white bg-[var(--color-bg-void)] reveal-up overflow-x-hidden">
+      <div className="min-h-screen pt-16 pb-8 px-4 sm:px-6 relative z-10 text-white bg-transparent reveal-up overflow-x-hidden">
         <div className="w-full">
           {/* Header */}
           <div className="mb-6 mt-2 sm:mt-4">
             <div className="flex flex-row items-end justify-between border-b border-white/10 pb-3">
               <div>
                 <div className="flex items-center gap-2 mb-1">
-                  <Zap className="h-3 w-3 text-[var(--color-accent)] fill-[var(--color-accent)]" />
+                  <Shield className="h-3 w-3 text-[var(--color-accent)] fill-[var(--color-accent)]" />
                   <span className="label-technical text-[9px] sm:text-[10px]">Operational Telemetry</span>
                 </div>
                 <h1 className="text-2xl sm:text-3xl font-bold uppercase tracking-tighter leading-none font-space-grotesk">
@@ -704,16 +723,71 @@ export default function App() {
             </div>
           </div>
 
+          {/* Runner Tab Switcher */}
+          {role === 'runner' && gameState!.stage !== 'complete' && (
+            <div className="flex gap-1.5 mb-6 p-1 glass-morphism border border-white/10 rounded-xl max-w-sm mx-auto">
+              <button
+                onClick={() => setRunnerTab('intel')}
+                className={cn(
+                  'flex-1 py-2 px-3 rounded-lg font-mono text-[10px] uppercase tracking-widest transition-all duration-200 flex items-center justify-center gap-2',
+                  runnerTab === 'intel'
+                    ? 'bg-white text-black font-bold shadow'
+                    : 'text-white/40 hover:text-white/70 hover:bg-white/5'
+                )}
+              >
+                <Activity className="w-3 h-3" />
+                Tactical Intel
+              </button>
+              <button
+                onClick={() => setRunnerTab('map')}
+                className={cn(
+                  'flex-1 py-2 px-3 rounded-lg font-mono text-[10px] uppercase tracking-widest transition-all duration-200 flex items-center justify-center gap-2',
+                  runnerTab === 'map'
+                    ? 'bg-white text-black font-bold shadow'
+                    : 'text-white/40 hover:text-white/70 hover:bg-white/5'
+                )}
+              >
+                <MapPin className="w-3 h-3" />
+                Sector Map
+              </button>
+            </div>
+          )}
+
           {/* Main Content */}
+
+          {/* Sector Map — always mounted to prevent Leaflet re-init on tab switch; hidden via CSS */}
+          {role === 'runner' && gameState!.stage !== 'complete' && (
+            <div className={runnerTab === 'map' ? 'block' : 'hidden'}>
+              <div className="corner-card bg-[var(--color-bg-surface)] backdrop-blur-xl border border-white/5 relative">
+                <div className="corner-tr" />
+                <div className="p-5 border-b border-white/5">
+                  <span className="label-technical text-[var(--color-accent)]">Sector Telemetry</span>
+                  <h3 className="text-sm font-bold uppercase tracking-widest text-white/80 mt-0.5">Sector 0{gameState!.round + 1} — Live Map</h3>
+                </div>
+                <div className="p-4">
+                  <SectorMap
+                    rounds={rounds}
+                    currentRound={gameState!.round}
+                    roundsDone={gameState!.roundsDone}
+                    stage={gameState!.stage}
+                    visible={runnerTab === 'map'}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Tactical Intel — shown when not on map tab */}
+          <div className={role === 'runner' && runnerTab === 'map' && gameState!.stage !== 'complete' ? 'hidden' : 'block'}>
           <AnimatePresence mode="wait">
             <motion.div key={gameState!.stage + gameState!.round} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
               {!isMyTurn && gameState!.stage !== 'complete' ? (
-                <div className="corner-card border-white/10 bg-[var(--color-bg-surface)]/60 backdrop-blur-2xl p-16 text-center space-y-6">
+                <div className="corner-card glass-morphism p-16 text-center space-y-6">
 
                   <div className="relative w-20 h-20 mx-auto">
                     <div className="absolute inset-0 border border-[var(--color-accent)] animate-ping opacity-20" />
                     <div className="w-full h-full bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/40 flex items-center justify-center">
-                      {role === 'solver' ? <MapPin className="text-[var(--color-accent)] animate-pulse" /> : <Zap className="text-[var(--color-accent)] animate-pulse" />}
+                      {role === 'solver' ? <MapPin className="text-[var(--color-accent)] animate-pulse" /> : <Shield className="text-[var(--color-accent)] animate-pulse" />}
                     </div>
                   </div>
                   <div className="space-y-2">
@@ -728,7 +802,7 @@ export default function App() {
                   {gameState!.stage === 'p1_solve' && (
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
                       {/* Left: Problem Statement */}
-                      <div className="corner-card backdrop-blur-xl relative p-8 h-full">
+                      <div className="corner-card glass-morphism relative p-8 h-full">
 
                         <div className="space-y-6">
                           <div className="flex flex-col gap-2">
@@ -737,11 +811,11 @@ export default function App() {
                           </div>
 
                           {/* Problem Description */}
-                          <div className="p-4 border border-white/10 bg-[var(--color-accent-fill)] space-y-2">
+                          <div className="p-5 glass-morphism-inner space-y-3 custom-scrollbar overflow-y-auto max-h-[400px]">
                             <div className="flex justify-between items-center mb-2">
-                              <span className="label-technical block text-white/40 uppercase">Problem Statement</span>
+                              <span className="label-technical block text-white/40 uppercase tracking-widest text-[9px]">Problem Statement</span>
                             </div>
-                            <p className="text-sm leading-relaxed text-white/70 font-mono whitespace-pre-wrap">
+                            <p className="text-sm leading-relaxed text-white/90 font-mono whitespace-pre-wrap">
                               {currentRound.p1.hint}
                             </p>
                           </div>
@@ -796,7 +870,7 @@ export default function App() {
                         </Button>
 
                         {/* Console Output */}
-                        <div className="corner-card bg-[var(--color-bg-surface)] border-white/5 p-5 min-h-[140px] flex flex-col">
+                        <div className="corner-card glass-morphism-dark p-5 min-h-[140px] flex flex-col">
                           <span className="label-technical mb-3 block text-[var(--color-accent)]/60">Execution Console</span>
                           <div className="font-mono text-[11px] flex-1 overflow-y-auto custom-scrollbar space-y-1">
                             {!consoleOutput && !isRunning && (
@@ -872,7 +946,7 @@ export default function App() {
 
                   {/* P1 Solved - Show coordinates */}
                   {gameState!.stage === 'p1_solved' && (
-                    <div className="corner-card bg-[var(--color-bg-surface)]/80 backdrop-blur-2xl relative p-8 overflow-hidden">
+                    <div className="corner-card glass-morphism relative p-8 overflow-hidden">
 
                       <div className="space-y-6">
                         <div className="text-center">
@@ -883,7 +957,7 @@ export default function App() {
 
                         <div className="space-y-4">
                           {/* Coordinates Card */}
-                          <div className="corner-card bg-white/[0.03] border border-white/10 p-4 relative">
+                          <div className="corner-card glass-morphism p-4 relative">
                             <div className="grid grid-cols-2 gap-4">
                               <div>
                                 <span className="text-[10px] font-bold text-[var(--color-accent)]/60 uppercase">Latitude</span>
@@ -904,7 +978,7 @@ export default function App() {
                           </div>
 
                           {/* Passkey */}
-                          <div className="corner-card bg-white/[0.05] border border-[var(--color-accent)]/40 p-4 text-center">
+                          <div className="corner-card glass-morphism p-4 text-center">
                             <div className="text-[10px] font-bold text-[var(--color-accent)] uppercase tracking-[0.2em] mb-1">Passkey</div>
                             <div className="font-mono text-base sm:text-xl font-bold tracking-[0.22em] sm:tracking-[0.4em] text-white break-all">{currentRound.qrPasskey}</div>
                           </div>
@@ -932,18 +1006,18 @@ export default function App() {
 
                   {/* Runner Travel - Runner navigates to location */}
                   {gameState!.stage === 'runner_travel' && (
-                    <div className="corner-card bg-[var(--color-bg-surface)] backdrop-blur-xl relative p-4 sm:p-6 overflow-hidden">
+                    <div className="corner-card glass-morphism relative p-4 sm:p-6 overflow-hidden">
 
                       <div className="space-y-4">
                         <div className="flex flex-col gap-1">
-                          <Badge className="w-fit mb-1 bg-[var(--color-accent)]/10 text-white border border-[var(--color-accent)] text-[10px] uppercase">Round {gameState!.round + 1}</Badge>
+                          <Badge className="w-fit mb-1 bg-[var(--color-accent)]/10 text-white border border-white/20 text-[10px] uppercase text-xs">Round {gameState!.round + 1}</Badge>
                           <h2 className="text-lg font-bold tracking-widest uppercase">Travel to Location</h2>
                           <p className="text-[10px] text-white/40 uppercase tracking-widest leading-relaxed">Find the volunteer at the coordinates below.</p>
                         </div>
 
                         <div className="space-y-3">
                           {gameState!.handoff && (
-                            <div className="corner-card border-white/10 bg-white/[0.03] p-3 space-y-1.5 text-sm relative">
+                            <div className="corner-card glass-morphism p-3 space-y-1.5 text-sm relative">
                               <div className="corner-tr" />
                               <div><span className="text-[10px] uppercase text-[var(--color-accent)]/60 font-bold mr-2">Volunteer:</span> {gameState!.handoff.volunteer}</div>
                               <div><span className="text-[10px] uppercase text-[var(--color-accent)]/60 font-bold mr-2">Passkey:</span> <span className="font-mono text-white tracking-widest">{gameState!.handoff.passkey}</span></div>
@@ -952,7 +1026,7 @@ export default function App() {
                           )}
 
                           {/* Coordinates */}
-                          <div className="corner-card bg-[var(--color-bg-void)] grid grid-cols-2 gap-3 p-3 border border-white/5">
+                          <div className="corner-card glass-morphism-dark grid grid-cols-2 gap-3 p-3">
                             <div>
                               <span className="text-[10px] font-bold text-white/30 uppercase block mb-0.5">Latitude</span>
                               <div className="font-mono text-sm text-white/80">{currentRound.coord.lat}</div>
@@ -964,12 +1038,12 @@ export default function App() {
                           </div>
 
                           {/* Volunteer card */}
-                          <div className={cn("corner-card flex items-center gap-3 p-3 border border-white/5 transition-all duration-500 bg-[var(--color-accent)]", currentRound.volunteer.bg)}>
-                            <div className={cn("w-9 h-9 shrink-0 rounded-none border border-white/10 flex items-center justify-center font-bold text-sm", currentRound.volunteer.color)}>
+                          <div className="corner-card flex items-center gap-3 p-3 border border-white/20 transition-all duration-500 bg-black/40">
+                            <div className="w-9 h-9 shrink-0 rounded-none border border-white/10 flex items-center justify-center font-bold text-sm text-[var(--color-accent)] bg-[var(--color-accent)]/10">
                               {currentRound.volunteer.initials}
                             </div>
                             <div className="flex flex-col min-w-0">
-                              <div className={cn("font-bold text-base uppercase tracking-wider truncate", currentRound.volunteer.color)}>
+                              <div className="font-bold text-base uppercase tracking-wider truncate text-white">
                                 {currentRound.volunteer.name}
                               </div>
                               <div className="text-[10px] text-white/60 uppercase tracking-widest font-mono truncate">
@@ -1014,7 +1088,7 @@ export default function App() {
 
                   {/* Final QR Handshake */}
                   {gameState!.stage === 'final_qr' && (
-                    <div className="corner-card bg-[var(--color-bg-surface)] backdrop-blur-xl p-6 sm:p-8 border border-[var(--color-accent)]/30 relative text-center overflow-hidden">
+                    <div className="corner-card glass-morphism p-6 sm:p-8 relative text-center overflow-hidden">
 
                       <div className="absolute inset-0 bg-white/[0.02] pointer-events-none" />
                       <div className="relative z-10 space-y-6">
@@ -1034,13 +1108,18 @@ export default function App() {
                             )}
 
                             {finalQrError && (
-                              <div className="px-4 py-2.5 rounded-full border border-[var(--color-accent)]/60 bg-[var(--color-accent)]/20 text-[var(--color-accent)] text-[10px] uppercase tracking-widest text-center backdrop-blur-sm">
-                                {finalQrError}
+                              <div className="flex justify-center">
+                                <TacticalStatus
+                                  tone="error"
+                                  label="Authentication Error"
+                                  message={finalQrError}
+                                  icon={AlertCircle}
+                                />
                               </div>
                             )}
 
                             {!!finalQrImageUrl && (
-                              <div className="mx-auto w-fit p-3 sm:p-4 border border-[var(--color-accent)]/40 bg-white">
+                              <div className="mx-auto w-fit p-3 sm:p-4 border border-white/20 bg-white">
                                 <img src={finalQrImageUrl} alt="Final completion QR code w-52 h-52 sm:w-72 sm:h-72 object-contain" />
                               </div>
                             )}
@@ -1088,27 +1167,27 @@ export default function App() {
 
                   {/* Quest Complete */}
                   {gameState!.stage === 'complete' && (
-                    <div className="corner-card bg-[var(--color-bg-surface)] backdrop-blur-xl p-8 border border-[var(--color-accent)]/30 relative text-center overflow-hidden">
+                    <div className="corner-card glass-morphism bg-black/20 backdrop-blur-xl p-8 border border-white/20 relative text-center overflow-hidden">
 
                       <div className="absolute inset-0 bg-white/[0.02] pointer-events-none" />
                       <div className="relative z-10 space-y-8">
                         <div>
-                          <Zap className="h-16 w-16 text-[var(--color-accent)] fill-[var(--color-accent)] mx-auto mb-6 animate-pulse" />
-                          <h2 className="text-3xl font-bold tracking-[0.3em] uppercase mb-2 text-[var(--color-accent)]">Quest Complete</h2>
+                          <Activity className="h-16 w-16 text-white fill-white/10 mx-auto mb-6 animate-pulse" />
+                          <h2 className="text-3xl font-bold tracking-[0.3em] uppercase mb-2 text-white">Quest Complete</h2>
                           <p className="text-[10px] text-white/60 uppercase tracking-[0.2em] sm:tracking-[0.4em]">All nodes synchronized. Protocol achieved.</p>
                         </div>
 
                         <div className="space-y-3">
                           {rounds.map((r: RoundQuestion, i: number) => (
-                            <div key={i} className="corner-card flex items-center gap-3 p-4 bg-white/5 border border-white/5 text-left relative group hover:border-[var(--color-accent)]/30 transition-all">
-                              <div className={cn("w-10 h-10 rounded-none border border-white/10 flex items-center justify-center text-xs font-bold", r.volunteer.bg, r.volunteer.color)}>
+                            <div key={i} className="corner-card glass-morphism flex items-center gap-3 p-4 bg-white/[0.02] border border-white/10 text-left relative group hover:border-white/30 transition-all">
+                              <div className="w-10 h-10 rounded-none border border-white/10 flex items-center justify-center text-xs font-bold bg-white/5 text-white">
                                 {r.volunteer.initials}
                               </div>
                               <div className="flex-1">
-                                <div className="text-xs font-bold uppercase tracking-widest text-[var(--color-accent)]/80">Round {i + 1}</div>
+                                <div className="text-xs font-bold uppercase tracking-widest text-white/80">Round {i + 1}</div>
                                 <div className="text-[10px] text-white/40 uppercase tracking-tighter">{r.coord.place}</div>
                               </div>
-                              <CheckCircle2 className="h-5 w-5 text-[var(--color-accent)]" />
+                              <CheckCircle2 className="h-5 w-5 text-white" />
                             </div>
                           ))}
                         </div>
@@ -1120,29 +1199,7 @@ export default function App() {
               )}
             </motion.div>
           </AnimatePresence>
-
-          {/* Game Map */}
-          {role !== 'solver' && (
-            <div className="mt-[var(--svh-md)]">
-              <div className="corner-card bg-[var(--color-bg-surface)] backdrop-blur-xl border border-white/5 relative">
-                <div className="corner-tr" />
-                <div className="p-6 border-b border-white/5 flex justify-between items-center">
-                  <div>
-                    <span className="label-technical text-[var(--color-accent)]">Sector Telemetry</span>
-                    <h3 className="text-m font-bold uppercase tracking-widest text-white/80">{gameState!.stage === 'complete' ? "Deployment Finished" : `Sector 0${gameState!.round + 1}`}</h3>
-                  </div>
-                </div>
-                <div className="p-4">
-                  <SectorMap
-                    rounds={rounds}
-                    currentRound={gameState!.round}
-                    roundsDone={gameState!.roundsDone}
-                    stage={gameState!.stage}
-                  />
-                </div>
-              </div>
-            </div>
-          )}
+          </div>
         </div>
       </div>
 
@@ -1152,20 +1209,23 @@ export default function App() {
           onClick={() => setIsCommsOpen(true)}
           className={cn(
             "fixed bottom-8 right-8 w-14 h-14 rounded-full z-[100] shadow-2xl transition-all duration-300 group overflow-hidden",
-            "bg-black border border-[var(--color-accent)]/30 flex items-center justify-center hover:scale-110 active:scale-95",
+            "bg-black border border-white/20 flex items-center justify-center hover:scale-110 active:scale-95",
             isCommsOpen ? "opacity-0 scale-90 pointer-events-none" : "opacity-100 scale-100"
           )}
         >
-          <div className="absolute inset-0 bg-[var(--color-accent)]/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-          <MessageSquare className="w-6 h-6 text-[var(--color-accent)] group-hover:text-[var(--color-accent)]/80 transition-colors" />
+          <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+          <MessageSquare className="w-6 h-6 text-white group-hover:text-white/80 transition-colors" />
 
           {/* Notification ping */}
-          {gameState?.lastMessage && gameState.lastMessage.timestamp > lastMessageNoticeRef.current && gameState.lastMessage.senderRole !== role && (
-            <span className="absolute top-3 right-3 flex h-3 w-3">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--color-accent)] opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-[var(--color-accent)]"></span>
-            </span>
-          )}
+          {gameState?.lastMessage &&
+            lastMessageNoticeRef.current !== 0 &&
+            gameState.lastMessage.timestamp > lastMessageNoticeRef.current &&
+            gameState.lastMessage.senderRole !== session.role && (
+              <span className="absolute top-3 right-3 flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--color-accent)] opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-[var(--color-accent)]"></span>
+              </span>
+            )}
         </button>
       )}
 
@@ -1173,7 +1233,7 @@ export default function App() {
       {session && (role === 'solver' || role === 'runner') && (
         <TacticalComms
           token={session.token}
-          role={role}
+          role={session.role}
           isOpen={isCommsOpen}
           onClose={() => setIsCommsOpen(false)}
           lastMessage={gameState?.lastMessage}

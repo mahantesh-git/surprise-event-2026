@@ -303,16 +303,17 @@ export interface LeaderboardTeam {
   finishTime: string | null;
   currentLat: number | null;
   currentLng: number | null;
+  currentHeading: number | null;
 }
 
 export async function getLeaderboard() {
   return requestJson<{ leaderboard: LeaderboardTeam[] }>('/leaderboard', { method: 'GET' });
 }
 
-export async function updateRunnerLocation(token: string, lat: number, lng: number) {
+export async function updateRunnerLocation(token: string, lat: number, lng: number, heading: number | null = null) {
   return requestJson<{ ok: boolean }>('/runner/location', {
     method: 'PUT',
-    body: JSON.stringify({ lat, lng }),
+    body: JSON.stringify({ lat, lng, heading }),
   }, token);
 }
 

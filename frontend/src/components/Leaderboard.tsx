@@ -99,17 +99,27 @@ function MapView({ teams, questions, now }: { teams: LeaderboardTeam[], question
       const durStr = formatDuration(team.startTime, team.finishTime, now);
 
       const html = `
-        <div style="position:relative;display:flex;flex-direction:column;align-items:center;transform:translate(0,-16px);pointer-events:none;">
-          <div style="background:rgba(0,0,0,0.85);border:1px solid rgba(238, 58, 23, 0.4);border-radius:4px;padding:4px 8px;margin-bottom:6px;box-shadow:0 0 10px rgba(0,0,0,0.9);display:flex;flex-direction:column;align-items:center;white-space:nowrap;backdrop-filter:blur(4px);">
-             <span style="color:#fff;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:1px;text-shadow:0 0 4px rgba(255,255,255,0.3);">${team.name}</span>
-             <span style="color:var(--color-accent);font-size:10px;font-family:monospace;margin-top:2px;display:flex;gap:8px;">
-               <span>${team.solvedCount}/${questions.length}</span>
-               <span>${durStr}</span>
-             </span>
+        <div style="position:relative;display:flex;flex-direction:column;align-items:center;transform:translate(0,-100%);margin-top:-6px;pointer-events:none;font-family:var(--font-mono);">
+          <!-- Tooltip Container -->
+          <div style="background:rgba(10,10,10,0.9);border:1px solid rgba(238, 58, 23, 0.4);padding:4px 10px;margin-bottom:8px;box-shadow:0 0 15px rgba(0,0,0,0.5);display:flex;flex-direction:column;align-items:center;white-space:nowrap;backdrop-filter:blur(4px);border-radius:2px;">
+             <span style="color:#fff;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">${team.name}</span>
+             <div style="display:flex;gap:12px;align-items:center;border-top:1px solid rgba(255,255,255,0.1);padding-top:2px;">
+               <span style="color:var(--color-accent);font-size:9px;font-weight:bold;">${team.solvedCount}/${questions.length}</span>
+               <span style="color:rgba(255,255,255,0.4);font-size:9px;">${durStr}</span>
+             </div>
           </div>
-          <div style="position:relative;width:14px;height:14px;">
-            <div style="position:absolute;inset:-8px;background:rgba(238, 58, 23, 0.25);border-radius:50%;${pulse ? 'animation:ping 1.5s cubic-bezier(0,0,0.2,1) infinite' : ''}"></div>
-            <div style="position:absolute;inset:0;background:${color};border-radius:50%;border:1px solid #000;box-shadow:0 0 8px rgba(238, 58, 23, 0.8);"></div>
+          
+          <!-- Diamond Marker -->
+          <div style="position:relative;width:12px;height:12px;display:flex;align-items:center;justify-content:center;">
+             ${team.currentHeading !== null ? `
+               <div style="position:absolute;width:32px;height:32px;display:flex;align-items:center;justify-content:center;transform:rotate(${team.currentHeading}deg);transition:transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);">
+                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                   <path d="M12 0L16 10H8L12 0Z" fill="var(--color-accent)" fill-opacity="0.7" />
+                 </svg>
+               </div>
+             ` : ''}
+             <div style="position:absolute;width:18px;height:18px;background:rgba(238, 58, 23, 0.3);border-radius:50%;filter:blur(4px);opacity:0.8;${pulse ? 'animation:marker-pulse 2s infinite' : ''}"></div>
+             <div style="width:8px;height:8px;background:var(--color-accent);transform:rotate(45deg);border:1px solid #000;box-shadow:0 0 8px var(--color-accent);"></div>
           </div>
         </div>
       `;
@@ -137,7 +147,7 @@ function MapView({ teams, questions, now }: { teams: LeaderboardTeam[], question
     });
   }, [teams, questions, now]);
 
-  return <div ref={containerRef} className="absolute inset-0 z-0 bg-[#060606]" />;
+  return <div ref={containerRef} className="absolute inset-0 z-0 bg-white/[0.03]" />;
 }
 
 
@@ -146,7 +156,7 @@ export function Leaderboard() {
   const [questions, setQuestions] = useState<RoundQuestion[]>([]);
   const [loading, setLoading] = useState(true);
   const [now, setNow] = useState(Date.now());
-  const [isListVisible, setIsListVisible] = useState(true);
+  const [isListVisible, setIsListVisible] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
@@ -208,19 +218,21 @@ export function Leaderboard() {
 
   useEffect(() => {
     fetchBoard();
-    const intv = setInterval(fetchBoard, 5000);
+    const intv = setInterval(fetchBoard, 2000);
     return () => clearInterval(intv);
   }, []);
 
   if (loading) return <div className="text-white/50 text-[10px] tracking-widest uppercase p-12 text-center">Loading Data Link...</div>;
 
   return (
-    <div ref={rootRef} className={`relative w-full overflow-hidden bg-[#060606] ${isFullscreen ? 'h-screen rounded-none border-none' : 'h-[calc(100vh-120px)] min-h-[420px] sm:h-[calc(100vh-140px)] sm:min-h-[500px] rounded-xl border border-white/10'}`}>
+    <div ref={rootRef} className={`relative w-full overflow-hidden ${isFullscreen ? 'h-screen rounded-none border-none' : 'h-[calc(100vh-120px)] min-h-[420px] sm:h-[calc(100vh-140px)] sm:min-h-[500px] rounded-xl border border-white/10'}`}>
       {/* Full Screen Map View */}
       {questions.length > 0 ? <MapView teams={teams} questions={questions} now={now} /> : <div className="absolute inset-0 flex items-center justify-center text-white/50 text-xs font-mono tracking-widest z-0">No Rounds Configured</div>}
 
-      {/* Floating List View overlay on the right */}
-      <div className={`absolute top-2 left-2 right-2 sm:top-4 sm:right-4 sm:left-auto flex flex-col h-[calc(100%-1rem)] sm:h-[calc(100%-2rem)] max-h-[700px] z-10 transition-all duration-300 ${isListVisible ? 'w-auto sm:w-full sm:max-w-[360px] corner-card border border-white/10 shadow-2xl backdrop-blur-xl bg-black/60' : 'w-auto'}`}>
+      <div 
+        className={`absolute top-4 flex flex-col h-[calc(100%-2rem)] max-h-[700px] z-20 transition-all duration-300 ${isListVisible ? 'w-[360px] max-w-[calc(100%-2rem)] corner-card border border-white/10 shadow-2xl glass-morphism' : 'w-auto'}`}
+        style={{ right: '1rem', left: 'auto' }}
+      >
         {isListVisible ? (
           <>
             <div className="px-3 sm:px-4 py-3 border-b border-white/5 flex items-center justify-between bg-[var(--color-accent-fill)]">
@@ -272,7 +284,7 @@ export function Leaderboard() {
                         hidden: { opacity: 0, x: -20 },
                         show: { opacity: 1, x: 0, transition: { ease: [0.87, 0, 0.13, 1], duration: 0.6 } }
                       }}
-                      className="corner-card bg-[var(--color-bg-surface)] border border-white/5 p-3 relative group transition-colors hover:border-[var(--color-accent)]/20 backdrop-blur-md overflow-hidden"
+                      className="corner-card glass-morphism-dark p-3 relative group transition-colors hover:border-[var(--color-accent)]/20 overflow-hidden"
                     >
                       <div className="absolute right-0 top-0 bottom-0 w-24 bg-gradient-to-l from-white/[0.02] to-transparent pointer-events-none" />
                       <div className="absolute right-3 top-1/2 -translate-y-1/2 opacity-10 text-3xl font-black italic select-none font-space-grotesk group-hover:opacity-20 group-hover:text-[var(--color-accent)] transition-all">
@@ -281,8 +293,8 @@ export function Leaderboard() {
                       <div className="pr-12 relative z-10">
                         <h3 className="font-bold text-xs uppercase tracking-widest text-[var(--color-accent)] truncate">{t.name}</h3>
                         <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-2 text-[10px] text-white/50 uppercase tracking-widest font-mono">
-                          <span className="flex items-center gap-1.5 bg-black/40 px-2 py-0.5"><Target className="w-3 h-3 text-[var(--color-accent)]/50" /> {t.solvedCount}/{questions.length}</span>
-                          <span className="flex items-center gap-1.5 bg-black/40 px-2 py-0.5"><Clock className="w-3 h-3 text-[var(--color-accent)]/50" /> {formatDuration(t.startTime, t.finishTime, now)}</span>
+                          <span className="flex items-center gap-1.5 bg-white/[0.03] px-2 py-0.5"><Target className="w-3 h-3 text-[var(--color-accent)]/50" /> {t.solvedCount}/{questions.length}</span>
+                          <span className="flex items-center gap-1.5 bg-white/[0.03] px-2 py-0.5"><Clock className="w-3 h-3 text-[var(--color-accent)]/50" /> {formatDuration(t.startTime, t.finishTime, now)}</span>
                         </div>
                         {t.finishTime && <div className="mt-3 text-[var(--color-accent)] font-bold text-[9px] uppercase tracking-[0.2em] flex items-center gap-1"><Zap className="w-3 h-3" /> Deployment Complete</div>}
                       </div>
@@ -296,14 +308,14 @@ export function Leaderboard() {
           <div className="absolute right-2 top-2 sm:right-0 sm:top-0 flex flex-col gap-2">
             <button
               onClick={toggleFullscreen}
-              className="bg-black/80 border border-white/10 text-white/50 p-3 rounded shadow-black-sm backdrop-blur-xl hover:bg-white/5 hover:text-white transition-all flex items-center justify-center group pointer-events-auto"
+              className="bg-white/[0.03] border border-white/10 text-white/50 p-3 rounded shadow-black-sm backdrop-blur-xl hover:bg-white/5 hover:text-white transition-all flex items-center justify-center group pointer-events-auto"
               title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
             >
               {isFullscreen ? <Minimize className="w-5 h-5 group-hover:scale-110 transition-transform" /> : <Maximize className="w-5 h-5 group-hover:scale-110 transition-transform" />}
             </button>
             <button
               onClick={() => setIsListVisible(true)}
-              className="bg-black/80 border border-[var(--color-accent)]/30 text-[var(--color-accent)] p-3 rounded shadow-black-md backdrop-blur-xl hover:bg-[var(--color-accent)]/10 transition-all flex items-center justify-center group pointer-events-auto"
+              className="bg-white/[0.03] border border-[var(--color-accent)]/30 text-[var(--color-accent)] p-3 rounded shadow-black-md backdrop-blur-xl hover:bg-[var(--color-accent)]/10 transition-all flex items-center justify-center group pointer-events-auto"
               title="Show Leaderboard"
             >
               <Trophy className="w-5 h-5 group-hover:scale-110 transition-transform" />

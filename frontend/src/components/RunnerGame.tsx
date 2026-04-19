@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Crosshair, Brain, LayoutGrid, CheckCircle2, RefreshCcw, Trophy,
-  Star, Fingerprint, QrCode, Shield, ChevronRight, AlertCircle, Sparkles,
+  Star, Fingerprint, QrCode, Shield, ChevronRight, AlertCircle, Activity,
 } from 'lucide-react';
+import { TacticalStatus } from './TacticalStatus';
 import { Button } from '@/components/ui/button';
 import { verifyRunnerLocationQr, verifyRunnerPasskey, completeRunnerGame } from '@/lib/api';
 import { QRScanner } from '@/components/QRScanner';
@@ -47,13 +48,12 @@ const TapGame = ({ onComplete }: { onComplete: () => void }) => {
 
   if (timeLeft === 0) return (
     <div className="flex flex-col items-center justify-center p-8 space-y-6">
-      <div className="px-4 py-2.5 rounded-full border border-[var(--color-accent)]/30 bg-[var(--color-accent)]/10 text-[var(--color-accent)] flex items-center gap-3 shadow-accent-md">
-        <RefreshCcw className="w-4 h-4 animate-spin-slow" />
-        <div className="flex flex-col items-start leading-none">
-          <span className="text-[8px] uppercase tracking-[0.2em] opacity-50 mb-0.5">Operation Failure</span>
-          <span className="text-[11px] font-bold uppercase tracking-widest">Time Expired</span>
-        </div>
-      </div>
+      <TacticalStatus
+        tone="error"
+        label="Operation Failure"
+        message="Time Expired"
+        icon={RefreshCcw}
+      />
       <button
         onClick={() => { setTaps(0); setTimeLeft(15); haptic(100); }}
         className="bg-zinc-800 hover:bg-zinc-700 px-8 py-4 rounded-xl font-bold text-sm uppercase tracking-widest transition-colors border border-zinc-700 text-white/80"
@@ -209,10 +209,12 @@ const PatternGame = ({ onComplete }: { onComplete: () => void }) => {
           animate={{ opacity: 1, y: 0 }}
           className="flex justify-center mb-4"
         >
-          <div className="px-4 py-2 rounded-full border border-[var(--color-accent)]/30 bg-[var(--color-accent)]/10 text-[var(--color-accent)] text-[9px] uppercase tracking-widest flex items-center gap-2">
-            <AlertCircle className="w-3.5 h-3.5" />
-            Sequence Mismatch: Restarting
-          </div>
+          <TacticalStatus
+            tone="error"
+            label="Security Alert"
+            message="Sequence Mismatch: Restarting"
+            icon={AlertCircle}
+          />
         </motion.div>
       )}
       <div className="text-sm font-mono text-white/40 text-center">
@@ -297,7 +299,7 @@ export function RunnerGame({ token, currentRoundIndex, totalRounds, onRoundCompl
       {/* ── LOCATION VERIFICATION ── */}
       {screen === 'location' && (
         <motion.div key="location" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
-          <div className="corner-card bg-[var(--color-bg-surface)] backdrop-blur-xl relative p-8 max-w-md mx-auto">
+          <div className="corner-card glass-morphism relative p-8 max-w-md mx-auto">
 
             <div className="space-y-6">
               <div className="text-center space-y-3">
@@ -313,10 +315,12 @@ export function RunnerGame({ token, currentRoundIndex, totalRounds, onRoundCompl
 
               {error && (
                 <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} className="flex justify-center">
-                  <div className="px-4 py-2.5 rounded-full border border-[var(--color-accent)]/30 bg-[var(--color-accent)]/10 text-[var(--color-accent)] text-[10px] uppercase tracking-widest flex items-center gap-2.5 shadow-accent-md">
-                    <AlertCircle className="w-3.5 h-3.5" />
-                    {error}
-                  </div>
+                  <TacticalStatus
+                    tone="error"
+                    label="Verification Error"
+                    message={error}
+                    icon={AlertCircle}
+                  />
                 </motion.div>
               )}
 
@@ -358,7 +362,7 @@ export function RunnerGame({ token, currentRoundIndex, totalRounds, onRoundCompl
       {/* ── PASSKEY ENTRY ── */}
       {screen === 'passkey' && (
         <motion.div key="passkey" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
-          <div className="corner-card bg-[var(--color-bg-surface)] backdrop-blur-xl relative p-8 max-w-md mx-auto">
+          <div className="corner-card glass-morphism relative p-8 max-w-md mx-auto">
 
             <div className="space-y-6">
               <div className="text-center space-y-3">
@@ -389,10 +393,12 @@ export function RunnerGame({ token, currentRoundIndex, totalRounds, onRoundCompl
 
                 {error && (
                   <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} className="flex justify-center">
-                    <div className="px-4 py-2.5 rounded-full border border-[var(--color-accent)]/30 bg-[var(--color-accent)]/10 text-[var(--color-accent)] text-[10px] uppercase tracking-widest flex items-center gap-2.5 shadow-accent-md">
-                      <AlertCircle className="w-3.5 h-3.5" />
-                      {error}
-                    </div>
+                    <TacticalStatus
+                      tone="error"
+                      label="Key Error"
+                      message={error}
+                      icon={AlertCircle}
+                    />
                   </motion.div>
                 )}
 
@@ -417,7 +423,7 @@ export function RunnerGame({ token, currentRoundIndex, totalRounds, onRoundCompl
       {/* ── MINIGAME ── */}
       {screen === 'game' && (
         <motion.div key="game" initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}>
-          <div className="corner-card bg-[var(--color-bg-surface)] backdrop-blur-xl border border-white/5 relative">
+          <div className="corner-card glass-morphism relative">
             <div className="corner-tr" />
             {/* Game Header */}
             <div className="flex items-center justify-between p-6 border-b border-white/5">
@@ -451,7 +457,7 @@ export function RunnerGame({ token, currentRoundIndex, totalRounds, onRoundCompl
       {/* ── VICTORY ── */}
       {screen === 'victory' && (
         <motion.div key="victory" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5 }}>
-          <div className="corner-card bg-[var(--color-bg-surface)] backdrop-blur-xl p-8 border border-[var(--color-accent)]/30 relative text-center overflow-hidden">
+          <div className="corner-card glass-morphism p-8 relative text-center overflow-hidden">
 
             <div className="absolute inset-0 bg-[var(--color-accent)]/5 pointer-events-none" />
             <div className="relative z-10 space-y-8">
@@ -471,7 +477,7 @@ export function RunnerGame({ token, currentRoundIndex, totalRounds, onRoundCompl
 
               <div className="bg-[var(--color-accent)]/5 border border-[var(--color-accent)]/20 p-4 space-y-2">
                 <div className="flex items-center justify-center gap-2 text-[var(--color-accent)] font-bold text-sm">
-                  <Sparkles className="w-4 h-4" />
+                  <Activity className="w-4 h-4" />
                   {isLastRound ? 'FINAL ROUND COMPLETE!' : 'READY FOR NEXT ROUND'}
                 </div>
                 <p className="text-white/40 text-xs font-mono">
