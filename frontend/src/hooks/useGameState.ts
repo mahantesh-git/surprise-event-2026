@@ -36,6 +36,8 @@ function getStorageKey(role: Role) {
 export interface TeamProfile {
   id: string;
   name: string;
+  solverName?: string;
+  runnerName?: string;
 }
 
 export interface TeamSession {

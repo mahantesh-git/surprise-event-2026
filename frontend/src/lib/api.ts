@@ -68,6 +68,8 @@ export interface TeamSession {
   team: {
     id: string;
     name: string;
+    solverName?: string;
+    runnerName?: string;
   };
   gameState: GameState;
   lastMessage?: ChatMessage | null;
@@ -82,6 +84,8 @@ export interface TeamProfile {
   team: {
     id: string;
     name: string;
+    solverName?: string;
+    runnerName?: string;
   };
   role: Role;
 }
@@ -245,10 +249,10 @@ export async function adminLogin(email: string, password: string) {
 }
 
 export async function getAdminTeams(token: string) {
-  return requestJson<{ teams: Array<{ id: string; name: string; email: string; createdAt: string; lastLoginAt: string | null }> }>('/admin/teams', { method: 'GET' }, token);
+  return requestJson<{ teams: Array<{ id: string; name: string; email: string; solverName: string; runnerName: string; createdAt: string; lastLoginAt: string | null }> }>('/admin/teams', { method: 'GET' }, token);
 }
 
-export async function createAdminTeam(token: string, payload: { name: string; email: string; password: string }) {
+export async function createAdminTeam(token: string, payload: { name: string; email: string; password: string; solverName?: string; runnerName?: string }) {
   return requestJson<{ ok: boolean }>('/admin/teams', {
     method: 'POST',
     body: JSON.stringify(payload),

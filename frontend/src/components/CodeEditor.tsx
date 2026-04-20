@@ -260,7 +260,7 @@ export function CodeEditor({
             tabSize: 4,
             automaticLayout: true,
             cursorStyle: 'line',
-            cursorBlinking: 'phase',
+            cursorBlinking: 'solid',
             renderLineHighlight: 'line',
             renderWhitespace: 'none',
             smoothScrolling: true,

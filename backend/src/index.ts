@@ -259,6 +259,8 @@ app.post('/api/auth/login', route(async (request, response) => {
     team: {
       id: team._id.toString(),
       name: team.name,
+      solverName: team.solverName,
+      runnerName: team.runnerName,
     },
     gameState,
   });
@@ -281,6 +283,8 @@ app.get('/api/session', requireAuth, route(async (request: AuthedRequest, respon
     team: {
       id: team._id.toString(),
       name: team.name,
+      solverName: team.solverName,
+      runnerName: team.runnerName,
     },
     role: auth.role,
   });
@@ -883,6 +887,8 @@ app.get('/api/admin/teams', requireAdmin, route(async (_request: AdminAuthedRequ
       id: team._id.toString(),
       name: team.name,
       email: team.email || '',
+      solverName: team.solverName || '',
+      runnerName: team.runnerName || '',
       createdAt: team.createdAt,
       lastLoginAt: team.lastLoginAt || null,
     })),
@@ -890,7 +896,7 @@ app.get('/api/admin/teams', requireAdmin, route(async (_request: AdminAuthedRequ
 }));
 
 app.post('/api/admin/teams', requireAdmin, route(async (request: AdminAuthedRequest, response) => {
-  const { name, email, password } = request.body as { name?: string; email?: string; password?: string };
+  const { name, email, password, solverName, runnerName } = request.body as { name?: string; email?: string; password?: string; solverName?: string; runnerName?: string };
   if (!name || !password) {
     response.status(400).json({ error: 'name and password are required' });
     return;
@@ -898,7 +904,7 @@ app.post('/api/admin/teams', requireAdmin, route(async (request: AdminAuthedRequ
 
   const roundCount = await getRoundCount();
   try {
-    await createTeam(name, password, email?.trim() || undefined, roundCount, false);
+    await createTeam(name, password, email?.trim() || undefined, solverName?.trim() || undefined, runnerName?.trim() || undefined, roundCount, false);
   } catch (err: any) {
     response.status(409).json({ error: 'Team already exists' });
     return;

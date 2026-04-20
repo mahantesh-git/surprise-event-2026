@@ -15,6 +15,8 @@ interface TeamManagementProps {
 export function TeamManagement({ token, teams, onRefresh, onError }: TeamManagementProps) {
   const [teamName, setTeamName] = useState('');
   const [teamEmail, setTeamEmail] = useState('');
+  const [teamSolverName, setTeamSolverName] = useState('');
+  const [teamRunnerName, setTeamRunnerName] = useState('');
   const [teamPassword, setTeamPassword] = useState('');
   const [isCreating, setIsCreating] = useState(false);
 
@@ -23,9 +25,11 @@ export function TeamManagement({ token, teams, onRefresh, onError }: TeamManagem
     setIsCreating(true);
     onError(null);
     try {
-      await createAdminTeam(token, { name: teamName, email: teamEmail, password: teamPassword });
+      await createAdminTeam(token, { name: teamName, email: teamEmail, password: teamPassword, solverName: teamSolverName, runnerName: teamRunnerName });
       setTeamName('');
       setTeamEmail('');
+      setTeamSolverName('');
+      setTeamRunnerName('');
       setTeamPassword('');
       onRefresh();
     } catch (err) {
@@ -97,6 +101,22 @@ export function TeamManagement({ token, teams, onRefresh, onError }: TeamManagem
               </div>
 
               <div className="space-y-2">
+                <label className="text-[8px] uppercase tracking-[0.3em] text-white/30 ml-1">Solver Name</label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/20" />
+                  <Input placeholder="SOLVER NAME" value={teamSolverName} onChange={e => setTeamSolverName(e.target.value)} className="bg-white/[0.03] border-white/5 pl-9 text-[10px] uppercase tracking-widest h-11" />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[8px] uppercase tracking-[0.3em] text-white/30 ml-1">Runner Name</label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/20" />
+                  <Input placeholder="RUNNER NAME" value={teamRunnerName} onChange={e => setTeamRunnerName(e.target.value)} className="bg-white/[0.03] border-white/5 pl-9 text-[10px] uppercase tracking-widest h-11" />
+                </div>
+              </div>
+
+              <div className="space-y-2">
                 <label className="text-[8px] uppercase tracking-[0.3em] text-white/30 ml-1">Secure_Passkey</label>
                 <div className="relative">
                   <Shield className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/20" />
@@ -147,6 +167,10 @@ export function TeamManagement({ token, teams, onRefresh, onError }: TeamManagem
                   <div className="text-[10px] font-mono text-[var(--color-accent)]/60 uppercase tracking-widest">{team.id.slice(-8).toUpperCase()}</div>
                   <div className="font-black uppercase tracking-tight text-lg">{team.name}</div>
                   <div className="text-[10px] font-mono text-white/30 truncate">{team.email || 'NO_EMAIL_IDENTIFIED'}</div>
+                  <div className="flex gap-2 mt-1">
+                    {team.solverName && <span className="text-[8px] font-mono bg-blue-500/10 text-blue-400 px-1.5 py-0.5 rounded border border-blue-500/20">S: {team.solverName.toUpperCase()}</span>}
+                    {team.runnerName && <span className="text-[8px] font-mono bg-orange-500/10 text-orange-400 px-1.5 py-0.5 rounded border border-orange-500/20">R: {team.runnerName.toUpperCase()}</span>}
+                  </div>
                 </div>
 
                 <div className="mt-4 pt-4 border-t border-white/5 flex justify-between items-center text-[8px] font-mono uppercase tracking-widest text-white/20">

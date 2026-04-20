@@ -33,6 +33,8 @@ export interface TeamDocument {
   name: string;
   nameNormalized: string;
   email?: string;
+  solverName?: string;
+  runnerName?: string;
   passwordHash: string;
   gameState: GameState;
   executionAttempts?: number[];

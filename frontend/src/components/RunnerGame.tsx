@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Crosshair, Brain, LayoutGrid, CheckCircle2, RefreshCcw, Trophy,
-  Star, Fingerprint, QrCode, Shield, ChevronRight, AlertCircle, Activity,
+  Star, Fingerprint, QrCode, Shield, ChevronRight, AlertCircle, Activity, ClipboardPaste
 } from 'lucide-react';
 import { TacticalStatus } from './TacticalStatus';
 import { Button } from '@/components/ui/button';
@@ -380,7 +380,7 @@ export function RunnerGame({ token, currentRoundIndex, totalRounds, onRoundCompl
                 <div className="relative">
                   <input
                     placeholder="PASSKEY"
-                    className="w-full bg-white/5 border border-white/10 text-center h-20 text-2xl tracking-[0.4em] font-black uppercase text-white placeholder:text-white/10 focus:border-white/20 focus:bg-white/10 transition-all duration-500 outline-none rounded-xl"
+                    className="w-full bg-white/5 border border-white/10 text-center h-20 text-2xl tracking-[0.4em] font-black uppercase text-white placeholder:text-white/10 focus:border-white/20 focus:bg-white/10 transition-all duration-500 outline-none rounded-xl pr-12"
                     value={passkey}
                     onChange={(e) => { setPasskey(e.target.value); setError(null); }}
                     onKeyDown={(e) => e.key === 'Enter' && handleVerifyPasskey()}
@@ -388,6 +388,23 @@ export function RunnerGame({ token, currentRoundIndex, totalRounds, onRoundCompl
                     autoComplete="off"
                     spellCheck={false}
                   />
+                  <button
+                    onClick={async () => {
+                      try {
+                        const text = await navigator.clipboard.readText();
+                        if (text) {
+                          setPasskey(text.trim());
+                          setError(null);
+                        }
+                      } catch (err) {
+                        console.error('Failed to read clipboard', err);
+                      }
+                    }}
+                    title="Paste Passkey"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-[var(--color-accent)] transition-colors p-2"
+                  >
+                    <ClipboardPaste className="w-6 h-6" />
+                  </button>
                   {error && <div className="absolute -bottom-[2px] left-0 right-0 h-[2px] bg-[var(--color-accent)]" />}
                 </div>
 

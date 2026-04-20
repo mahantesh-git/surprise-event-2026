@@ -12,6 +12,7 @@
 **/.nuxt/
 **/.svelte-kit/
 **/.output/
+**/event_qr_codes/
 
 # Coverage and test artifacts
 **/coverage/

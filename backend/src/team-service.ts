@@ -23,7 +23,7 @@ export async function verifyTeamPassword(team: TeamDocument, password: string) {
   return bcrypt.compare(password, team.passwordHash);
 }
 
-export async function createTeam(teamName: string, password: string, email: string | undefined, roundCount: number, force = false) {
+export async function createTeam(teamName: string, password: string, email: string | undefined, solverName: string | undefined, runnerName: string | undefined, roundCount: number, force = false) {
   const teams = await getTeamsCollection();
   const nameNormalized = normalizeTeamName(teamName);
   const passwordHash = await bcrypt.hash(password, 10);
@@ -32,6 +32,8 @@ export async function createTeam(teamName: string, password: string, email: stri
     name: teamName.trim(),
     nameNormalized,
     email,
+    solverName: solverName?.trim() || undefined,
+    runnerName: runnerName?.trim() || undefined,
     passwordHash,
     gameState: createInitialGameState(roundCount),
     createdAt: now,

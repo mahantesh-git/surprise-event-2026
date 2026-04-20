@@ -10,16 +10,17 @@ export function TacticalBackground() {
         
         {/* The generated high-fidelity background */}
         <div 
-          className="absolute inset-0 opacity-40 mix-blend-screen grayscale-[0.5]"
+          className="absolute inset-0 opacity-80 mix-blend-screen"
           style={{ 
             backgroundImage: 'url(/assets/images/cyberpunk-bg.png)',
             backgroundSize: 'cover',
-            backgroundPosition: 'center'
+            backgroundPosition: 'center',
+            filter: 'contrast(1.2) brightness(1.1)'
           }}
         />
 
         {/* Deep red atmospheric overlay */}
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(139,0,0,0.15)_0%,rgba(10,2,0,0.8)_100%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(238,58,23,0.25)_0%,rgba(10,2,0,0.9)_100%)]" />
         
         {/* Grain / Noise Overlay */}
         <div 

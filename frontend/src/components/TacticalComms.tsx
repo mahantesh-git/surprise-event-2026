@@ -13,9 +13,12 @@ interface TacticalCommsProps {
   isOpen: boolean;
   onClose: () => void;
   lastMessage?: ChatMessage | null;
+  teamName: string;
+  teamRunnerName?: string;
+  teamSolverName?: string;
 }
 
-export function TacticalComms({ token, role, isOpen, onClose, lastMessage }: TacticalCommsProps) {
+export function TacticalComms({ token, role, isOpen, onClose, lastMessage, teamName, teamRunnerName, teamSolverName }: TacticalCommsProps) {
   const [phrases, setPhrases] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState<string | null>(null);
@@ -150,7 +153,7 @@ export function TacticalComms({ token, role, isOpen, onClose, lastMessage }: Tac
 
                         <TacticalStatus
                           tone="success"
-                          label={lastMessage.senderRole === 'runner' ? 'Comms [Runner]' : lastMessage.senderRole === 'solver' ? 'Comms [HQ]' : 'Comms [Command]'}
+                          label={lastMessage.senderRole === 'runner' ? `${teamName.toUpperCase()}[${(teamRunnerName || 'RUNNER').toUpperCase()}]` : lastMessage.senderRole === 'solver' ? `${teamName.toUpperCase()}[${(teamSolverName || 'HQ').toUpperCase()}]` : 'COMMS [COMMAND]'}
                           message={lastMessage.text}
                           icon={CheckCircle2}
                           className="animate-in fade-in slide-in-from-left-4 duration-500"
