@@ -31,7 +31,7 @@ async function main() {
 
   const questions = await getQuestionsCollection();
   const roundCount = await questions.countDocuments();
-  await createTeam(teamName, password, email, Math.max(1, roundCount), force);
+  await createTeam(teamName, password, email, undefined, undefined, Math.max(1, roundCount), force);
   console.log(`Team ${teamName} saved`);
 }
 
