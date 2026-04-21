@@ -21,12 +21,15 @@ export interface GameState {
   currentLat?: number | null;
   currentLng?: number | null;
   currentHeading?: number | null;
+  helpRequested?: boolean;
+  lastValidatedAt?: string | Date;
 }
 
 export interface ChatMessage {
   text: string;
   senderRole: string;
   timestamp: number;
+  targetRole?: 'runner' | 'solver' | 'all';
 }
 
 export interface TeamDocument {
@@ -37,6 +40,12 @@ export interface TeamDocument {
   runnerName?: string;
   passwordHash: string;
   gameState: GameState;
+  score?: number;
+  scoreHistory?: {
+    amount: number;
+    reason: string;
+    timestamp: string;
+  }[];
   executionAttempts?: number[];
   lastMessage?: ChatMessage;
   createdAt: Date;

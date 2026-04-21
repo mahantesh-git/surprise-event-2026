@@ -12,54 +12,64 @@ interface QRScannerProps {
 export function QRScanner({ onScan, onClose }: QRScannerProps) {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const qrRef = useRef<Html5Qrcode | null>(null);
+  // Prevent onScan from firing more than once per scanner mount
+  const hasScanned = useRef(false);
+
+  const stopScanner = () => {
+    const instance = qrRef.current;
+    if (!instance) return;
+    qrRef.current = null;
+    const state = instance.getState();
+    const isActive =
+      state === Html5QrcodeScannerState.SCANNING ||
+      state === Html5QrcodeScannerState.PAUSED;
+    if (isActive) {
+      instance.stop()
+        .then(() => instance.clear())
+        .catch(() => { })
+        .finally(() => {
+          const el = document.getElementById('qr-reader');
+          if (el) el.innerHTML = '';
+        });
+    } else {
+      const el = document.getElementById('qr-reader');
+      if (el) el.innerHTML = '';
+    }
+  };
 
   useEffect(() => {
     const el = document.getElementById('qr-reader');
     if (el) el.innerHTML = '';
+    hasScanned.current = false;
 
     const qr = new Html5Qrcode('qr-reader');
     qrRef.current = qr;
 
+    const handleDecode = (decodedText: string) => {
+      if (hasScanned.current) return; // Block all subsequent frames
+      hasScanned.current = true;
+      stopScanner(); // Stop the camera immediately
+      onScan(decodedText);
+    };
+
     qr.start(
       { facingMode: 'environment' },
       { fps: 10, qrbox: { width: 240, height: 240 } },
-      (decodedText) => { onScan(decodedText); },
+      handleDecode,
       () => { /* ignore per-frame errors */ }
     ).catch(() => {
       // Fallback to 'user' facing camera if 'environment' fails (e.g. laptop webcam)
       qr.start(
         { facingMode: 'user' },
         { fps: 10, qrbox: { width: 240, height: 240 } },
-        (decodedText) => { onScan(decodedText); },
+        handleDecode,
         () => { /* ignore per-frame errors */ }
       ).catch(() => {
         setErrorMsg('Camera access denied or camera is currently in use by another app.');
       });
     });
 
-    return () => {
-      const instance = qrRef.current;
-      qrRef.current = null;
-      if (!instance) return;
-
-      const state = instance.getState();
-      const isActive =
-        state === Html5QrcodeScannerState.SCANNING ||
-        state === Html5QrcodeScannerState.PAUSED;
-
-      if (isActive) {
-        instance.stop()
-          .then(() => instance.clear())
-          .catch(() => { })
-          .finally(() => {
-            const el = document.getElementById('qr-reader');
-            if (el) el.innerHTML = '';
-          });
-      } else {
-        const el = document.getElementById('qr-reader');
-        if (el) el.innerHTML = '';
-      }
-    };
+    return () => { stopScanner(); };
   }, []);
 
   return (

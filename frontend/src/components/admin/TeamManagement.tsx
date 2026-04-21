@@ -65,7 +65,7 @@ export function TeamManagement({ token, teams, onRefresh, onError }: TeamManagem
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-black uppercase tracking-tight mb-2">Operative_Registry</h2>
-          <p className="text-[10px] font-mono text-white/40 uppercase tracking-widest">Manage field agents and access nodes</p>
+          <p className="text-[10px] font-mono text-white/80 uppercase tracking-widest">Manage field agents and access nodes</p>
         </div>
         {teams.length > 0 && (
           <Button variant="ghost" onClick={handleDeleteAll} className="text-[10px] uppercase tracking-widest text-[var(--color-accent)] hover:bg-[var(--color-accent)]/10">
@@ -80,46 +80,46 @@ export function TeamManagement({ token, teams, onRefresh, onError }: TeamManagem
           <div className="corner-card glass-morphism p-8 space-y-6 sticky top-8">
             <div className="flex items-center gap-3 text-[var(--color-accent)] mb-2">
               <Plus className="w-4 h-4" />
-              <span className="text-[10px] font-mono tracking-[0.3em] uppercase opacity-60">Add_Operative</span>
+              <span className="text-[10px] font-mono tracking-[0.3em] uppercase opacity-80">Add_Operative</span>
             </div>
             
             <div className="space-y-4">
               <div className="space-y-2">
-                <label className="text-[8px] uppercase tracking-[0.3em] text-white/30 ml-1">Callsign</label>
+                <label className="text-[8px] uppercase tracking-[0.3em] text-white/80 ml-1">Callsign</label>
                 <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/20" />
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/40" />
                   <Input placeholder="OPERATIVE NAME" value={teamName} onChange={e => setTeamName(e.target.value)} className="bg-white/[0.03] border-white/5 pl-9 text-[10px] uppercase tracking-widest h-11" />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <label className="text-[8px] uppercase tracking-[0.3em] text-white/30 ml-1">Identifier (Email)</label>
+                <label className="text-[8px] uppercase tracking-[0.3em] text-white/80 ml-1">Identifier (Email)</label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/20" />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/40" />
                   <Input placeholder="REGISTRY EMAIL" value={teamEmail} onChange={e => setTeamEmail(e.target.value)} className="bg-white/[0.03] border-white/5 pl-9 text-[10px] uppercase tracking-widest h-11" />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <label className="text-[8px] uppercase tracking-[0.3em] text-white/30 ml-1">Solver Name</label>
+                <label className="text-[8px] uppercase tracking-[0.3em] text-white/80 ml-1">Solver Name</label>
                 <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/20" />
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/40" />
                   <Input placeholder="SOLVER NAME" value={teamSolverName} onChange={e => setTeamSolverName(e.target.value)} className="bg-white/[0.03] border-white/5 pl-9 text-[10px] uppercase tracking-widest h-11" />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <label className="text-[8px] uppercase tracking-[0.3em] text-white/30 ml-1">Runner Name</label>
+                <label className="text-[8px] uppercase tracking-[0.3em] text-white/80 ml-1">Runner Name</label>
                 <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/20" />
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/40" />
                   <Input placeholder="RUNNER NAME" value={teamRunnerName} onChange={e => setTeamRunnerName(e.target.value)} className="bg-white/[0.03] border-white/5 pl-9 text-[10px] uppercase tracking-widest h-11" />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <label className="text-[8px] uppercase tracking-[0.3em] text-white/30 ml-1">Secure_Passkey</label>
+                <label className="text-[8px] uppercase tracking-[0.3em] text-white/80 ml-1">Secure_Passkey</label>
                 <div className="relative">
-                  <Shield className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/20" />
+                  <Shield className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/40" />
                   <Input placeholder="PASSWORD" type="password" value={teamPassword} onChange={e => setTeamPassword(e.target.value)} className="bg-white/[0.03] border-white/5 pl-9 text-[10px] uppercase tracking-widest h-11" />
                 </div>
               </div>
@@ -139,7 +139,7 @@ export function TeamManagement({ token, teams, onRefresh, onError }: TeamManagem
         <div className="lg:col-span-2 space-y-4">
           <div className="flex items-center gap-4 mb-6">
             <Users className="text-[var(--color-accent)] w-4 h-4" />
-            <h3 className="text-[10px] font-mono uppercase tracking-[0.4em] text-white/40">Active_Registry_Nodes ({teams.length})</h3>
+            <h3 className="text-[10px] font-mono uppercase tracking-[0.4em] text-white/80">Active_Registry_Nodes ({teams.length})</h3>
           </div>
 
           <div className="grid sm:grid-cols-2 gap-4">
@@ -152,8 +152,9 @@ export function TeamManagement({ token, teams, onRefresh, onError }: TeamManagem
                 className="corner-card p-6 glass-morphism transition-all group"
               >
                 <div className="flex justify-between items-start mb-4">
-                  <div className="w-8 h-8 bg-[var(--color-accent)]/5 border border-[var(--color-accent)]/20 flex items-center justify-center font-mono text-[10px] text-[var(--color-accent)]">
-                    {team.id.slice(-2).toUpperCase()}
+                  <div className="w-10 h-8 bg-[var(--color-accent)]/5 border border-[var(--color-accent)]/20 flex flex-col items-center justify-center font-mono text-[10px] text-[var(--color-accent)]">
+                    <span className="text-[7px] opacity-50 leading-none mb-0.5">SCORE</span>
+                    <span className="leading-none">{team.score || 0}</span>
                   </div>
                   <button 
                     onClick={() => handleDeleteTeam(team.id)}
@@ -166,14 +167,14 @@ export function TeamManagement({ token, teams, onRefresh, onError }: TeamManagem
                 <div className="space-y-1">
                   <div className="text-[10px] font-mono text-[var(--color-accent)]/60 uppercase tracking-widest">{team.id.slice(-8).toUpperCase()}</div>
                   <div className="font-black uppercase tracking-tight text-lg">{team.name}</div>
-                  <div className="text-[10px] font-mono text-white/30 truncate">{team.email || 'NO_EMAIL_IDENTIFIED'}</div>
+                  <div className="text-[10px] font-mono text-white/80 truncate">{team.email || 'NO_EMAIL_IDENTIFIED'}</div>
                   <div className="flex gap-2 mt-1">
                     {team.solverName && <span className="text-[8px] font-mono bg-blue-500/10 text-blue-400 px-1.5 py-0.5 rounded border border-blue-500/20">S: {team.solverName.toUpperCase()}</span>}
                     {team.runnerName && <span className="text-[8px] font-mono bg-orange-500/10 text-orange-400 px-1.5 py-0.5 rounded border border-orange-500/20">R: {team.runnerName.toUpperCase()}</span>}
                   </div>
                 </div>
 
-                <div className="mt-4 pt-4 border-t border-white/5 flex justify-between items-center text-[8px] font-mono uppercase tracking-widest text-white/20">
+                <div className="mt-4 pt-4 border-t border-white/5 flex justify-between items-center text-[8px] font-mono uppercase tracking-widest text-white/70">
                    <span>Added: {new Date(team.createdAt).toLocaleDateString()}</span>
                    <span className="text-[var(--color-accent)]/40">Status: Active</span>
                 </div>

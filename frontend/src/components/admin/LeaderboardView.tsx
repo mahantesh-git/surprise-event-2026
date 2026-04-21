@@ -10,7 +10,7 @@ export function LeaderboardView() {
 
       <div className="absolute bottom-6 right-6 z-10 pointer-events-none">
         <div className="px-4 py-2 glass-morphism border-r-2 border-[var(--color-accent)] text-right">
-          <div className="text-[8px] font-mono text-white/40 uppercase tracking-[0.2em]">Sync_Status</div>
+          <div className="text-[8px] font-mono text-white/70 uppercase tracking-[0.2em]">Sync_Status</div>
           <div className="text-[10px] font-mono text-[var(--color-accent)] uppercase tracking-[0.3em]">Link_Established</div>
         </div>
       </div>

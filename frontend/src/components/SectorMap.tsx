@@ -57,6 +57,8 @@ export function SectorMap({ rounds, currentRound, stage, visible }: SectorMapPro
   const [routeCoords, setRouteCoords] = useState<L.LatLngTuple[]>([]); // live route path for cone bearing
   const hasCenteredRef = useRef<boolean>(false);
   const [isFullScreen, setIsFullScreen] = useState(false);
+  const pathHistoryRef = useRef<L.LatLngTuple[]>([]);
+  const pathLayerRef = useRef<L.Polyline | null>(null);
 
   const isComplete = stage === 'complete';
   const isRunnerStage = ['runner_travel', 'runner_game', 'runner_done'].includes(stage);
@@ -385,6 +387,32 @@ export function SectorMap({ rounds, currentRound, stage, visible }: SectorMapPro
       }).addTo(map);
     }
 
+    // ── Update Tactical Path (History) ────────────────────────
+    if (map) {
+      const currentPos: L.LatLngTuple = [lat, lng];
+      const lastPos = pathHistoryRef.current[pathHistoryRef.current.length - 1];
+      
+      // Only add point if moved significantly (> 2m) to keep the path clean
+      if (!lastPos || map.distance(currentPos, lastPos) > 2) {
+        pathHistoryRef.current.push(currentPos);
+        if (pathHistoryRef.current.length > 1000) pathHistoryRef.current.shift();
+      }
+
+      if (pathLayerRef.current) {
+        pathLayerRef.current.setLatLngs(pathHistoryRef.current);
+      } else if (pathHistoryRef.current.length > 1) {
+        pathLayerRef.current = L.polyline(pathHistoryRef.current, {
+          color: '#ffffff',
+          weight: 2,
+          opacity: 0.4,
+          dashArray: '5, 8',
+          lineCap: 'round',
+          lineJoin: 'round',
+          interactive: false,
+        }).addTo(map);
+      }
+    }
+
     // Only auto-center the very first time we get a GPS lock, so we don't
     // yank the camera constantly while the user is trying to pan/zoom.
     if (!hasCenteredRef.current) {
@@ -407,12 +435,13 @@ export function SectorMap({ rounds, currentRound, stage, visible }: SectorMapPro
     }
   }, [runnerCoords, rotation, hasTarget, targetLat, targetLng, routeCoords]);
 
-  // ── Draw walking route via OSRM ─────────────────────────────
+  // ── Draw walking route via OSRM (Google Maps Style) ────────────────
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !runnerCoords || !hasTarget || targetLat === null || targetLng === null) return;
 
     const [rLat, rLng] = runnerCoords;
+    // Request full geometry to follow roads exactly
     const url =
       `https://router.project-osrm.org/route/v1/foot/${rLng},${rLat};${targetLng},${targetLat}?overview=full&geometries=geojson`;
 
@@ -425,12 +454,10 @@ export function SectorMap({ rounds, currentRound, stage, visible }: SectorMapPro
             ([lng, lat]: [number, number]) => [lat, lng] as L.LatLngTuple
           ) ?? [];
 
-        // Ensure the path meets the markers exactly by adding 
-        // the precise runner and target coordinates to the OSRM results.
+        // Smoothly bridge the gap between GPS and the nearest road
         const coords: L.LatLngTuple[] = [[rLat, rLng], ...rawCoords, [targetLat!, targetLng!]];
         setRouteCoords(coords);
 
-        // Remove old route layers
         if (routeGlowRef.current) {
           mapRef.current.removeLayer(routeGlowRef.current);
           routeGlowRef.current = null;
@@ -441,39 +468,30 @@ export function SectorMap({ rounds, currentRound, stage, visible }: SectorMapPro
         }
 
         if (coords.length > 1) {
-          // Layer 1: wide glow beneath the line
+          // Layer 1: Wide Blue Glow
           routeGlowRef.current = L.polyline(coords, {
-            color: '#ffffff',
-            weight: 14,
-            opacity: 0.08,
+            color: '#00BFFF',
+            weight: 12,
+            opacity: 0.15,
             lineCap: 'round',
             lineJoin: 'round',
           }).addTo(mapRef.current);
 
-          // Layer 2: crisp solid line on top
+          // Layer 2: Main Cyan "Google Style" Line
           routeLayerRef.current = L.polyline(coords, {
-            color: '#ffffff',
-            weight: 3,
-            opacity: 0.85,
+            color: '#00BFFF',
+            weight: 5,
+            opacity: 0.8,
             lineCap: 'round',
             lineJoin: 'round',
           }).addTo(mapRef.current);
         }
       })
-      .catch(() => {
-        // Fallback: straight line with glow
-        const map = mapRef.current;
-        if (!map) return;
-        if (routeGlowRef.current) { map.removeLayer(routeGlowRef.current); routeGlowRef.current = null; }
-        if (routeLayerRef.current) { map.removeLayer(routeLayerRef.current); routeLayerRef.current = null; }
+      .catch((err) => {
+        console.warn('OSRM Fallback:', err);
+        // If road data is missing, show a straight dashed line as fallback
         const fallbackCoords: L.LatLngTuple[] = [[rLat, rLng], [targetLat!, targetLng!]];
         setRouteCoords(fallbackCoords);
-        routeGlowRef.current = L.polyline(fallbackCoords, {
-          color: '#ffffff', weight: 14, opacity: 0.08, lineCap: 'round', lineJoin: 'round',
-        }).addTo(map);
-        routeLayerRef.current = L.polyline(fallbackCoords, {
-          color: '#ffffff', weight: 3, opacity: 0.7, lineCap: 'round', lineJoin: 'round',
-        }).addTo(map);
       });
   }, [runnerCoords, hasTarget, targetLat, targetLng]);
 
@@ -544,6 +562,7 @@ export function SectorMap({ rounds, currentRound, stage, visible }: SectorMapPro
               const label = isGood ? `GPS ±${Math.round(acc)}m` : `~±${Math.round(acc)}m`;
               return (
                 <span
+                  key="gps-status"
                   className="flex items-center gap-1 font-mono text-[9px] uppercase tracking-widest"
                   style={{ color }}
                 >

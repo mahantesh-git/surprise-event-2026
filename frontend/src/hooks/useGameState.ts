@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getGameState, getSession, loginTeam, resetGameState, updateGameState, ChatMessage } from '@/lib/api';
+import { getGameState, getSession, loginTeam, resetGameState, updateGameState, ChatMessage, isAuthError } from '@/lib/api';
 
 export type Stage = 'p1_solve' | 'p1_solved' | 'runner_travel' | 'runner_game' | 'runner_done' | 'final_qr' | 'complete';
 export type Role = 'solver' | 'runner';
@@ -96,11 +96,20 @@ export function useGameState(role: Role) {
         if (!active) return;
         setSession({ ...storedSession, gameState: freshState });
         window.localStorage.setItem(storageKey, JSON.stringify({ ...storedSession, gameState: freshState }));
-      } catch {
-        window.localStorage.removeItem(storageKey);
-        if (!active) return;
-        setSession(null);
-        setGameState(null);
+      } catch (err) {
+        // Only logout on auth errors. Network errors should be ignored (let the session persist).
+        if (isAuthError(err)) {
+          window.localStorage.removeItem(storageKey);
+          if (!active) return;
+          setSession(null);
+          setGameState(null);
+        } else {
+          console.warn('[Session] Bootstrap sync failed (network?), retaining session', err);
+          if (active) {
+            setSession(storedSession);
+            setGameState(storedSession.gameState);
+          }
+        }
       } finally {
         if (active) setLoading(false);
       }
@@ -128,10 +137,18 @@ export function useGameState(role: Role) {
     if (!session) return;
 
     const interval = window.setInterval(() => {
-      syncGameState(session.token).catch(() => {
-        window.localStorage.removeItem(storageKey);
-        setSession(null);
-        setGameState(null);
+      syncGameState(session.token).catch((err) => {
+        // Only logout on auth errors. 
+        if (isAuthError(err)) {
+          console.error('[Session] Auth failure during sync, logging out', err);
+          window.localStorage.removeItem(storageKey);
+          setSession(null);
+          setGameState(null);
+        } else {
+          // Network errors are expected on mobile when screen is off or connection is weak.
+          // We silently ignore them to keep the session alive.
+          console.debug('[Session] Periodic sync failed (expected on flaky networks)');
+        }
       });
     }, 3000);
 

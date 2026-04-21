@@ -94,6 +94,7 @@ export interface ChatMessage {
   text: string;
   senderRole: string;
   timestamp: number;
+  targetRole?: 'runner' | 'solver' | 'all';
 }
 
 export interface GameStateUpdate extends Partial<Omit<GameState, 'handoff'>> {
@@ -142,7 +143,7 @@ export async function updateGameState(token: string, updates: GameStateUpdate) {
 }
 
 export function isAuthError(error: unknown) {
-  return error instanceof ApiError && (error.status === 401 || error.status === 403);
+  return error instanceof ApiError && (error.status === 401 || error.status === 403 || error.status === 404);
 }
 
 export async function verifyRunnerLocationQr(token: string, qrCode: string) {
@@ -308,6 +309,9 @@ export interface LeaderboardTeam {
   currentLat: number | null;
   currentLng: number | null;
   currentHeading: number | null;
+  locationHistory?: { lat: number; lng: number }[];
+  helpRequested?: boolean;
+  lastValidatedAt?: string | null;
 }
 
 export async function getLeaderboard() {
@@ -351,5 +355,41 @@ export async function sendChatMessage(token: string, text: string) {
   return requestJson<{ ok: boolean; lastMessage: ChatMessage }>('/chat/send', {
     method: 'POST',
     body: JSON.stringify({ text }),
+  }, token);
+}
+
+export async function sendAdminChatMessage(token: string, payload: { text: string; targetTeamId: string | 'all'; targetRole: 'runner' | 'solver' | 'all' }) {
+  return requestJson<{ ok: boolean }>('/admin/chat/send', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  }, token);
+}
+
+export async function getAdminPhrases(token: string) {
+  return requestJson<{ phrases: { _id?: string, id?: string, text: string }[] }>('/admin/phrases', { method: 'GET' }, token);
+}
+
+export async function createAdminPhrase(token: string, text: string) {
+  return requestJson<{ ok: boolean }>('/admin/phrases', {
+    method: 'POST',
+    body: JSON.stringify({ text })
+  }, token);
+}
+
+export async function updateAdminPhrase(token: string, id: string, text: string) {
+  return requestJson<{ ok: boolean }>(`/admin/phrases/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify({ text })
+  }, token);
+}
+
+export async function deleteAdminPhrase(token: string, id: string) {
+  return requestJson<{ ok: boolean }>(`/admin/phrases/${id}`, { method: 'DELETE' }, token);
+}
+
+export async function requestTacticalSupport(token: string, location?: { lat: number, lng: number }) {
+  return requestJson<{ ok: boolean }>('/team/request-help', {
+    method: 'POST',
+    body: JSON.stringify(location)
   }, token);
 }

@@ -22,7 +22,7 @@ import { AdminPanel } from '@/components/AdminPanel';
 import { RoleSelection } from '@/components/RoleSelection';
 import { useGameState, Role } from '@/hooks/useGameState';
 import { useRunnerGps } from '@/hooks/useRunnerGps';
-import { getQuestions, compileCode, getFinalRoundQrCode, verifyRunnerFinalQr, RoundQuestion } from '@/lib/api';
+import { getQuestions, compileCode, getFinalRoundQrCode, verifyRunnerFinalQr, RoundQuestion, requestTacticalSupport } from '@/lib/api';
 import type { SupportedLanguage } from '@/components/CodeEditor';
 import { CodeEditor, LANGUAGE_TEMPLATES } from '@/components/CodeEditor';
 import { PersistentProgress } from '@/components/PersistentProgress';
@@ -79,6 +79,10 @@ export default function App() {
   const lastRunnerHandoffNoticeRef = useRef<string>('');
   const lastSolverCompleteNoticeRef = useRef(false);
   const notificationTimerRef = useRef<number | null>(null);
+  // Ref guard for final QR — prevents duplicate API calls before React state updates
+  const isVerifyingFinalQrRef = useRef(false);
+  // Prevents the final_qr runner notification from firing more than once
+  const lastFinalQrNoticeRef = useRef(false);
   const requestAppFullscreen = async () => {
     const root = document.documentElement as HTMLElement & {
       webkitRequestFullscreen?: () => Promise<void> | void;
@@ -124,8 +128,8 @@ export default function App() {
 
   // Stream runner GPS to backend while in field stages
   useRunnerGps(
-    role === 'runner' ? (session?.token ?? null) : null,
-    role === 'runner' ? (gameState?.stage ?? null) : null
+    session?.token ?? null,
+    gameState?.stage ?? null
   );
 
   // Sync top-level location changes on popstate
@@ -134,6 +138,72 @@ export default function App() {
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
+
+  // Request Notification Permissions on mount
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
+
+  const [helpCooldown, setHelpCooldown] = useState(0);
+  const helpCooldownTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Cooldown timer effect
+  useEffect(() => {
+    if (helpCooldown > 0) {
+      helpCooldownTimerRef.current = setInterval(() => {
+        setHelpCooldown(prev => prev - 1);
+      }, 1000);
+    } else if (helpCooldown === 0 && helpCooldownTimerRef.current) {
+      clearInterval(helpCooldownTimerRef.current);
+    }
+    return () => {
+      if (helpCooldownTimerRef.current) clearInterval(helpCooldownTimerRef.current);
+    };
+  }, [helpCooldown]);
+
+  const handleRequestHelp = async () => {
+    if (helpCooldown > 0 || !session) return;
+
+    let coords: { lat: number; lng: number } | undefined;
+
+    // Attempt to get high-accuracy location for tactical support
+    if (role === 'runner' && 'geolocation' in navigator) {
+      try {
+        const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy: true,
+            timeout: 15000, // 15s for mobile cold fix
+            maximumAge: 0
+          });
+        });
+        coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      } catch (err) {
+        console.warn('High-accuracy GPS failed, trying fallback...', err);
+        try {
+          const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, {
+              enableHighAccuracy: false,
+              timeout: 10000,
+              maximumAge: 60000
+            });
+          });
+          coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        } catch (fallbackErr) {
+          console.warn('Tactical GPS fallback failed:', fallbackErr);
+        }
+      }
+    }
+
+    try {
+      await requestTacticalSupport(session.token, coords);
+      pushNotification('Tactical Support requested. Mission Control has been notified.', 'success');
+      setHelpCooldown(60); // 1 minute cooldown for tactical bridge
+    } catch (err) {
+      pushNotification('Failed to reach Mission Control. Check your signal.', 'info');
+    }
+  };
 
   useEffect(() => {
     if (!role) return;
@@ -184,6 +254,7 @@ export default function App() {
       setFinalQrError(null);
       setFinalQrLoading(false);
       setFinalQrScannerOpen(false);
+      lastFinalQrNoticeRef.current = false; // Reset so it fires again next time stage enters final_qr
       return;
     }
 
@@ -201,7 +272,11 @@ export default function App() {
       return;
     }
 
-    pushNotification('Runner final step: scan the solver finish QR to complete the quest.');
+    // Only notify runner once per final_qr stage entry
+    if (!lastFinalQrNoticeRef.current) {
+      lastFinalQrNoticeRef.current = true;
+      pushNotification('Runner final step: scan the solver finish QR to complete the quest.');
+    }
   }, [gameState?.stage, role, session?.token]);
 
   const pushNotification = (message: string, tone: 'info' | 'success' = 'info') => {
@@ -274,12 +349,19 @@ export default function App() {
       if (lastMessageNoticeRef.current === 0) {
         lastMessageNoticeRef.current = gameState.lastMessage.timestamp;
       } else if (gameState.lastMessage.timestamp > lastMessageNoticeRef.current) {
-        if (gameState.lastMessage.senderRole !== session.role) {
+
+        // Determine if message is targeted at this user
+        const targetRole = (gameState.lastMessage as any).targetRole || 'all';
+        const isTargeted = targetRole === 'all' || targetRole === session.role;
+
+        if (gameState.lastMessage.senderRole === 'admin') {
+          if (isTargeted) {
+            pushNotification(`[COMMAND OVERRIDE]: ${gameState.lastMessage.text}`, 'success');
+          }
+        } else if (gameState.lastMessage.senderRole !== session.role) {
           const senderName = gameState.lastMessage.senderRole === 'runner'
             ? (session.team.runnerName || 'RUNNER').toUpperCase()
-            : gameState.lastMessage.senderRole === 'solver'
-              ? (session.team.solverName || 'SOLVER').toUpperCase()
-              : gameState.lastMessage.senderRole.toUpperCase();
+            : (session.team.solverName || 'SOLVER').toUpperCase();
           pushNotification(`${session.team.name.toUpperCase()}[${senderName}]: ${gameState.lastMessage.text}`, 'success');
         }
         lastMessageNoticeRef.current = gameState.lastMessage.timestamp;
@@ -585,8 +667,9 @@ export default function App() {
   };
 
   const handleVerifyFinalQr = async (decodedValue: string) => {
-    if (!session?.token || isVerifyingFinalQr) return;
-
+    // Use a ref guard (not just state) so this is synchronous and race-condition-proof
+    if (!session?.token || isVerifyingFinalQrRef.current) return;
+    isVerifyingFinalQrRef.current = true;
     setIsVerifyingFinalQr(true);
     try {
       await verifyRunnerFinalQr(session.token, decodedValue.trim());
@@ -595,6 +678,7 @@ export default function App() {
     } catch (error) {
       pushNotification(error instanceof Error ? error.message : 'Final QR verification failed');
     } finally {
+      isVerifyingFinalQrRef.current = false;
       setIsVerifyingFinalQr(false);
     }
   };
@@ -1296,6 +1380,49 @@ export default function App() {
           teamRunnerName={session.team.runnerName}
           teamSolverName={session.team.solverName}
         />
+      )}
+      {/* Tactical Support Floating Widget */}
+      {session && role && gameState?.stage !== 'complete' && (
+        <div className="fixed bottom-6 left-6 z-50 flex flex-col gap-2 items-start pointer-events-none">
+          <div className="pointer-events-auto">
+            <button
+              onClick={handleRequestHelp}
+              disabled={helpCooldown > 0}
+              className={cn(
+                "group relative flex items-center gap-3 px-4 py-2 bg-black/80 backdrop-blur-md border transition-all duration-300 overflow-hidden",
+                helpCooldown > 0
+                  ? "border-white/10 text-white/20 cursor-not-allowed grayscale"
+                  : "border-red-500/40 text-red-500 hover:border-red-500 hover:bg-red-500/10 cursor-pointer active:scale-95 shadow-[0_0_15px_rgba(239,68,68,0.1)]"
+              )}
+            >
+              {/* Scanline effect for tactical feel */}
+              <div className="absolute inset-0 bg-gradient-to-b from-transparent via-red-500/5 to-transparent -translate-y-full group-hover:animate-[scan_2s_linear_infinite]" />
+
+              <div className="relative flex items-center justify-center">
+                <ShieldAlert className={cn(
+                  "w-4 h-4 transition-transform duration-300",
+                  helpCooldown === 0 && "group-hover:scale-110"
+                )} />
+                {helpCooldown > 0 && (
+                  <div className="absolute inset-0 border border-white/20 animate-spin rounded-full scale-150 opacity-20" />
+                )}
+              </div>
+
+              <div className="flex flex-col items-start">
+                <span className="text-[10px] font-bold tracking-widest uppercase leading-none">
+                  {helpCooldown > 0 ? `SYNCING... ${helpCooldown}s` : 'REQUEST SUPPORT'}
+                </span>
+                <span className="text-[7px] opacity-60 font-medium tracking-[0.2em] uppercase mt-1">
+                  Alert Mission Control
+                </span>
+              </div>
+
+              {/* Corner Accents */}
+              <div className="absolute top-0 left-0 w-1 h-1 border-t border-l border-red-500/50" />
+              <div className="absolute bottom-0 right-0 w-1 h-1 border-b border-r border-red-500/50" />
+            </button>
+          </div>
+        </div>
       )}
     </>
   );

@@ -77,7 +77,7 @@ export function ConfigManagement({ token, config, onRefresh, onError }: ConfigMa
       {/* Header */}
       <div>
         <h2 className="text-3xl font-black uppercase tracking-tight mb-2">Systems_Configuration</h2>
-        <p className="text-[10px] font-mono text-white/40 uppercase tracking-widest">Global engine settings and tactical comms management</p>
+        <p className="text-[10px] font-mono text-white/60 uppercase tracking-widest">Global engine settings and tactical comms management</p>
       </div>
 
       <div className="grid lg:grid-cols-2 gap-12">
@@ -86,12 +86,12 @@ export function ConfigManagement({ token, config, onRefresh, onError }: ConfigMa
            <section className="space-y-4">
               <div className="flex items-center gap-4">
                 <Power className="text-[var(--color-accent)] w-4 h-4" />
-                <h3 className="text-[10px] font-mono uppercase tracking-[0.4em] text-white/40">Access_Control</h3>
+                <h3 className="text-[10px] font-mono uppercase tracking-[0.4em] text-white/60">Access_Control</h3>
               </div>
               <div className="corner-card glass-morphism p-8 flex justify-between items-center group">
                  <div className="space-y-1">
                    <h4 className="font-black uppercase tracking-widest text-sm">Operative Authentication</h4>
-                   <p className="text-[10px] font-mono text-white/30 uppercase tracking-tight max-w-[280px]">
+                   <p className="text-[10px] font-mono text-white/60 uppercase tracking-tight max-w-[280px]">
                      Enable or disable team login globally across all nodes.
                    </p>
                  </div>
@@ -111,12 +111,12 @@ export function ConfigManagement({ token, config, onRefresh, onError }: ConfigMa
            <section className="space-y-4">
               <div className="flex items-center gap-4">
                 <Database className="text-[var(--color-accent)] w-4 h-4" />
-                <h3 className="text-[10px] font-mono uppercase tracking-[0.4em] text-white/40">Data_Destruction</h3>
+                <h3 className="text-[10px] font-mono uppercase tracking-[0.4em] text-white/60">Data_Destruction</h3>
               </div>
               <div className="corner-card glass-morphism border-[var(--color-accent)]/20 p-8 flex justify-between items-center">
                  <div className="space-y-1">
                    <h4 className="font-black uppercase tracking-widest text-sm text-[var(--color-accent)]">Database Purge</h4>
-                   <p className="text-[10px] font-mono text-[var(--color-accent)]/40 uppercase tracking-tight max-w-[280px]">
+                   <p className="text-[10px] font-mono text-[var(--color-accent)]/60 uppercase tracking-tight max-w-[280px]">
                      Irreversibly wipe all team data, questions, and system logs.
                    </p>
                  </div>
@@ -136,7 +136,7 @@ export function ConfigManagement({ token, config, onRefresh, onError }: ConfigMa
            <section className="space-y-4 h-full">
               <div className="flex items-center gap-4">
                 <MessageSquare className="text-[var(--color-accent)] w-4 h-4" />
-                <h3 className="text-[10px] font-mono uppercase tracking-[0.4em] text-white/40">Tactical_Comms_Presets</h3>
+                <h3 className="text-[10px] font-mono uppercase tracking-[0.4em] text-white/60">Tactical_Comms_Presets</h3>
               </div>
               <div className="corner-card glass-morphism p-8 space-y-6 h-[calc(100%-48px)] flex flex-col">
                  <div className="flex gap-2">
@@ -155,7 +155,7 @@ export function ConfigManagement({ token, config, onRefresh, onError }: ConfigMa
                  <div className="flex-1 space-y-2 overflow-y-auto custom-scrollbar pr-2 min-h-[300px]">
                     {(config?.tacticalPhrases || []).map((phrase: string, idx: number) => (
                       <div key={idx} className="flex items-center justify-between p-3 bg-white/[0.02] border border-white/5 group hover:border-white/10 transition-all">
-                        <span className="text-[10px] font-mono uppercase tracking-widest text-white/60">{phrase}</span>
+                        <span className="text-[10px] font-mono uppercase tracking-widest text-white/80">{phrase}</span>
                         <button onClick={() => handleDeletePhrase(idx)} className="text-white/10 hover:text-[var(--color-accent)] transition-colors">
                           <X className="w-3.5 h-3.5" />
                         </button>
@@ -164,7 +164,7 @@ export function ConfigManagement({ token, config, onRefresh, onError }: ConfigMa
                     {!config?.tacticalPhrases?.length && (
                       <div className="h-full flex flex-col items-center justify-center border border-dashed border-white/5 bg-white/[0.03] py-12">
                          <MessageSquare className="w-8 h-8 text-white/5 mb-2" />
-                         <span className="text-[8px] uppercase tracking-[0.4em] text-white/20">No preset phrases defined</span>
+                         <span className="text-[8px] uppercase tracking-[0.4em] text-white/40">No preset phrases defined</span>
                       </div>
                     )}
                  </div>

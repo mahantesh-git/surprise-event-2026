@@ -102,7 +102,7 @@ export function QuestionManagement({ token, questions, onRefresh, onError }: Que
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-black uppercase tracking-tight mb-2">Sequence_Architect</h2>
-          <p className="text-[10px] font-mono text-white/40 uppercase tracking-widest">Design mission stages and validation puzzles</p>
+          <p className="text-[10px] font-mono text-white/70 uppercase tracking-widest">Architect tactical sequences and mission nodes</p>
         </div>
         <Button
           variant="ghost"
@@ -128,29 +128,29 @@ export function QuestionManagement({ token, questions, onRefresh, onError }: Que
               <div className="space-y-6">
                 <div className="flex items-center gap-3 text-[var(--color-accent)] mb-2">
                   <Terminal className="w-4 h-4" />
-                  <span className="text-[10px] font-mono tracking-[0.3em] uppercase opacity-60">Global_Params</span>
+                  <span className="text-[10px] font-mono tracking-[0.3em] uppercase opacity-80">Global_Params</span>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-[8px] uppercase tracking-[0.3em] text-white/30 ml-1">Stage_Sequence</label>
+                    <label className="text-[8px] uppercase tracking-[0.3em] text-white/70 ml-1">Stage_Sequence</label>
                     <Input type="number" value={draft.round} onChange={e => setDraft({ ...draft, round: Number(e.target.value) })} className="bg-white/[0.03] border-white/5 h-11 font-mono text-xs" />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[8px] uppercase tracking-[0.3em] text-white/30 ml-1">Validation_Key</label>
+                    <label className="text-[8px] uppercase tracking-[0.3em] text-white/70 ml-1">Validation_Key</label>
                     <Input placeholder="PASSKEY_01" value={draft.qrPasskey} onChange={e => setDraft({ ...draft, qrPasskey: e.target.value })} className="bg-white/[0.03] border-white/5 h-11 font-mono text-xs uppercase" />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[8px] uppercase tracking-[0.3em] text-white/30 ml-1">Location_Vector_QR</label>
+                  <label className="text-[8px] uppercase tracking-[0.3em] text-white/70 ml-1">Location_Vector_QR</label>
                   <Input readOnly value={draft.locationQrCode || buildLocationQrCode(draft.round)} className="bg-white/[0.03] border-white/5 h-11 font-mono text-xs text-[var(--color-accent)]/80" />
                 </div>
 
                 <div className="space-y-4 pt-4 border-t border-white/5">
-                  <div className="flex items-center gap-3 text-white/40 mb-2">
+                  <div className="flex items-center gap-3 text-white/80 mb-2">
                     <MapPin className="w-4 h-4" />
-                    <span className="text-[10px] font-mono tracking-[0.3em] uppercase opacity-60">Field_Coordinates</span>
+                    <span className="text-[10px] font-mono tracking-[0.3em] uppercase opacity-80">Field_Coordinates</span>
                   </div>
                   <Input placeholder="DESTINATION_NAME" value={draft.coord.place} onChange={e => setDraft({ ...draft, coord: { ...draft.coord, place: e.target.value } })} className="bg-white/[0.03] border-white/5 text-[10px] uppercase h-10" />
                   <div className="grid grid-cols-2 gap-2">
@@ -164,7 +164,7 @@ export function QuestionManagement({ token, questions, onRefresh, onError }: Que
               <div className="space-y-6">
                 <div className="flex items-center gap-3 text-[var(--color-accent)] mb-2">
                   <Code className="w-4 h-4" />
-                  <span className="text-[10px] font-mono tracking-[0.3em] uppercase opacity-60">Puzzle_Matrix</span>
+                  <span className="text-[10px] font-mono tracking-[0.3em] uppercase opacity-80">Puzzle_Matrix</span>
                 </div>
 
                 <div className="space-y-4">
@@ -174,7 +174,7 @@ export function QuestionManagement({ token, questions, onRefresh, onError }: Que
                     <select
                       value={draft.p1.language || 'python'}
                       onChange={e => setDraft({ ...draft, p1: { ...draft.p1, language: e.target.value as any } })}
-                      className="bg-white/[0.03] border border-white/5 h-10 px-3 text-[10px] uppercase font-mono text-white focus:outline-none focus:border-[var(--color-accent)]/50 transition-colors"
+                      className="bg-[#0a0a0a] border border-white/10 h-10 px-3 text-[10px] uppercase font-mono text-white focus:outline-none focus:border-[var(--color-accent)]/50 transition-colors [&>option]:bg-[#1a1a1a] [&>option]:text-white"
                     >
                       {LANGUAGE_OPTIONS.map(opt => <option key={opt.id} value={opt.id}>{opt.label}</option>)}
                     </select>
@@ -196,9 +196,9 @@ export function QuestionManagement({ token, questions, onRefresh, onError }: Que
             {/* Test Cases */}
             <div className="space-y-4 pt-8 border-t border-white/5">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3 text-white/30">
+                <div className="flex items-center gap-3 text-white/70">
                   <ShieldCheck className="w-4 h-4" />
-                  <span className="text-[10px] font-mono tracking-[0.3em] uppercase opacity-60">Validation_Test_Suite</span>
+                  <span className="text-[10px] font-mono tracking-[0.3em] uppercase opacity-80">Validation_Test_Suite</span>
                 </div>
                 <Button
                   variant="ghost"
@@ -218,13 +218,13 @@ export function QuestionManagement({ token, questions, onRefresh, onError }: Que
                         const cases = draft.p1.testCases || [];
                         setDraft({ ...draft, p1: { ...draft.p1, testCases: cases.filter((_, i) => i !== idx) } });
                       }}
-                      className="absolute top-2 right-2 text-white/10 hover:text-[var(--color-accent)] opacity-0 group-hover:opacity-100 transition-all"
+                      className="absolute top-2 right-2 text-white/30 hover:text-[var(--color-accent)] opacity-0 group-hover:opacity-100 transition-all"
                     >
                       <X className="w-3 h-3" />
                     </button>
                     <div className="space-y-2">
                       <div className="flex items-center gap-2">
-                        <span className="text-[8px] font-mono uppercase text-white/20">Input</span>
+                        <span className="text-[8px] font-mono uppercase text-white/40">Input</span>
                         <Input value={tc.input} onChange={e => {
                           const cases = [...(draft.p1.testCases || [])];
                           if (cases[idx]) {
@@ -234,7 +234,7 @@ export function QuestionManagement({ token, questions, onRefresh, onError }: Que
                         }} className="bg-transparent border-none p-0 h-6 text-[10px] font-mono focus-visible:ring-0" />
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-[8px] font-mono uppercase text-[var(--color-accent)]/30">Output</span>
+                        <span className="text-[8px] font-mono uppercase text-[var(--color-accent)]/60">Output</span>
                         <Input value={tc.output} onChange={e => {
                           const cases = [...(draft.p1.testCases || [])];
                           if (cases[idx]) {
@@ -254,7 +254,7 @@ export function QuestionManagement({ token, questions, onRefresh, onError }: Que
                 {editingId ? 'Update Sequence' : 'Initialize Sequence'}
               </Button>
               {editingId && (
-                <Button onClick={handleCancel} variant="ghost" className="h-14 px-8 text-white/40 hover:text-white uppercase tracking-widest border border-white/5">
+                <Button onClick={handleCancel} variant="ghost" className="h-14 px-8 text-white/60 hover:text-white uppercase tracking-widest border border-white/5">
                   <X className="w-4 h-4" />
                 </Button>
               )}
@@ -266,7 +266,7 @@ export function QuestionManagement({ token, questions, onRefresh, onError }: Que
         <div className="xl:col-span-2 space-y-4">
           <div className="flex items-center gap-4 mb-6">
             <Terminal className="text-[var(--color-accent)] w-4 h-4" />
-            <h3 className="text-[10px] font-mono uppercase tracking-[0.4em] text-white/40">Active_Mission_Stack</h3>
+            <h3 className="text-[10px] font-mono uppercase tracking-[0.4em] text-white/60">Active_Mission_Stack</h3>
           </div>
 
           <div className="space-y-4 max-h-[1000px] overflow-y-auto pr-2 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
@@ -283,11 +283,12 @@ export function QuestionManagement({ token, questions, onRefresh, onError }: Que
                     </div>
                     <div>
                       <div className="font-black uppercase tracking-widest text-sm">{q.p1.title}</div>
-                      <div className="text-[8px] font-mono text-white/20 uppercase tracking-widest">{q.id.slice(-8).toUpperCase()}</div>
+                      <div className="text-[8px] font-mono text-white/60 uppercase tracking-widest mb-1">Sequence_Round</div>
+                      <div className="text-[8px] font-mono text-white/40 uppercase tracking-widest">{q.id.slice(-8).toUpperCase()}</div>
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <button onClick={() => handleEdit(q)} className="p-2 text-white/10 hover:text-white transition-colors">
+                    <button onClick={() => handleEdit(q)} className="p-2 text-white/30 hover:text-white transition-colors">
                       <Edit3 className="w-4 h-4" />
                     </button>
                     <button onClick={() => handleDelete(q.id!)} className="p-2 text-white/10 hover:text-[var(--color-accent)] transition-colors">
@@ -298,11 +299,11 @@ export function QuestionManagement({ token, questions, onRefresh, onError }: Que
 
                 <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/5">
                   <div className="space-y-1">
-                    <div className="text-[8px] uppercase text-white/20 tracking-widest font-mono">Target_Node</div>
+                    <div className="text-[8px] uppercase text-white/40 tracking-widest font-mono">Target_Node</div>
                     <div className="text-[10px] font-bold text-white/60 truncate">{q.coord.place}</div>
                   </div>
                   <div className="space-y-1">
-                    <div className="text-[8px] uppercase text-white/20 tracking-widest font-mono">Secure_Passkey</div>
+                    <div className="text-[8px] uppercase text-white/40 tracking-widest font-mono">Secure_Passkey</div>
                     <div className="text-[10px] font-mono text-[var(--color-accent)]/80">{q.qrPasskey}</div>
                   </div>
                 </div>

@@ -54,6 +54,12 @@ export async function getConfigCollection(): Promise<Collection<ConfigDocument>>
   return dbClient.db(getDatabaseName()).collection<ConfigDocument>('config');
 }
 
+export async function getAdminPhrasesCollection(): Promise<Collection<any>> {
+  const dbClient = await getClient();
+
+  return dbClient.db(getDatabaseName()).collection<any>('admin_phrases');
+}
+
 export async function ensureIndexes() {
   const teams = await getTeamsCollection();
   const questions = await getQuestionsCollection();

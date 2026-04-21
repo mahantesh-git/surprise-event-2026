@@ -7,13 +7,14 @@ import path from 'path';
 import { spawn } from 'child_process';
 import { ObjectId } from 'mongodb';
 import type { LoginPayload, GameState, QuestionDocument } from './types';
-import { closeClient, ensureIndexes, getQuestionsCollection, getTeamsCollection, getConfigCollection } from './db';
+import { closeClient, ensureIndexes, getQuestionsCollection, getTeamsCollection, getConfigCollection, getAdminPhrasesCollection } from './db';
 import { requireAdmin, requireAuth, signAdminToken, signToken, normalizeRole, type AdminAuthedRequest, type AuthedRequest } from './auth';
 import { createTeam, findTeamByName, verifyTeamPassword, findTeamById } from './team-service';
 import { createInitialGameState, normalizeGameState, sanitizeGameStateUpdate } from './game';
 import { DEFAULT_QUESTIONS } from './defaultQuestions';
 import { asyncHandler, createApiErrorHandler, HttpError } from './errors';
 import type { ChatMessage } from './types';
+import { initDiscordBridge, sendAdminAlert } from './discord-bridge';
 
 const envPath = path.resolve(__dirname, '../.env');
 const fallbackEnvPath = path.resolve(__dirname, '../.env.example');
@@ -82,6 +83,29 @@ async function generateQuestionQrAsset(question: Pick<QuestionDocument, 'round' 
       reject(new Error(stderr.trim() || `QR generation exited with code ${code}`));
     });
   });
+}
+
+/**
+ * Update score and record history in a single atomic operation
+ */
+async function recordScoreChange(teamId: string | ObjectId, amount: number, reason: string) {
+  const teams = await getTeamsCollection();
+  const id = typeof teamId === 'string' ? toObjectId(teamId, 'team id') : teamId;
+  
+  await teams.updateOne(
+    { _id: id },
+    { 
+      $inc: { score: amount },
+      $push: { 
+        scoreHistory: { 
+          amount, 
+          reason, 
+          timestamp: new Date().toISOString() 
+        } 
+      } as any,
+      $set: { updatedAt: new Date() }
+    }
+  );
 }
 
 function createQuestionPayload(input: any, existing?: Partial<QuestionDocument>): Omit<QuestionDocument, 'createdAt' | 'updatedAt'> {
@@ -207,6 +231,23 @@ app.get('/api/health', (_request, response) => {
   response.json({ ok: true });
 });
 
+app.post('/api/admin/adjust-score', requireAdmin, route(async (request: AdminAuthedRequest, response) => {
+  const { teamId, amount, reason } = request.body as { teamId?: string; amount?: number; reason?: string };
+
+  if (!teamId || typeof amount !== 'number' || !reason?.trim()) {
+    response.status(400).json({ error: 'teamId, amount (number), and reason are required' });
+    return;
+  }
+
+  if (reason.trim().length < 5) {
+    response.status(400).json({ error: 'Reason must be at least 5 characters for auditing' });
+    return;
+  }
+
+  await recordScoreChange(teamId, amount, reason.trim());
+  response.json({ ok: true });
+}));
+
 app.post('/api/auth/login', route(async (request, response) => {
   const body = request.body as LoginPayload;
   const teamName = body.teamName?.trim();
@@ -275,7 +316,7 @@ app.get('/api/session', requireAuth, route(async (request: AuthedRequest, respon
 
   const team = await findTeamById(auth.teamId);
   if (!team) {
-    response.status(404).json({ error: 'Team not found' });
+    response.status(401).json({ error: 'Invalid or expired session' });
     return;
   }
 
@@ -294,7 +335,7 @@ app.get('/api/game/state', requireAuth, route(async (request: AuthedRequest, res
   const auth = request.auth!;
   const team = await findTeamById(auth.teamId);
   if (!team) {
-    response.status(404).json({ error: 'Team not found' });
+    response.status(401).json({ error: 'Invalid or expired session' });
     return;
   }
 
@@ -305,9 +346,9 @@ app.get('/api/game/state', requireAuth, route(async (request: AuthedRequest, res
     await teams.updateOne({ _id: team._id }, { $set: { gameState: normalizedState, updatedAt: new Date() } });
   }
 
-  response.json({ 
+  response.json({
     gameState: normalizedState,
-    lastMessage: team.lastMessage || null 
+    lastMessage: team.lastMessage || null
   });
 }));
 
@@ -315,7 +356,7 @@ app.patch('/api/game/state', requireAuth, route(async (request: AuthedRequest, r
   const auth = request.auth!;
   const team = await findTeamById(auth.teamId);
   if (!team) {
-    response.status(404).json({ error: 'Team not found' });
+    response.status(401).json({ error: 'Invalid or expired session' });
     return;
   }
 
@@ -334,7 +375,7 @@ app.patch('/api/game/state', requireAuth, route(async (request: AuthedRequest, r
     { $set: { gameState: nextState, updatedAt: new Date() } },
   );
 
-  response.json({ 
+  response.json({
     gameState: nextState,
     lastMessage: team.lastMessage || null
   });
@@ -349,7 +390,7 @@ app.post('/api/game/reset', requireAuth, route(async (request: AuthedRequest, re
 
   const team = await findTeamById(auth.teamId);
   if (!team) {
-    response.status(404).json({ error: 'Team not found' });
+    response.status(401).json({ error: 'Invalid or expired session' });
     return;
   }
 
@@ -362,7 +403,7 @@ app.post('/api/game/reset', requireAuth, route(async (request: AuthedRequest, re
     { $set: { gameState: nextState, updatedAt: new Date() } },
   );
 
-  response.json({ 
+  response.json({
     gameState: nextState,
     lastMessage: team.lastMessage || null
   });
@@ -382,7 +423,7 @@ app.get('/api/game/final-qr', requireAuth, route(async (request: AuthedRequest, 
 
   const team = await findTeamById(auth.teamId);
   if (!team) {
-    response.status(404).json({ error: 'Team not found' });
+    response.status(401).json({ error: 'Invalid or expired session' });
     return;
   }
 
@@ -445,7 +486,7 @@ app.post('/api/game/compile', requireAuth, route(async (request: AuthedRequest, 
   const teams = await getTeamsCollection();
   const team = await teams.findOne({ _id: toObjectId(auth.teamId, 'team id') });
   if (!team) {
-    response.status(404).json({ error: 'Team not found' });
+    response.status(401).json({ error: 'Invalid or expired session' });
     return;
   }
 
@@ -467,7 +508,7 @@ app.post('/api/game/compile', requireAuth, route(async (request: AuthedRequest, 
   // 2. Fetch Question for Verification
   const questions = await getQuestionsCollection();
   const question = await questions.findOne({ _id: toObjectId(questionId, 'questionId') });
-  
+
   if (!question) {
     response.status(404).json({ error: 'Question not found' });
     return;
@@ -484,7 +525,7 @@ app.post('/api/game/compile', requireAuth, route(async (request: AuthedRequest, 
       'https://piston.engineer/api/v2/execute',
       'http://127.0.0.1:2000/api/v2/execute'
     ];
-    
+
     const testResults = [];
     let allPassed = true;
     let activeUrlIndex = 0;
@@ -553,7 +594,7 @@ app.post('/api/game/compile', requireAuth, route(async (request: AuthedRequest, 
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : String(err);
     console.error('Execution failed:', errorMsg);
-    response.status(502).json({ 
+    response.status(502).json({
       error: 'Code execution failed. Please check the server logs or try again.',
       details: errorMsg
     });
@@ -585,6 +626,51 @@ app.get('/api/questions', route(async (_request, response) => {
   response.json({ questions: masked });
 }));
 
+app.post('/api/team/request-help', requireAuth, route(async (request: AuthedRequest, response) => {
+  if (!request.auth) {
+    response.status(401).json({ error: 'Unauthorized' });
+    return;
+  }
+
+  const teams = await getTeamsCollection();
+  const team = await teams.findOne({ _id: toObjectId(request.auth.teamId, 'team id') });
+
+  if (!team) {
+    response.status(401).json({ error: 'Invalid or expired session' });
+    return;
+  }
+
+  const questions = await getQuestionsCollection();
+  const roundCount = await questions.countDocuments({});
+  const gameState = normalizeGameState(team.gameState, roundCount);
+  const roundDisplay = gameState.round + 1;
+
+  const location = request.body; // { lat, lng }
+  const requesterName = request.auth.role === 'runner'
+    ? (team.runnerName || 'RUNNER')
+    : (team.solverName || 'SOLVER');
+
+  const alertText = `TACTICAL SUPPORT REQUEST: ${requesterName} from Squad ${team.name} is requesting assistance on Round ${roundDisplay}`;
+
+  const messageId = await sendAdminAlert(alertText, location?.lat ? location : undefined);
+
+  if (messageId) {
+    await teams.updateOne(
+      { _id: team._id },
+      {
+        $set: {
+          lastHelpMessageId: messageId,
+          lastHelpRequesterRole: request.auth.role,
+          'gameState.helpRequested': true,
+          updatedAt: new Date()
+        }
+      }
+    );
+  }
+
+  response.json({ ok: true });
+}));
+
 app.post('/api/runner/verify-location-qr', requireAuth, route(async (request: AuthedRequest, response) => {
   const auth = request.auth;
   if (!auth || auth.role !== 'runner') {
@@ -600,7 +686,7 @@ app.post('/api/runner/verify-location-qr', requireAuth, route(async (request: Au
 
   const team = await findTeamById(auth.teamId);
   if (!team) {
-    response.status(404).json({ error: 'Team not found' });
+    response.status(401).json({ error: 'Invalid or expired session' });
     return;
   }
 
@@ -616,6 +702,16 @@ app.post('/api/runner/verify-location-qr', requireAuth, route(async (request: Au
     response.status(401).json({ error: 'Invalid location QR' });
     return;
   }
+
+  const teams = await getTeamsCollection();
+  await teams.updateOne(
+    { _id: team._id },
+    { $set: { 'gameState.lastValidatedAt': new Date(), updatedAt: new Date() } }
+  );
+
+  // Award points for reaching the checkpoint
+  const roundDisplay = team.gameState.round + 1;
+  await recordScoreChange(team._id, 200, `Tactical Checkpoint ${roundDisplay} Secured`);
 
   response.json({ ok: true });
 }));
@@ -636,7 +732,7 @@ app.post('/api/runner/verify-passkey', requireAuth, route(async (request: Authed
 
   const team = await findTeamById(auth.teamId);
   if (!team) {
-    response.status(404).json({ error: 'Team not found' });
+    response.status(401).json({ error: 'Invalid or expired session' });
     return;
   }
 
@@ -677,7 +773,7 @@ app.post('/api/runner/complete-round', requireAuth, route(async (request: Authed
 
   const team = await findTeamById(auth.teamId);
   if (!team) {
-    response.status(404).json({ error: 'Team not found' });
+    response.status(401).json({ error: 'Invalid or expired session' });
     return;
   }
 
@@ -709,6 +805,29 @@ app.post('/api/runner/complete-round', requireAuth, route(async (request: Authed
   const teams = await getTeamsCollection();
   await teams.updateOne({ _id: team._id }, { $set: { gameState: nextState, updatedAt: new Date() } });
 
+  // Calculate Points & Speed Bonus
+  const basePoints = 800;
+  let speedBonus = 0;
+  let speedReason = "";
+
+  if (team.gameState.lastValidatedAt) {
+    const startTime = new Date(team.gameState.lastValidatedAt).getTime();
+    const endTime = Date.now();
+    const elapsedSeconds = (endTime - startTime) / 1000;
+    
+    // Max bonus: 500 pts if solved within 300s (5 mins)
+    const MAX_BONUS = 500;
+    const DECAY_TIME = 300;
+    
+    speedBonus = Math.max(0, Math.floor(MAX_BONUS * (1 - elapsedSeconds / DECAY_TIME)));
+    const mins = Math.floor(elapsedSeconds / 60);
+    const secs = Math.floor(elapsedSeconds % 60);
+    speedReason = ` (Time: ${mins}m ${secs}s)`;
+  }
+
+  const totalPoints = basePoints + speedBonus;
+  await recordScoreChange(team._id, totalPoints, `Round ${currentRound + 1} Cleared${speedReason}`);
+
   response.json({ ok: true, gameState: nextState });
 }));
 
@@ -727,7 +846,7 @@ app.post('/api/runner/verify-final-qr', requireAuth, route(async (request: Authe
 
   const team = await findTeamById(auth.teamId);
   if (!team) {
-    response.status(404).json({ error: 'Team not found' });
+    response.status(401).json({ error: 'Invalid or expired session' });
     return;
   }
 
@@ -746,6 +865,7 @@ app.post('/api/runner/verify-final-qr', requireAuth, route(async (request: Authe
     ...team.gameState,
     stage: 'complete',
     finishTime: team.gameState.finishTime || new Date().toISOString(),
+    lastValidatedAt: new Date(),
   };
 
   const teams = await getTeamsCollection();
@@ -756,10 +876,8 @@ app.post('/api/runner/verify-final-qr', requireAuth, route(async (request: Authe
 
 app.put('/api/runner/location', requireAuth, route(async (request: AuthedRequest, response) => {
   const auth = request.auth!;
-  if (auth.role !== 'runner') {
-    response.status(403).json({ error: 'Only runners can update location' });
-    return;
-  }
+  // Allow both runner and solver roles to update tactical location 
+  // to ensure continuous tracking throughout the round.
 
   const { lat, lng, heading } = request.body as { lat?: unknown; lng?: unknown; heading?: unknown };
   if (typeof lat !== 'number' || typeof lng !== 'number' || isNaN(lat) || isNaN(lng)) {
@@ -769,16 +887,22 @@ app.put('/api/runner/location', requireAuth, route(async (request: AuthedRequest
 
   const h = (typeof heading === 'number' && !isNaN(heading)) ? heading : null;
 
+  const team = await findTeamById(auth.teamId);
+  if (!team) {
+    response.status(401).json({ error: 'Invalid or expired session' });
+    return;
+  }
+
   const teams = await getTeamsCollection();
   await teams.updateOne(
-    { _id: toObjectId(auth.teamId, 'team id') },
-    { 
-      $set: { 
-        'gameState.currentLat': lat, 
-        'gameState.currentLng': lng, 
+    { _id: team._id },
+    {
+      $set: {
+        'gameState.currentLat': lat,
+        'gameState.currentLng': lng,
         'gameState.currentHeading': h,
-        updatedAt: new Date() 
-      } 
+        updatedAt: new Date()
+      }
     }
   );
 
@@ -796,12 +920,15 @@ app.get('/api/leaderboard', route(async (_request, response) => {
       name: team.name,
       round: team.gameState.round,
       solvedCount,
+      score: team.score || 0,
       stage: team.gameState.stage,
       startTime: team.gameState.startTime,
       finishTime: team.gameState.finishTime,
       currentLat: team.gameState.currentLat ?? null,
       currentLng: team.gameState.currentLng ?? null,
       currentHeading: team.gameState.currentHeading ?? null,
+      helpRequested: team.gameState.helpRequested || false,
+      lastValidatedAt: team.gameState.lastValidatedAt || null,
     };
   });
 
@@ -848,6 +975,12 @@ app.post('/api/chat/send', requireAuth, route(async (request: AuthedRequest, res
     return;
   }
 
+  const team = await findTeamById(auth.teamId);
+  if (!team) {
+    response.status(401).json({ error: 'Invalid or expired session' });
+    return;
+  }
+
   const teams = await getTeamsCollection();
   const lastMessage: ChatMessage = {
     text,
@@ -856,7 +989,7 @@ app.post('/api/chat/send', requireAuth, route(async (request: AuthedRequest, res
   };
 
   await teams.updateOne(
-    { _id: toObjectId(auth.teamId, 'team id') },
+    { _id: team._id },
     { $set: { lastMessage, updatedAt: new Date() } }
   );
 
@@ -893,6 +1026,77 @@ app.get('/api/admin/teams', requireAdmin, route(async (_request: AdminAuthedRequ
       lastLoginAt: team.lastLoginAt || null,
     })),
   });
+}));
+
+app.post('/api/admin/chat/send', requireAdmin, route(async (request: AdminAuthedRequest, response) => {
+  const { text, targetTeamId, targetRole } = request.body as { text?: string; targetTeamId?: string; targetRole?: 'runner' | 'solver' | 'all' };
+
+  if (!text || typeof text !== 'string') {
+    response.status(400).json({ error: 'Message text is required' });
+    return;
+  }
+
+  const teams = await getTeamsCollection();
+  const lastMessage: ChatMessage = {
+    text,
+    senderRole: 'admin',
+    timestamp: Date.now(),
+    targetRole: targetRole || 'all'
+  };
+
+  if (targetTeamId && targetTeamId !== 'all') {
+    await teams.updateOne(
+      { _id: toObjectId(targetTeamId, 'team id') },
+      { $set: { lastMessage, updatedAt: new Date() } }
+    );
+  } else {
+    await teams.updateMany(
+      {},
+      { $set: { lastMessage, updatedAt: new Date() } }
+    );
+  }
+
+  response.json({ ok: true });
+}));
+
+// --- Admin Phrases CRUD ---
+app.get('/api/admin/phrases', requireAdmin, route(async (request: AdminAuthedRequest, response) => {
+  const collection = await getAdminPhrasesCollection();
+  const phrases = await collection.find({}).toArray();
+  response.json({ phrases });
+}));
+
+app.post('/api/admin/phrases', requireAdmin, route(async (request: AdminAuthedRequest, response) => {
+  const { text } = request.body as { text?: string };
+  if (!text || typeof text !== 'string') {
+    response.status(400).json({ error: 'Phrase text is required' });
+    return;
+  }
+  const collection = await getAdminPhrasesCollection();
+  const result = await collection.insertOne({ text, createdAt: new Date() });
+  response.json({ ok: true, phrase: { _id: result.insertedId, text } });
+}));
+
+app.put('/api/admin/phrases/:id', requireAdmin, route(async (request: AdminAuthedRequest, response) => {
+  const phraseId = String(request.params.id);
+  const { text } = request.body as { text?: string };
+  if (!text || typeof text !== 'string') {
+    response.status(400).json({ error: 'Phrase text is required' });
+    return;
+  }
+  const collection = await getAdminPhrasesCollection();
+  await collection.updateOne(
+    { _id: toObjectId(phraseId, 'phrase id') },
+    { $set: { text, updatedAt: new Date() } }
+  );
+  response.json({ ok: true });
+}));
+
+app.delete('/api/admin/phrases/:id', requireAdmin, route(async (request: AdminAuthedRequest, response) => {
+  const phraseId = String(request.params.id);
+  const collection = await getAdminPhrasesCollection();
+  await collection.deleteOne({ _id: toObjectId(phraseId, 'phrase id') });
+  response.json({ ok: true });
 }));
 
 app.post('/api/admin/teams', requireAdmin, route(async (request: AdminAuthedRequest, response) => {
@@ -1019,6 +1223,10 @@ async function main() {
 
   server = app.listen(port, '0.0.0.0', () => {
     console.log(`Backend listening on http://localhost:${port}`);
+    // Start Discord Bridge if configured (failsafe)
+    initDiscordBridge().catch(error => {
+      console.error('CRITICAL: Discord Bridge failed to initialize, but continuing backend startup:', error);
+    });
   });
 
   server.on('error', (error: NodeJS.ErrnoException) => {
@@ -1031,6 +1239,7 @@ async function main() {
     process.exit(1);
   });
 }
+
 
 async function shutdown(signal: string) {
   if (isShuttingDown) {

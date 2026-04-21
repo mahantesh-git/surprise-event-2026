@@ -1,0 +1,10 @@
+{
+  "name": "QUEST: The Code Scavenger",
+  "short_name": "Quest",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#ee3a17",
+  "description": "Tactical Scavenger Hunt Terminal",
+  "icons": []
+}

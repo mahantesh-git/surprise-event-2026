@@ -78,6 +78,22 @@
   --shadow-black-md: 0 8px 20px rgba(0, 0, 0, 0.5);
   --shadow-black-lg: 0 0 50px rgba(0, 0, 0, 0.6);
   --shadow-black-xl: 0 20px 40px -10px rgba(0, 0, 0, 0.8);
+
+  @keyframes scan {
+    0% { transform: translateY(-100%); opacity: 0; }
+    50% { opacity: 1; }
+    100% { transform: translateY(100%); opacity: 0; }
+  }
+  @keyframes scan-reverse {
+    0% { transform: translateY(100%); opacity: 0; }
+    50% { opacity: 1; }
+    100% { transform: translateY(-100%); opacity: 0; }
+  }
+}
+
+@layer utilities {
+  .animate-scan { animation: scan 2s linear infinite; }
+  .animate-scan-reverse { animation: scan-reverse 2s linear infinite; }
 }
 
 @layer base {
@@ -317,7 +333,7 @@
 
 /* Smoothly animate Leaflet markers for real-time movement */
 .leaflet-marker-pane .leaflet-marker-icon {
-  transition: transform 2s linear;
+  transition: transform 0.8s linear;
 }
 
 /* Disable transition during map zoom/pan to prevent markers from sliding out of place */

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/lib/utils';
 import { Shield, Activity, ChevronRight, Lock, Command, AlertCircle } from 'lucide-react';
 import { TacticalStatus } from './TacticalStatus';
+import { QuestLogo } from './QuestLogo';
 
 interface LoginScreenProps {
   role: string;
@@ -31,15 +32,20 @@ export function LoginScreen({
     <div className="relative min-h-screen overflow-hidden select-none font-sans text-white flex flex-col justify-between">
 
       {/* TOP BAR */}
-      <div className="relative z-10 p-8 flex items-center gap-3">
-        <motion.div
-          animate={{ opacity: [1, 0, 1] }}
-          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-          className="w-2 h-2 bg-[#ff4500]"
-        />
-        <span className="font-mono text-[11px] uppercase tracking-[0.3em] text-[#ff4500]">
-          PROTOCOL: AUTHENTICATION_REQUIRED
-        </span>
+      <div className="relative z-10 p-8 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <QuestLogo className="w-10 h-10" />
+          <div className="flex items-center gap-3">
+            <motion.div
+              animate={{ opacity: [1, 0, 1] }}
+              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+              className="w-2 h-2 bg-[#ff4500]"
+            />
+            <span className="font-mono text-[11px] uppercase tracking-[0.3em] text-[#ff4500]">
+              PROTOCOL: AUTHENTICATION_REQUIRED
+            </span>
+          </div>
+        </div>
       </div>
 
       {/* MAIN CONTENT AREA */}
@@ -65,9 +71,10 @@ export function LoginScreen({
           initial={{ opacity: 0, scale: 0.98, x: 20 }}
           animate={{ opacity: 1, scale: 1, x: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className="w-full max-w-[460px] glass-morphism px-11 py-10 rounded-[6px] shadow-2xl"
+          className="w-full max-w-[460px] relative"
         >
-          <div className="space-y-8">
+          <div className="glass-morphism px-11 py-10 rounded-[6px] shadow-2xl">
+            <div className="space-y-8">
             {/* Team Name Input */}
             <div className="space-y-2.5">
               <label className="block font-mono text-[11px] uppercase tracking-[0.2em] text-[#888]">
@@ -130,8 +137,9 @@ export function LoginScreen({
               VERIFICATION MODULE ENGAGED. UNAUTHORIZED ACCESS ATTEMPTS ARE LOGGED.
             </p>
           </div>
-        </motion.div>
-      </div>
+        </div>
+      </motion.div>
+    </div>
 
       {/* BOTTOM STATUS BAR */}
       <div className="relative z-10 p-6 flex items-center justify-between">

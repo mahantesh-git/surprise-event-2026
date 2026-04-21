@@ -1,8 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { updateRunnerLocation } from '@/lib/api';
 
-const FIELD_STAGES = new Set(['runner_travel', 'runner_game', 'runner_done']);
-const SEND_INTERVAL_MS = 2000;
+const SEND_INTERVAL_MS = 250;
 
 /**
  * Watches the runner's real GPS position and streams it to the backend
@@ -15,7 +14,7 @@ export function useRunnerGps(token: string | null, stage: string | null) {
   const latestRotationRef = useRef<number | null>(null);
 
   useEffect(() => {
-    const isActive = !!token && !!stage && FIELD_STAGES.has(stage);
+    const isActive = !!token && !!stage && stage !== 'lobby';
 
     if (!isActive) {
       // Stop watching
@@ -44,16 +43,17 @@ export function useRunnerGps(token: string | null, stage: string | null) {
           heading: pos.coords.heading,
         };
       },
-      () => {},
-      { enableHighAccuracy: true, maximumAge: 3000, timeout: 10000 }
+      () => { },
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
     );
 
     // Orientation listener
+    // Orientation listener with Low-Pass Filtering
     function handleOrientation(e: any) {
       if (e.webkitCompassHeading !== undefined) {
-        latestRotationRef.current = e.webkitCompassHeading;
+        latestRotationRef.current = (360 - e.webkitCompassHeading) % 360;
       } else if (e.alpha !== null) {
-        latestRotationRef.current = 360 - e.alpha;
+        latestRotationRef.current = (360 - e.alpha) % 360;
       }
     }
 
@@ -74,7 +74,7 @@ export function useRunnerGps(token: string | null, stage: string | null) {
     sendTimerRef.current = setInterval(() => {
       const pos = latestPositionRef.current;
       if (!pos || !token) return;
-      
+
       // Use compass rotation if available, fallback to GPS heading
       const h = latestRotationRef.current !== null ? latestRotationRef.current : pos.heading;
 
