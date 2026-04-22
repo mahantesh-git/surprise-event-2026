@@ -53,7 +53,11 @@ export async function initDiscordBridge() {
   const rest = new REST({ version: '10' }).setToken(DISCORD_BOT_TOKEN);
 
   try {
-    await rest.put(Routes.applicationCommands(DISCORD_CLIENT_ID), { body: commands });
+    if (DISCORD_CLIENT_ID) {
+      await rest.put(Routes.applicationCommands(DISCORD_CLIENT_ID), { body: commands });
+    } else {
+      console.warn('Discord Bridge: DISCORD_CLIENT_ID missing, skipping command registration.');
+    }
   } catch (error) {
     console.error('Discord Bridge: Command registration failed', error);
   }
@@ -128,7 +132,11 @@ export async function initDiscordBridge() {
  * Sends an alert to the admin channel and returns the message ID for tracking.
  */
 export async function sendAdminAlert(text: string, location?: { lat: number, lng: number }): Promise<string | null> {
-  if (!discordClient || !adminChannelId) return null;
+  if (!discordClient || !adminChannelId) {
+    console.warn('Discord Bridge: Cannot send alert. Bridge not initialized or channel missing.');
+    return null;
+  }
+  
   try {
     const channel = await discordClient.channels.fetch(adminChannelId);
     if (channel && channel.isTextBased() && 'send' in channel) {
