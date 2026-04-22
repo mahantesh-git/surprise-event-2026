@@ -75,10 +75,13 @@ function MapView({ teams, questions, now }: { teams: LeaderboardTeam[], question
     const map = L.map(containerRef.current, {
       zoomControl: true,
       attributionControl: false,
-    }).setView([15.4340, 75.6465], 17); // JT BCA Gadag Campus Center
+      maxZoom: 24,
+    }).setView([15.4340, 75.6465], 18); // JT BCA Gadag Campus Center
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       className: 'map-tiles grayscale invert opacity-50',
+      maxZoom: 24,
+      maxNativeZoom: 19,
     }).addTo(map);
 
     const layerGroup = L.layerGroup().addTo(map);
@@ -328,7 +331,7 @@ export function Leaderboard() {
   if (loading) return <div className="text-white/80 text-[10px] tracking-widest uppercase p-12 text-center font-mono">Standby for Satellite Uplink...</div>;
 
   return (
-    <div ref={rootRef} className={`relative w-full overflow-hidden ${isFullscreen ? 'h-screen rounded-none border-none' : 'h-[calc(100vh-120px)] min-h-[420px] rounded-xl border border-white/10'}`}>
+    <div ref={rootRef} className={`relative w-full overflow-hidden ${isFullscreen ? 'h-screen rounded-none border-none' : 'h-full rounded-xl border border-white/10'}`}>
       {questions.length > 0 ? <MapView teams={teams} questions={questions} now={now} /> : <div className="absolute inset-0 flex items-center justify-center text-white/50 text-xs font-mono tracking-widest z-0">No Rounds Configured</div>}
 
       <div

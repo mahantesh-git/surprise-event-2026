@@ -73,50 +73,54 @@ const LANGUAGE_SNIPPETS: Record<string, { label: string, insertText: string, doc
 
 let intellisenseRegistered = false;
 
-function defineQuestTheme(monaco: Monaco) {
-  if (!intellisenseRegistered) {
-    intellisenseRegistered = true;
-    Object.keys(LANGUAGE_COMPLETIONS).forEach((lang) => {
-      monaco.languages.registerCompletionItemProvider(lang, {
-        provideCompletionItems: (model: any, position: any) => {
-          const word = model.getWordUntilPosition(position);
-          const range = {
-            startLineNumber: position.lineNumber,
-            endLineNumber: position.lineNumber,
-            startColumn: word.startColumn,
-            endColumn: word.endColumn,
-          };
+function registerIntellisense(monaco: Monaco) {
+  if (intellisenseRegistered) return;
+  intellisenseRegistered = true;
 
-          const suggestions: any[] = [];
+  Object.keys(LANGUAGE_COMPLETIONS).forEach((lang) => {
+    monaco.languages.registerCompletionItemProvider(lang, {
+      provideCompletionItems: (model: any, position: any) => {
+        const word = model.getWordUntilPosition(position);
+        const range = {
+          startLineNumber: position.lineNumber,
+          endLineNumber: position.lineNumber,
+          startColumn: word.startColumn,
+          endColumn: word.endColumn,
+        };
 
-          LANGUAGE_COMPLETIONS[lang].forEach(keyword => {
+        const suggestions: any[] = [];
+
+        // Add Keywords
+        LANGUAGE_COMPLETIONS[lang].forEach(keyword => {
+          suggestions.push({
+            label: keyword,
+            kind: monaco.languages.CompletionItemKind.Keyword,
+            insertText: keyword,
+            range
+          });
+        });
+
+        // Add Snippets
+        if (LANGUAGE_SNIPPETS[lang]) {
+          LANGUAGE_SNIPPETS[lang].forEach(snippet => {
             suggestions.push({
-              label: keyword,
-              kind: monaco.languages.CompletionItemKind.Keyword,
-              insertText: keyword,
+              label: snippet.label,
+              kind: monaco.languages.CompletionItemKind.Snippet,
+              insertText: snippet.insertText,
+              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              documentation: snippet.documentation,
               range
             });
           });
-
-          if (LANGUAGE_SNIPPETS[lang]) {
-            LANGUAGE_SNIPPETS[lang].forEach(snippet => {
-              suggestions.push({
-                label: snippet.label,
-                kind: monaco.languages.CompletionItemKind.Snippet,
-                insertText: snippet.insertText,
-                insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-                documentation: snippet.documentation,
-                range
-              });
-            });
-          }
-
-          return { suggestions };
         }
-      });
-    });
-  }
 
+        return { suggestions };
+      }
+    });
+  });
+}
+
+function defineQuestTheme(monaco: Monaco) {
   monaco.editor.defineTheme('quest-dark', {
     base: 'vs-dark',
     inherit: true,
@@ -156,7 +160,7 @@ interface CodeEditorProps {
   onChange: (value: string) => void;
   language: SupportedLanguage;
   onLanguageChange: (lang: SupportedLanguage, starterCode: string) => void;
-  onRun?: () => void;
+  onRun?: (code?: string) => void;
   height?: string;
   /** Admin's original language for this question */
   defaultLanguage?: SupportedLanguage;
@@ -175,25 +179,42 @@ export function CodeEditor({
   defaultCode,
 }: CodeEditorProps) {
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
+  const onRunRef = useRef(onRun);
+
+  // Sync ref with latest prop
+  useEffect(() => {
+    onRunRef.current = onRun;
+  }, [onRun]);
 
   // Global Ctrl/Cmd+Enter shortcut
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
         e.preventDefault();
-        onRun?.();
+        // Always grab latest from editor if mounted, otherwise fallback to prop value
+        const currentCode = editorRef.current?.getValue() || value;
+        onRunRef.current?.(currentCode);
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [onRun]);
+  }, [value]);
 
   const handleMount = (ed: editor.IStandaloneCodeEditor, monaco: Monaco) => {
     editorRef.current = ed;
     defineQuestTheme(monaco);
+    registerIntellisense(monaco);
     monaco.editor.setTheme('quest-dark');
     // Ctrl+Enter inside the editor
-    ed.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => onRun?.());
+    ed.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
+      const currentCode = ed.getValue();
+      onRunRef.current?.(currentCode);
+    });
+  };
+
+  const handleBeforeMount = (monaco: Monaco) => {
+    defineQuestTheme(monaco);
+    registerIntellisense(monaco);
   };
 
   const handleLanguageSwitch = (lang: SupportedLanguage) => {

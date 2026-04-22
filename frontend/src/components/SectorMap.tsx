@@ -15,20 +15,20 @@ L.Icon.Default.mergeOptions({
 function parseCoord(raw: string): number {
   if (typeof raw !== 'string') return Number(raw) || 0;
   const clean = raw.trim();
-  
+
   // Capture degrees, minutes, seconds, and direction
   // Matches: 15° 26' 03.4" N, 15.4348° N, 15°26'N, 15 26 03 N, etc.
   const parts = clean.match(/([\d.]+)[°\s]*([\d.]*)['\s]*([\d.]*)["\s]*([NSEW]?)/i);
   if (!parts) return 0;
-  
+
   const d = parseFloat(parts[1] || '0');
   const m = parseFloat(parts[2] || '0');
   const s = parseFloat(parts[3] || '0');
   const dir = (parts[4] || '').toUpperCase();
-  
+
   let decimal = d + (m / 60) + (s / 3600);
   if (dir === 'S' || dir === 'W') decimal = -decimal;
-  
+
   // Final safeguard: if result is clearly an integer that was meant to be DMS 
   // but failed (e.g. 1526 instead of 15.43), we don't want to send it.
   // But our new parser handles 15°26' as 15.4333, so 1526 shouldn't happen anymore.
@@ -161,7 +161,7 @@ export function SectorMap({ rounds, currentRound, stage, visible }: SectorMapPro
 
     L.tileLayer(
       'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-      { maxZoom: 21, subdomains: 'abcd' }
+      { maxZoom: 21, maxNativeZoom: 19, subdomains: 'abcd' }
     ).addTo(map);
 
     mapRef.current = map;
@@ -247,7 +247,7 @@ export function SectorMap({ rounds, currentRound, stage, visible }: SectorMapPro
     if (!hasRealHeading && hasTarget && targetLat !== null && targetLng !== null) {
       let nextLat = targetLat;
       let nextLng = targetLng;
-      
+
       if (routeCoords && routeCoords.length > 1) {
         // Find a point at least 5 meters ahead for a stable bearing
         for (let i = 1; i < routeCoords.length; i++) {
@@ -391,7 +391,7 @@ export function SectorMap({ rounds, currentRound, stage, visible }: SectorMapPro
     if (map) {
       const currentPos: L.LatLngTuple = [lat, lng];
       const lastPos = pathHistoryRef.current[pathHistoryRef.current.length - 1];
-      
+
       // Only add point if moved significantly (> 2m) to keep the path clean
       if (!lastPos || map.distance(currentPos, lastPos) > 2) {
         pathHistoryRef.current.push(currentPos);
@@ -534,18 +534,17 @@ export function SectorMap({ rounds, currentRound, stage, visible }: SectorMapPro
       )}
       {/* Map */}
       <div className={
-        isFullScreen 
-        ? "fixed inset-0 z-[9999] bg-black/90 backdrop-blur-md" 
-        : "relative w-full h-[360px] sm:h-[420px] glass-morphism corner-card overflow-hidden shadow-black-lg"
+        isFullScreen
+          ? "fixed inset-0 z-[9999] bg-black/90 backdrop-blur-md"
+          : "relative w-full h-[360px] sm:h-[420px] glass-morphism corner-card overflow-hidden shadow-black-lg"
       }>
         <div ref={mapContainerRef} className="absolute inset-0 w-full h-full" />
 
         {/* Fullscreen Toggle */}
         <button
           onClick={() => setIsFullScreen(!isFullScreen)}
-          className={`absolute right-4 z-[1000] p-2 bg-black/60 backdrop-blur-sm border border-white/10 rounded-lg text-white hover:bg-white/10 transition-colors shadow-black-lg ${
-            isFullScreen ? 'top-20 sm:top-24' : 'top-4'
-          }`}
+          className={`absolute right-4 z-[1000] p-2 bg-black/60 backdrop-blur-sm border border-white/10 rounded-lg text-white hover:bg-white/10 transition-colors shadow-black-lg ${isFullScreen ? 'top-20 sm:top-24' : 'top-4'
+            }`}
           aria-label="Toggle Fullscreen"
         >
           {isFullScreen ? <Minimize className="h-5 w-5" /> : <Maximize className="h-5 w-5" />}

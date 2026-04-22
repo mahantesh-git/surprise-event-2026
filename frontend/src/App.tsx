@@ -598,12 +598,13 @@ export default function App() {
 
   const normalizeAnswer = (value: string) => value.replace(/\r\n/g, '\n').trim();
 
-  const runCode = async () => {
-    if (!session?.token || !p1Code.trim() || isRunning) return;
+  const runCode = async (codeOverride?: string) => {
+    const codeToRun = typeof codeOverride === 'string' ? codeOverride : p1Code;
+    if (!session?.token || !codeToRun.trim() || isRunning) return;
     setIsRunning(true);
     setConsoleOutput(null);
     try {
-      const result = await compileCode(session.token, currentRound.id, p1Code, selectedLanguage);
+      const result = await compileCode(session.token, currentRound.id, codeToRun, selectedLanguage);
 
       if (result.timedOut) {
         setConsoleOutput({ stdout: '', stderr: 'Execution timed out (10s limit exceeded).', matched: false });
@@ -957,7 +958,7 @@ export default function App() {
                                 setP1Code(starter);
                                 setConsoleOutput(null);
                               }}
-                              onRun={runCode}
+                              onRun={(code) => runCode(code)}
                               height="340px"
                               defaultLanguage={(currentRound.p1.language ?? 'python') as SupportedLanguage}
                               defaultCode={currentRound.p1.code}
@@ -967,7 +968,7 @@ export default function App() {
                             <Button
                               className="w-full font-bold uppercase tracking-[0.2em] h-14 btn-primary"
                               size="md"
-                              onClick={runCode}
+                              onClick={() => runCode()}
                               disabled={isRunning || !p1Code.trim()}
                             >
                               {isRunning ? (

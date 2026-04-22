@@ -276,7 +276,10 @@ export function AdminPanel({ onBack }: { onBack: () => void }) {
           )}
         </header>
 
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-8">
+        <div className={cn(
+          "flex-1 relative",
+          activePage === 'leaderboard' ? "overflow-hidden" : "overflow-y-auto custom-scrollbar p-8"
+        )}>
           <AnimatePresence mode="wait">
             <motion.div
               key={activePage}
@@ -284,7 +287,7 @@ export function AdminPanel({ onBack }: { onBack: () => void }) {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.2 }}
-              className="h-full relative"
+              className={cn("relative", activePage === 'leaderboard' ? "h-full" : "min-h-full")}
             >
               {activePage === 'leaderboard' && <LeaderboardView />}
               {activePage === 'teams' && (
