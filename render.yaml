@@ -21,13 +21,7 @@ services:
         value: https://emkc.org/api/v2/piston/execute
       - key: NODE_ENV
         value: production
-      - key: DISCORD_BOT_TOKEN
-        sync: false
-      - key: ADMIN_CHANNEL_ID
-        sync: false
-      - key: DISCORD_CLIENT_ID
-        sync: false
-      - key: ADMIN_DISCORD_USER_ID
+      - key: DISCORD_WEBHOOK_URL
         sync: false
 
   - type: static

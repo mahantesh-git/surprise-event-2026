@@ -1247,10 +1247,8 @@ async function main() {
   httpServer.listen(port, '0.0.0.0', () => {
     console.log(`Backend listening on http://localhost:${port} (HTTP + WebSocket)`);
 
-    // Init Discord in background — must NOT block server startup
-    initDiscordBridge().catch(error => {
-      console.error('Discord Bridge failed to initialize, continuing without it:', error);
-    });
+    // Init Discord Webhook bridge (synchronous, no connection needed)
+    initDiscordBridge();
   });
 
   httpServer.on('error', (error: NodeJS.ErrnoException) => {
