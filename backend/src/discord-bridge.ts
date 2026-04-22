@@ -14,6 +14,15 @@ export async function initDiscordBridge() {
   const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID;
   const ADMIN_DISCORD_USER_ID = process.env.ADMIN_DISCORD_USER_ID;
 
+  // Diagnostic: log which vars are present (not their values)
+  console.log('Discord Bridge init check:', {
+    hasToken: !!DISCORD_BOT_TOKEN,
+    hasChannelId: !!ADMIN_CHANNEL_ID,
+    hasClientId: !!DISCORD_CLIENT_ID,
+    hasUserId: !!ADMIN_DISCORD_USER_ID,
+    tokenLength: DISCORD_BOT_TOKEN?.length ?? 0,
+  });
+
   if (!DISCORD_BOT_TOKEN || !ADMIN_CHANNEL_ID || !DISCORD_CLIENT_ID) {
     console.warn('Discord Bridge: Missing configuration. Bridge disabled.');
     return;
