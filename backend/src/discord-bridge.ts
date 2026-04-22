@@ -20,7 +20,7 @@ export async function initDiscordBridge() {
   }
 
   adminChannelId = ADMIN_CHANNEL_ID;
-  discordClient = new Client({
+  const pendingClient = new Client({
     intents: [
       GatewayIntentBits.Guilds,
       GatewayIntentBits.GuildMessages,
@@ -62,12 +62,12 @@ export async function initDiscordBridge() {
     console.error('Discord Bridge: Command registration failed', error);
   }
 
-  discordClient.on(Events.ClientReady, () => {
-    console.log(`Tactical Bridge Active: ${discordClient?.user?.tag}`);
+  pendingClient.on(Events.ClientReady, () => {
+    console.log(`Tactical Bridge Active: ${pendingClient.user?.tag}`);
   });
 
   // Handle Slash Commands
-  discordClient.on(Events.InteractionCreate, async (interaction) => {
+  pendingClient.on(Events.InteractionCreate, async (interaction) => {
     if (!interaction.isChatInputCommand()) return;
     if (interaction.channelId !== adminChannelId) {
       await interaction.reply({ content: 'ACCESS DENIED: Restricted to Admin Channel.', ephemeral: true });
@@ -87,7 +87,7 @@ export async function initDiscordBridge() {
   });
 
   // SMART RELY: Handle replies to help alerts
-  discordClient.on(Events.MessageCreate, async (message) => {
+  pendingClient.on(Events.MessageCreate, async (message) => {
     if (message.author.bot || message.channelId !== adminChannelId) return;
     
     // Check if this is a reply to one of our messages
@@ -122,9 +122,13 @@ export async function initDiscordBridge() {
   });
 
   try {
-    await discordClient.login(DISCORD_BOT_TOKEN);
+    await pendingClient.login(DISCORD_BOT_TOKEN);
+    // Only expose the client globally AFTER a successful login
+    discordClient = pendingClient;
+    console.log('Discord Bridge: Login successful.');
   } catch (error) {
-    console.error('Discord Bridge: Login failed', error);
+    adminChannelId = null;
+    console.error('Discord Bridge: Login failed. Check DISCORD_BOT_TOKEN env var.', error);
   }
 }
 
