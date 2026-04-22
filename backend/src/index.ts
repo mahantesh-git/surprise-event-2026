@@ -1243,12 +1243,13 @@ async function main() {
   await ensureIndexes();
   await seedQuestionsIfEmpty();
 
+  // Initialize Discord Bridge BEFORE accepting requests so the bot is ready
+  await initDiscordBridge().catch(error => {
+    console.error('Discord Bridge failed to initialize, continuing without it:', error);
+  });
+
   httpServer.listen(port, '0.0.0.0', () => {
     console.log(`Backend listening on http://localhost:${port} (HTTP + WebSocket)`);
-    // Start Discord Bridge if configured (failsafe)
-    initDiscordBridge().catch(error => {
-      console.error('CRITICAL: Discord Bridge failed to initialize, but continuing backend startup:', error);
-    });
   });
 
   httpServer.on('error', (error: NodeJS.ErrnoException) => {
