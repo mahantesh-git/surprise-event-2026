@@ -4,24 +4,31 @@ services:
     env: docker
     rootDir: backend
     dockerfilePath: Dockerfile
-    plan: free # or starter if you need more resources
+    plan: free
+    healthCheckPath: /api/health
     envVars:
       - key: PORT
         value: 4000
-      # You need to provide your MongoDB URI in the Render Dashboard
       - key: MONGO_URI
         sync: false
-      # You need to provide a JWT secret in the Render Dashboard
       - key: JWT_SECRET
         sync: false
-      # Optional: custom admin credentials
       - key: ADMIN_EMAIL
         value: admin@admin.com
       - key: ADMIN_PASSWORD
         sync: false
-      # Point to public Piston API for code execution since Docker in Render can't run Piston privileged
       - key: PISTON_API_URL
         value: https://emkc.org/api/v2/piston/execute
+      - key: NODE_ENV
+        value: production
+      - key: DISCORD_BOT_TOKEN
+        sync: false
+      - key: ADMIN_CHANNEL_ID
+        sync: false
+      - key: DISCORD_CLIENT_ID
+        sync: false
+      - key: ADMIN_DISCORD_USER_ID
+        sync: false
 
   - type: static
     name: quest-frontend
@@ -34,13 +41,9 @@ services:
         source: /*
         destination: /index.html
     envVars:
-      # This tells the frontend to connect to the backend deployed above
       - key: VITE_API_HOST
         fromService:
           type: web
           name: quest-backend
           property: url
-          # Render will automatically append /api via frontend code logic, 
-          # but we can explicitly pass the full path if needed:
-          # Render automatically passes the base URL like https://quest-backend.onrender.com
 

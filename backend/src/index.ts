@@ -18,12 +18,14 @@ import type { ChatMessage } from './types';
 import { initDiscordBridge, sendAdminAlert } from './discord-bridge';
 import { initSocketServer, broadcastLeaderboard } from './socket';
 
-const envPath = path.resolve(__dirname, '../.env');
-const fallbackEnvPath = path.resolve(__dirname, '../.env.example');
-const envLoad = dotenv.config({ path: envPath });
-if (envLoad.error) {
-  dotenv.config({ path: fallbackEnvPath });
-}
+// Load environment variables. In production (Render), these are provided by the system.
+// In local dev, this loads from the .env file.
+dotenv.config();
+
+console.log('--- SYSTEM STARTUP ---');
+console.log('Environment:', process.env.NODE_ENV || 'development');
+console.log('Discord Token Configured:', !!process.env.DISCORD_BOT_TOKEN);
+console.log('-----------------------');
 
 const app = express();
 const httpServer = http.createServer(app);
