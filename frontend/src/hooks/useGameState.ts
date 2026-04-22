@@ -66,12 +66,15 @@ function parseStoredSession(role: Role): TeamSession | null {
   }
 }
 
+import { useSocket } from '@/contexts/SocketContext';
+
 export function useGameState(role: Role) {
   const [session, setSession] = useState<TeamSession | null>(null);
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const storageKey = getStorageKey(role);
+  const { socket } = useSocket();
 
   const syncGameState = async (token: string) => {
     const response = await getGameState(token);
@@ -154,6 +157,22 @@ export function useGameState(role: Role) {
 
     return () => window.clearInterval(interval);
   }, [session, storageKey]);
+
+  useEffect(() => {
+    if (!socket || !session) return;
+
+    const handleChatMessage = (msg: ChatMessage) => {
+      setGameState(prev => {
+        if (!prev) return prev;
+        return { ...prev, lastMessage: msg };
+      });
+    };
+
+    socket.on('chat:message', handleChatMessage);
+    return () => {
+      socket.off('chat:message', handleChatMessage);
+    };
+  }, [socket, session]);
 
   const login = async (teamName: string, password: string) => {
     setError(null);

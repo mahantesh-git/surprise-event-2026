@@ -1,3 +1,4 @@
+import http from 'http';
 import axios from 'axios';
 import cors from 'cors';
 
@@ -15,6 +16,7 @@ import { DEFAULT_QUESTIONS } from './defaultQuestions';
 import { asyncHandler, createApiErrorHandler, HttpError } from './errors';
 import type { ChatMessage } from './types';
 import { initDiscordBridge, sendAdminAlert } from './discord-bridge';
+import { initSocketServer, broadcastLeaderboard } from './socket';
 
 const envPath = path.resolve(__dirname, '../.env');
 const fallbackEnvPath = path.resolve(__dirname, '../.env.example');
@@ -24,13 +26,15 @@ if (envLoad.error) {
 }
 
 const app = express();
+const httpServer = http.createServer(app);
 const port = Number(process.env.PORT || 4000);
 
+// Attach Socket.io to the HTTP server immediately (before any routes)
+initSocketServer(httpServer);
 
 const eventQrCodesDir = path.resolve(__dirname, '../../event_qr_codes');
 const questionQrScriptPath = path.resolve(__dirname, '../scripts/generate_question_qr.py');
 const route = asyncHandler;
-let server: ReturnType<typeof app.listen> | null = null;
 let isShuttingDown = false;
 
 function buildLocationQrCode(round: number) {
@@ -876,7 +880,7 @@ app.post('/api/runner/verify-final-qr', requireAuth, route(async (request: Authe
 
 app.put('/api/runner/location', requireAuth, route(async (request: AuthedRequest, response) => {
   const auth = request.auth!;
-  // Allow both runner and solver roles to update tactical location 
+  // Allow both runner and solver roles to update tactical location
   // to ensure continuous tracking throughout the round.
 
   const { lat, lng, heading } = request.body as { lat?: unknown; lng?: unknown; heading?: unknown };
@@ -905,6 +909,14 @@ app.put('/api/runner/location', requireAuth, route(async (request: AuthedRequest
       }
     }
   );
+
+  // Also push lightweight update over socket to admin room (REST fallback path)
+  const { getIo } = await import('./socket');
+  getIo()?.to('admin').emit('runner:location', {
+    teamId: auth.teamId,
+    lat, lng, heading: h,
+    timestamp: Date.now(),
+  });
 
   response.json({ ok: true });
 }));
@@ -966,6 +978,8 @@ app.get('/api/chat/phrases', requireAuth, route(async (_request: AuthedRequest, 
   response.json({ phrases: phrases?.value || [] });
 }));
 
+import { notifyTeamMessage } from './socket';
+
 app.post('/api/chat/send', requireAuth, route(async (request: AuthedRequest, response) => {
   const auth = request.auth!;
   const { text } = request.body as { text?: string };
@@ -992,6 +1006,10 @@ app.post('/api/chat/send', requireAuth, route(async (request: AuthedRequest, res
     { _id: team._id },
     { $set: { lastMessage, updatedAt: new Date() } }
   );
+
+  // Instantly push the message to the team room and admin room
+  notifyTeamMessage(auth.teamId, 'chat:message', lastMessage);
+  notifyTeamMessage('admin', 'chat:message', { ...lastMessage, teamId: auth.teamId });
 
   response.json({ ok: true, lastMessage });
 }));
@@ -1049,11 +1067,13 @@ app.post('/api/admin/chat/send', requireAdmin, route(async (request: AdminAuthed
       { _id: toObjectId(targetTeamId, 'team id') },
       { $set: { lastMessage, updatedAt: new Date() } }
     );
+    notifyTeamMessage(targetTeamId, 'chat:message', lastMessage);
   } else {
     await teams.updateMany(
       {},
       { $set: { lastMessage, updatedAt: new Date() } }
     );
+    notifyTeamMessage('all', 'chat:message', lastMessage);
   }
 
   response.json({ ok: true });
@@ -1221,15 +1241,15 @@ async function main() {
   await ensureIndexes();
   await seedQuestionsIfEmpty();
 
-  server = app.listen(port, '0.0.0.0', () => {
-    console.log(`Backend listening on http://localhost:${port}`);
+  httpServer.listen(port, '0.0.0.0', () => {
+    console.log(`Backend listening on http://localhost:${port} (HTTP + WebSocket)`);
     // Start Discord Bridge if configured (failsafe)
     initDiscordBridge().catch(error => {
       console.error('CRITICAL: Discord Bridge failed to initialize, but continuing backend startup:', error);
     });
   });
 
-  server.on('error', (error: NodeJS.ErrnoException) => {
+  httpServer.on('error', (error: NodeJS.ErrnoException) => {
     if (error.code === 'EADDRINUSE') {
       console.error(`Port ${port} is already in use. Stop the existing process or change PORT in backend/.env.`);
       process.exit(1);
@@ -1242,23 +1262,13 @@ async function main() {
 
 
 async function shutdown(signal: string) {
-  if (isShuttingDown) {
-    return;
-  }
-
+  if (isShuttingDown) return;
   isShuttingDown = true;
   console.log(`${signal} received. Shutting down gracefully...`);
 
   await new Promise<void>((resolve) => {
-    if (!server) {
-      resolve();
-      return;
-    }
-
-    server.close((error) => {
-      if (error) {
-        console.error('Error while closing HTTP server', error);
-      }
+    httpServer.close((error) => {
+      if (error) console.error('Error while closing HTTP server', error);
       resolve();
     });
   });

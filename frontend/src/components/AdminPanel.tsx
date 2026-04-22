@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useSocket } from '@/contexts/SocketContext';
 import {
   Lock,
   Database,
@@ -95,6 +96,17 @@ export function AdminPanel({ onBack }: { onBack: () => void }) {
       setIsAdminLoggingIn(false);
     }
   };
+
+  const { connect: socketConnect, disconnect: socketDisconnect } = useSocket();
+
+  // Connect socket when admin token is available; disconnect on logout
+  useEffect(() => {
+    if (token) {
+      socketConnect(token);
+    } else {
+      socketDisconnect();
+    }
+  }, [token]);
 
   const handleAdminLogout = () => {
     window.localStorage.removeItem(ADMIN_SESSION_KEY);

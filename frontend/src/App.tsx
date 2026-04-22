@@ -22,6 +22,7 @@ import { AdminPanel } from '@/components/AdminPanel';
 import { RoleSelection } from '@/components/RoleSelection';
 import { useGameState, Role } from '@/hooks/useGameState';
 import { useRunnerGps } from '@/hooks/useRunnerGps';
+import { useSocket } from '@/contexts/SocketContext';
 import { getQuestions, compileCode, getFinalRoundQrCode, verifyRunnerFinalQr, RoundQuestion, requestTacticalSupport } from '@/lib/api';
 import type { SupportedLanguage } from '@/components/CodeEditor';
 import { CodeEditor, LANGUAGE_TEMPLATES } from '@/components/CodeEditor';
@@ -103,6 +104,15 @@ export default function App() {
     setLoginError(null);
     setIsLoggingIn(true);
     try {
+      // iOS 13+ requires explicit user gesture to grant compass access
+      if (typeof (window as any).DeviceOrientationEvent !== 'undefined' && typeof (window as any).DeviceOrientationEvent.requestPermission === 'function') {
+        try {
+          await (window as any).DeviceOrientationEvent.requestPermission();
+        } catch (e) {
+          console.warn('DeviceOrientation permission request failed or ignored', e);
+        }
+      }
+
       await login(teamName, password);
       if (role === 'solver' || role === 'runner') {
         await requestAppFullscreen();
@@ -131,6 +141,20 @@ export default function App() {
     session?.token ?? null,
     gameState?.stage ?? null
   );
+
+  // ── WebSocket lifecycle: connect on login, disconnect on logout ───────────
+  const { connect: socketConnect, disconnect: socketDisconnect } = useSocket();
+  useEffect(() => {
+    // AdminPanel manages its own admin socket connection. If we're on the admin
+    // route, don't let the team session lifecycle interfere with it.
+    if (pathname === '/admin') return;
+
+    if (session?.token) {
+      socketConnect(session.token);
+    } else {
+      socketDisconnect();
+    }
+  }, [session?.token, pathname, socketConnect, socketDisconnect]);
 
   // Sync top-level location changes on popstate
   useEffect(() => {

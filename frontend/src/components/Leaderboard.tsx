@@ -2,10 +2,12 @@ import { useState, useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
 import { Trophy, Clock, Target, MapPin, Zap, ChevronRight, ChevronLeft, Maximize, Minimize, ShieldAlert } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { formatDuration } from '@/lib/formatDuration';
 import { getLeaderboard, getQuestions, LeaderboardTeam, RoundQuestion } from '@/lib/api';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { QuestLogo } from './QuestLogo';
+import { useSocket } from '@/contexts/SocketContext';
 
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -18,16 +20,6 @@ function parseCoord(raw: string) {
   return parseFloat(raw.replace(/[°NSEWnsew\s]/g, ''));
 }
 
-export function formatDuration(start: string | null, finish: string | null, now: number) {
-  if (!start) return '--:--:--';
-  const s = new Date(start).getTime();
-  const e = finish ? new Date(finish).getTime() : now;
-  const elapsed = Math.max(0, Math.floor((e - s) / 1000));
-  const h = Math.floor(elapsed / 3600).toString().padStart(2, '0');
-  const m = Math.floor((elapsed % 3600) / 60).toString().padStart(2, '0');
-  const sec = (elapsed % 60).toString().padStart(2, '0');
-  return `${h}:${m}:${sec}`;
-}
 
 function AnimatedScore({ value }: { value: number }) {
   const [displayValue, setDisplayValue] = useState(value);
@@ -147,7 +139,7 @@ function MapView({ teams, questions, now }: { teams: LeaderboardTeam[], question
           
           <!-- Diamond Marker -->
           <div style="position:relative;width:12px;height:12px;display:flex;align-items:center;justify-content:center;">
-              <div class="team-direction" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;transform:rotate(${team.currentHeading || 0}deg);transition:transform 0.4s ease-out;opacity:${team.currentHeading !== null ? 1 : 0};z-index:20;">
+              <div class="team-direction" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;transform:rotate(${team.currentHeading || 0}deg);transition:transform 0.15s linear;opacity:${team.currentHeading !== null ? 1 : 0};z-index:20;">
                 <svg width="40" height="40" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" overflow="visible">
                   <!-- Outer glow cone -->
                   <path d="M32 32 L18 4 A30 30 0 0 1 46 4 Z" fill="var(--color-accent)" fill-opacity="0.18" />
@@ -272,6 +264,7 @@ export function Leaderboard() {
   const [isListVisible, setIsListVisible] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
+  const { socket } = useSocket();
 
   useEffect(() => {
     const onFullscreenChange = () => setIsFullscreen(!!document.fullscreenElement);
@@ -299,7 +292,7 @@ export function Leaderboard() {
         getQuestions().catch(() => ({ questions: [] }))
       ]);
 
-      const boardArr = ldbRes?.leaderboard || [];
+      const boardArr: LeaderboardTeam[] = ldbRes?.leaderboard || [];
       const questionsArray = qRes?.questions || (Array.isArray(qRes) ? qRes : []);
 
       const currentNow = Date.now();
@@ -312,7 +305,23 @@ export function Leaderboard() {
         return (aEnd - aStart) - (bEnd - bStart);
       });
 
-      setTeams(sorted);
+      // Merge REST data with existing WS-updated position fields.
+      // The REST response comes from MongoDB which is intentionally throttled
+      // (writes every 2 s), so we must NOT overwrite currentLat/currentLng/
+      // currentHeading — those are kept fresh by live WebSocket events.
+      setTeams(prev => {
+        const prevMap = new Map(prev.map(t => [t.id, t]));
+        return sorted.map(restTeam => {
+          const live = prevMap.get(restTeam.id);
+          if (!live) return restTeam; // first load — no WS data yet
+          return {
+            ...restTeam,                               // REST wins for score/stage/round
+            currentLat:     live.currentLat,           // WS wins for live position
+            currentLng:     live.currentLng,
+            currentHeading: live.currentHeading,
+          };
+        });
+      });
       setQuestions(questionsArray);
     } catch {
       setTeams([]);
@@ -322,9 +331,56 @@ export function Leaderboard() {
     }
   };
 
+
+  // ── Socket: live GPS position updates ──────────────────────────────────────
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleRunnerLocation = (data: {
+      teamId: string; lat: number; lng: number;
+      heading: number | null; timestamp: number;
+    }) => {
+      setTeams(prev => prev.map(t => {
+        if (t.id === data.teamId) {
+          let newHeading = data.heading;
+          if (newHeading !== null && t.currentHeading !== null) {
+            let diff = newHeading - (t.currentHeading % 360);
+            diff = ((diff + 540) % 360) - 180;
+            newHeading = t.currentHeading + diff;
+          }
+          return { ...t, currentLat: data.lat, currentLng: data.lng, currentHeading: newHeading };
+        }
+        return t;
+      }));
+    };
+
+    // ── Socket: full leaderboard sync (score/stage changes) ─────────────────
+    const handleLeaderboardUpdate = (data: { leaderboard: LeaderboardTeam[] }) => {
+      const currentNow = Date.now();
+      const sorted = [...data.leaderboard].sort((a, b) => {
+        if (a.solvedCount !== b.solvedCount) return b.solvedCount - a.solvedCount;
+        const aStart = a.startTime ? new Date(a.startTime).getTime() : currentNow;
+        const aEnd = a.finishTime ? new Date(a.finishTime).getTime() : currentNow;
+        const bStart = b.startTime ? new Date(b.startTime).getTime() : currentNow;
+        const bEnd = b.finishTime ? new Date(b.finishTime).getTime() : currentNow;
+        return (aEnd - aStart) - (bEnd - bStart);
+      });
+      setTeams(sorted);
+    };
+
+    socket.on('runner:location', handleRunnerLocation);
+    socket.on('leaderboard:update', handleLeaderboardUpdate);
+
+    return () => {
+      socket.off('runner:location', handleRunnerLocation);
+      socket.off('leaderboard:update', handleLeaderboardUpdate);
+    };
+  }, [socket]);
+
+  // ── REST polling (5s fallback — keeps data fresh if WS drops) ────────────
   useEffect(() => {
     fetchBoard();
-    const intv = setInterval(fetchBoard, 800);
+    const intv = setInterval(fetchBoard, 5000);
     return () => clearInterval(intv);
   }, []);
 

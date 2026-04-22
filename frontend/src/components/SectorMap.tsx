@@ -59,6 +59,7 @@ export function SectorMap({ rounds, currentRound, stage, visible }: SectorMapPro
   const [isFullScreen, setIsFullScreen] = useState(false);
   const pathHistoryRef = useRef<L.LatLngTuple[]>([]);
   const pathLayerRef = useRef<L.Polyline | null>(null);
+  const prevRoundRef = useRef<number>(currentRound);
 
   const isComplete = stage === 'complete';
   const isRunnerStage = ['runner_travel', 'runner_game', 'runner_done'].includes(stage);
@@ -149,6 +150,34 @@ export function SectorMap({ rounds, currentRound, stage, visible }: SectorMapPro
       if (cleanup) cleanup();
     };
   }, [isRunnerStage]);
+
+  // ── Clear stale path + route whenever the round advances ────
+  useEffect(() => {
+    if (prevRoundRef.current === currentRound) return;
+    prevRoundRef.current = currentRound;
+
+    const map = mapRef.current;
+
+    // 1. Clear the breadcrumb trail
+    pathHistoryRef.current = [];
+    if (pathLayerRef.current && map) {
+      map.removeLayer(pathLayerRef.current);
+      pathLayerRef.current = null;
+    }
+
+    // 2. Clear the OSRM navigation route
+    if (routeLayerRef.current && map) {
+      map.removeLayer(routeLayerRef.current);
+      routeLayerRef.current = null;
+    }
+    if (routeGlowRef.current && map) {
+      map.removeLayer(routeGlowRef.current);
+      routeGlowRef.current = null;
+    }
+
+    // 3. Allow re-centering on the new target
+    hasCenteredRef.current = false;
+  }, [currentRound]);
 
   // ── Init Leaflet map ────────────────────────────────────────
   useEffect(() => {
