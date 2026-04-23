@@ -46,7 +46,15 @@ export default function App() {
   const normalizedPathname = pathname.replace(/\/$/, '');
   const role = normalizedPathname === '/solver' || normalizedPathname === '/runner' ? (normalizedPathname.slice(1) as Role) : null;
   const { session, gameState, loading, login, logout, resetGame, updateState, sync } = useGameState((role ?? 'solver') as Role);
-  const [rounds, setRounds] = useState<RoundQuestion[]>([]);
+  const [rounds, setRounds] = useState<RoundQuestion[]>(() => {
+    try {
+      const stored = localStorage.getItem('quest_rounds');
+      if (stored) return JSON.parse(stored);
+    } catch (e) {
+      console.warn('Failed to parse cached rounds');
+    }
+    return [];
+  });
   const [roundsLoading, setRoundsLoading] = useState(false);
   const [roundsError, setRoundsError] = useState<string | null>(null);
   const [p1Code, setP1Code] = useState('');
@@ -232,17 +240,29 @@ export default function App() {
   useEffect(() => {
     if (!role) return;
 
-    setRoundsLoading(true);
+    if (rounds.length === 0) {
+      setRoundsLoading(true);
+    }
+    
     getQuestions()
       .then((response: any) => {
         const questionsArray = response?.questions || (Array.isArray(response) ? response : []);
         const sorted = [...questionsArray].sort((a: RoundQuestion, b: RoundQuestion) => (a.round || 0) - (b.round || 0));
         setRounds(sorted);
+        try {
+          localStorage.setItem('quest_rounds', JSON.stringify(sorted));
+        } catch (e) {
+          console.warn('Failed to cache rounds');
+        }
         setRoundsError(null);
       })
       .catch((error: Error) => {
-        setRounds(prev => prev.length > 0 ? prev : []);
-        setRoundsError(error instanceof Error ? error.message : 'Failed to load questions');
+        if (rounds.length === 0) {
+          setRounds(prev => prev.length > 0 ? prev : []);
+          setRoundsError(error instanceof Error ? error.message : 'Failed to load questions');
+        } else {
+          console.warn('Failed to fetch rounds, using cached data.', error);
+        }
       })
       .finally(() => setRoundsLoading(false));
   }, [role, session?.team.id]);
