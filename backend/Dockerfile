@@ -6,30 +6,25 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # Install python dependencies for QR code generation
-# Add --break-system-packages to bypass PEP 668 in Debian 12/Bullseye if needed, 
-# but bullseye usually allows it. Let's use it just in case, or use a venv.
 RUN pip3 install qrcode pillow
 
-# We set the working directory to match the relative paths expected by the app.
-# The app looks for ../../event_qr_codes from backend/dist/index.js
-# So if we are in /app/backend, ../../event_qr_codes is /app/event_qr_codes
-WORKDIR /app/backend
+# Set working dir to /app so relative paths work correctly
+WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
-
-# Install dependencies
-RUN npm install
-
-# Copy backend source code
+# Copy the entire repo (backend + event_qr_codes)
 COPY . .
 
-# Create the QR codes directory the backend expects
-RUN mkdir -p /app/event_qr_codes
+# Install backend dependencies
+WORKDIR /app/backend
+
+RUN npm install
 
 # Build TypeScript
 RUN npm run build
 
+# Create the QR codes directory the backend expects
+RUN mkdir -p /app/event_qr_codes
+ 
 EXPOSE 4000
 
 # Start the application
