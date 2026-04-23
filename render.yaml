@@ -1,35 +1,7 @@
-services:
-  - type: web
-    name: quest-backend
-    env: docker
-    rootDir: backend
-    dockerfilePath: Dockerfile
-    plan: free
-    healthCheckPath: /api/health
-    envVars:
-      - key: PORT
-        value: 4000
-      - key: MONGODB_URI
-        sync: false
-      - key: JWT_SECRET
-        sync: false
-      - key: ADMIN_EMAIL
-        value: admin@admin.com
-      - key: ADMIN_PASSWORD
-        sync: false
-      - key: PISTON_API_URL
-        value: https://emkc.org/api/v2/piston/execute
-      - key: NODE_ENV
-        value: production
-      - key: DISCORD_BOT_TOKEN
-        sync: false
-      - key: ADMIN_CHANNEL_ID
-        sync: false
-      - key: DISCORD_CLIENT_ID
-        sync: false
-      - key: ADMIN_DISCORD_USER_ID
-        sync: false
+# Backend is hosted on Railway: https://quest-backend-production-7b82.up.railway.app
+# Only the frontend static site is managed here.
 
+services:
   - type: static
     name: quest-frontend
     rootDir: frontend
@@ -42,8 +14,5 @@ services:
         destination: /index.html
     envVars:
       - key: VITE_API_HOST
-        fromService:
-          type: web
-          name: quest-backend
-          property: url
+        value: https://quest-backend-production-7b82.up.railway.app
 
