@@ -37,12 +37,12 @@ In the Quest: The Code Scavenger platform, the "Runner" team members are require
 ## Runner Workflow & Game Progression
 Each minigame serves as the final clearance step of a round, following a strict operational sequence:
 
-### Phase A: Navigation & Tracking (Sector Map)
-Before the game begins, the Runner must navigate to the target site.
-- **Live GPS Tracking:** The Runner uses a high-precision Dark-mode Sector Map to track their real-time location (Cyan dot) relative to the Target (Neon Green marker).
-- **Walking Routes:** The system automatically calculates and renders the most efficient walking path using OSRM data, displayed as a dashed neon line.
-- **Navigation Shortcuts:** A "Navigate to Target" button allows the Runner to instantly open the coordinates in external apps like Google Maps for turn-by-turn guidance.
-- **Background Telemetry:** While the map is open, the Runner's device sends periodic location updates to the central server. Administrators can track runner progress in real-time on the global dashboard.
+### Phase A: Deployment & Navigation (Sector Map)
+Before the mission begins, the Runner's device is in **Lockdown Mode**.
+- **Authorization Gating:** The Sector Map and mission data remain encrypted until the **Solver** decrypts the round's puzzle and authorizes field ingress.
+- **Live GPS Tracking:** Once authorized, the Runner uses the high-precision Sector Map to track their real-time location (Cyan dot) relative to the Target (Neon Green marker).
+- **Walking Routes:** The system renders the most efficient walking path using OSRM data, displayed as a dashed neon line.
+- **Background Telemetry:** Administrators track runner progress in real-time via background location pings while the map is active.
 
 ### Phase B: Location Verification (QR scanning)
 Upon arrival, the Runner must prove their physical presence.

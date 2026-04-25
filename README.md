@@ -19,8 +19,8 @@
 
 Two teammates. One goal. Ten rounds.
 
-- **Solver** — Stays at base, solves coding puzzles in a browser terminal. Each solved puzzle generates a passkey.
-- **Runner** — Goes to the field, navigates via GPS map, scans QR codes at physical locations, enters the passkey, and completes a mini-challenge to clear the round.
+- **Solver** — Stays at base, solves coding puzzles in a browser terminal. Each solved puzzle generates a passkey and unlocks tactical data for the field.
+- **Runner** — Deploys to the field. Their map and mission data are locked until the Solver clears the encryption. Once synced, they navigate, scan QR codes, and complete physical challenges.
 
 → See [`GAME_FLOW.md`](./GAME_FLOW.md) for the full player experience (no tech details).
 
@@ -28,26 +28,23 @@ Two teammates. One goal. Ten rounds.
 
 ## 🚀 Core Features
 
-### Dual-Role Gameplay
-- **Solver** receives coding challenges in a browser IDE with live code execution
-- **Runner** gets a GPS sector map, QR scanner, and mini-game challenges
-- Both roles must cooperate — the passkey links them every round
+### Dual-Role Gated Orchestration
+- **Role Separation**: Solver and Runner see different, synchronized views based on the round's progress.
+- **Encryption Gating**: Runner's tactical map and mission targets are strictly locked until the Solver successfully decrypts the round's passkey.
+- **Real-Time Hand-off**: Automated synchronization ensures that when a Runner completes a challenge, the Solver's terminal is instantly provisioned for the next round.
 
 ### Discord Tactical Bridge
 - Admins manage the event entirely via Discord slash commands
 - `/broadcast`, `/team`, `/runner`, `/solver` send messages directly to players' screens
 - Players can request help — admin replies in Discord, player sees it instantly on screen
-- Bot stays online persistently via Railway (no Render sleep/timeout issues)
 
-### Real-Time Leaderboard
-- Live score updates via Socket.IO
-- Tracks round completion time and ranking per team
-- Visible at `/leaderboard` for spectators
+### Real-Time Leaderboard & Sync
+- **Fast-Polling Engine**: Multi-layer state synchronization ensures sub-3s latency between roles without manual refreshes.
+- **Live Leaderboard**: Tracks round completion time and ranking per team, visible at `/leaderboard`.
 
-### Premium Interface
-- Dark tactical HUD with glassmorphism and animated scanlines
-- Haptic feedback for field runners on mobile
-- Interactive GPS sector map with walking route overlay
+### Premium HUD Architecture
+- **Cinematic Design**: Dark tactical HUD with glassmorphism, scanlines, and Orbitron typography.
+- **Interactive GPS**: Sector map with live geolocation and walking route overlays.
 
 ---
 

@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useRef, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, ReactNode, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -57,9 +57,16 @@ const SocketContext = createContext<SocketContextValue>({
 // ─────────────────────────────────────────────────────────────────────────────
 export function SocketProvider({ children }: { children: ReactNode }) {
   const socketRef = useRef<Socket | null>(null);
+  const connectedTokenRef = useRef<string | null>(null);
   const [status, setStatus] = useState<ConnectionStatus>('disconnected');
+  const [socket, setSocket] = useState<Socket | null>(null);
 
-  function connect(token: string) {
+  const connect = useCallback((token: string) => {
+    // If we're already connecting/connected to this exact token, do nothing
+    if (socketRef.current && connectedTokenRef.current === token) {
+      return;
+    }
+
     // Tear down any existing connection first
     if (socketRef.current) {
       socketRef.current.disconnect();
@@ -68,36 +75,36 @@ export function SocketProvider({ children }: { children: ReactNode }) {
 
     setStatus('connecting');
 
-    const socket = io(getSocketUrl(), {
+    const newSocket = io(getSocketUrl(), {
       auth: { token },
-      // Start with polling so the initial HTTP request flows through
-      // Vite's HTTPS proxy cleanly. Socket.io will then attempt to
-      // upgrade to WebSocket automatically. In production (Render)
-      // WebSocket is used directly from the start.
-      transports: ['polling', 'websocket'],
+      transports: ['websocket'], // Force websocket to prevent polling floods
       reconnectionAttempts: 10,
       reconnectionDelay: 2000,
       timeout: 10000,
     });
 
-    socket.on('connect', () => setStatus('connected'));
-    socket.on('disconnect', () => setStatus('disconnected'));
-    socket.on('connect_error', () => setStatus('error'));
+    newSocket.on('connect', () => setStatus('connected'));
+    newSocket.on('disconnect', () => setStatus('disconnected'));
+    newSocket.on('connect_error', () => setStatus('error'));
 
-    socketRef.current = socket;
-  }
+    socketRef.current = newSocket;
+    connectedTokenRef.current = token;
+    setSocket(newSocket);
+  }, []);
 
-  function disconnect() {
+  const disconnect = useCallback(() => {
     socketRef.current?.disconnect();
     socketRef.current = null;
+    connectedTokenRef.current = null;
+    setSocket(null);
     setStatus('disconnected');
-  }
+  }, []);
 
   // Cleanup on unmount
   useEffect(() => () => { socketRef.current?.disconnect(); }, []);
 
   return (
-    <SocketContext.Provider value={{ socket: socketRef.current, status, connect, disconnect }}>
+    <SocketContext.Provider value={{ socket, status, connect, disconnect }}>
       {children}
     </SocketContext.Provider>
   );

@@ -92,7 +92,7 @@ export function CommsManagement({ token, teams }: CommsManagementProps) {
               <select
                 value={targetTeamId}
                 onChange={(e) => setTargetTeamId(e.target.value)}
-                className="w-full bg-[#0a0a0a] border border-white/10 rounded-md h-10 px-3 text-xs text-white outline-none focus:border-[var(--color-accent)]/50 uppercase [&>option]:bg-[#1a1a1a] [&>option]:text-white"
+                className="w-full bg-[#0a0a0a] border border-white/10 h-10 px-3 text-xs text-white outline-none focus:border-[var(--color-accent)]/50 uppercase [&>option]:bg-[#1a1a1a] [&>option]:text-white clip-oct"
               >
                 <option value="all">{">>>"} ALL SQUADRONS (GLOBAL) {"<<<"}</option>
                 {teams.map(t => (
@@ -110,7 +110,7 @@ export function CommsManagement({ token, teams }: CommsManagementProps) {
               <select
                 value={targetRole}
                 onChange={(e) => setTargetRole(e.target.value as any)}
-                className="w-full bg-[#0a0a0a] border border-white/10 rounded-md h-10 px-3 text-xs text-white outline-none focus:border-[var(--color-accent)]/50 uppercase [&>option]:bg-[#1a1a1a] [&>option]:text-white"
+                className="w-full bg-[#0a0a0a] border border-white/10 h-10 px-3 text-xs text-white outline-none focus:border-[var(--color-accent)]/50 uppercase [&>option]:bg-[#1a1a1a] [&>option]:text-white clip-oct"
               >
                 <option value="all">ALL OPERATIVES</option>
                 <option value="runner">
@@ -138,19 +138,19 @@ export function CommsManagement({ token, teams }: CommsManagementProps) {
             </div>
             
             {isManaging ? (
-              <div className="bg-black/40 border border-white/5 rounded-md p-3 space-y-3 mb-3">
+              <div className="bg-black/40 border border-white/5 p-3 space-y-3 mb-3 clip-oct">
                 <div className="flex gap-2">
                   <input
                     type="text"
                     value={newPhrase}
                     onChange={(e) => setNewPhrase(e.target.value)}
                     placeholder="Add new quick phrase..."
-                    className="flex-1 bg-black/60 border border-white/10 rounded-md px-4 py-3 text-sm text-white outline-none focus:border-[var(--color-accent)]/50 transition-all placeholder:text-white/20"
+                    className="flex-1 bg-black/60 border border-white/10 px-4 py-3 text-sm text-white outline-none focus:border-[var(--color-accent)]/50 transition-all placeholder:text-white/20 clip-oct"
                   />
                   <button 
                     onClick={handleAddPhrase} 
                     disabled={!newPhrase.trim()} 
-                    className="bg-white/10 hover:bg-white/20 text-white px-4 rounded-md disabled:opacity-50 transition-all flex items-center justify-center border border-white/5"
+                    className="bg-white/10 hover:bg-white/20 text-white px-4 disabled:opacity-50 transition-all flex items-center justify-center border border-white/5 clip-oct"
                   >
                     <Plus className="w-5 h-5" />
                   </button>
@@ -176,7 +176,7 @@ export function CommsManagement({ token, teams }: CommsManagementProps) {
                   <button
                     key={p.id || p._id}
                     onClick={() => setText(p.text)}
-                    className="text-[10px] bg-white/5 hover:bg-white/10 border border-white/10 text-white/90 px-2 py-1 rounded transition-colors text-left"
+                    className="text-[10px] bg-white/5 hover:bg-white/10 border border-white/10 text-white/90 px-2 py-1 transition-colors text-left clip-oct"
                   >
                     {p.text}
                   </button>
@@ -188,7 +188,7 @@ export function CommsManagement({ token, teams }: CommsManagementProps) {
               value={text}
               onChange={(e) => setText(e.target.value)}
               placeholder="Select a quick phrase or enter custom transmission..."
-              className="w-full bg-black/50 border border-white/10 rounded-md min-h-[100px] p-3 text-sm text-white outline-none focus:border-[var(--color-accent)]/50 resize-y"
+              className="w-full bg-black/50 border border-white/10 min-h-[100px] p-3 text-sm text-white outline-none focus:border-[var(--color-accent)]/50 resize-y clip-oct"
             />
           </div>
 

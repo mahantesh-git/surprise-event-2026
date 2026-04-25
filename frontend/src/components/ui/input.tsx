@@ -10,9 +10,9 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
         ref={ref}
         type={type}
         className={cn(
-          'flex h-11 w-full border border-white/10 bg-[var(--color-bg-surface)] px-3 py-2 text-sm font-mono text-white transition-colors',
+          'flex h-11 w-full border-b-2 border-white/20 bg-transparent px-3 py-2 text-sm font-mono text-white transition-colors rounded-none',
           'placeholder:text-white/20',
-          'focus-visible:outline-none focus-visible:border-[var(--color-accent)]/40 focus-visible:ring-1 focus-visible:ring-[var(--color-accent)]/20',
+          'focus-visible:outline-none focus-visible:border-[var(--color-accent)] focus-visible:bg-white/[0.03]',
           'disabled:cursor-not-allowed disabled:opacity-50',
           className,
         )}

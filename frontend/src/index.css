@@ -1,26 +1,25 @@
-@import "tailwindcss";
-@import "tw-animate-css";
-@import "shadcn/tailwind.css";
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Inter:wght@400;500;600;700&display=swap');
 @import "@fontsource-variable/space-grotesk";
 @import "@fontsource/ibm-plex-mono/400.css";
 @import "@fontsource/ibm-plex-mono/500.css";
 @import "@fontsource/ibm-plex-mono/600.css";
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
 :root {
-  --color-bg-void: #131314;
-  --color-bg-surface: #1C1C1C;
-  --color-accent: #EE3A17;
-  --color-accent-muted: rgba(238, 58, 23, 0.7);
-  --color-accent-fill: rgba(238, 58, 23, 0.05);
-  --color-accent-tertiary: #FF4D00;
-  --color-text-primary: #E3E3E3;
-  --color-grid: rgba(238, 58, 23, 0.05);
+  --color-bg-void: #100F2C;
+  --color-bg-surface: #0A0919;
+  --color-accent: #D91F40;
+  --color-accent-muted: rgba(217, 31, 64, 0.7);
+  --color-accent-fill: rgba(217, 31, 64, 0.05);
+  --color-accent-tertiary: #FF2347;
+  --color-text-primary: #FFFFFF;
+  --color-grid: rgba(217, 31, 64, 0.05);
 
   --ease-signature: cubic-bezier(0.87, 0, 0.13, 1);
-  --clip-oct: polygon(20px 0%, calc(100% - 20px) 0%,
-      100% 20px, 100% calc(100% - 20px),
-      calc(100% - 20px) 100%, 20px 100%,
-      0% calc(100% - 20px), 0% 20px);
+  --clip-oct: polygon(0% 15%, 3% 0%, 97% 0%, 100% 15%, 100% 85%, 97% 100%, 3% 100%, 0% 85%);
+  --clip-hex: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
 
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
@@ -40,13 +39,13 @@
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.62 0.22 35);
-  --radius: 10px;
+  --radius: 0px;
 }
 
 @theme inline {
-  --font-sans: 'Space Grotesk Variable', sans-serif;
+  --font-sans: 'Inter', sans-serif;
   --font-mono: 'IBM Plex Mono', monospace;
-  --font-heading: var(--font-sans);
+  --font-heading: 'Orbitron', sans-serif;
 
   --color-background: var(--color-bg-void);
   --color-foreground: var(--color-text-primary);
@@ -63,16 +62,16 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
 
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
 
-  --shadow-accent-xs: 0 0 6px rgba(238, 58, 23, 0.15);
-  --shadow-accent-sm: 0 0 10px rgba(238, 58, 23, 0.2);
-  --shadow-accent-md: 0 0 20px rgba(238, 58, 23, 0.25);
-  --shadow-accent-lg: 0 0 30px rgba(238, 58, 23, 0.3);
-  --shadow-accent-xl: 0 0 50px rgba(238, 58, 23, 0.4);
+  --shadow-accent-xs: none;
+  --shadow-accent-sm: none;
+  --shadow-accent-md: none;
+  --shadow-accent-lg: none;
+  --shadow-accent-xl: none;
 
   --shadow-black-sm: 0 4px 10px rgba(0, 0, 0, 0.3);
   --shadow-black-md: 0 8px 20px rgba(0, 0, 0, 0.5);
@@ -80,20 +79,46 @@
   --shadow-black-xl: 0 20px 40px -10px rgba(0, 0, 0, 0.8);
 
   @keyframes scan {
-    0% { transform: translateY(-100%); opacity: 0; }
-    50% { opacity: 1; }
-    100% { transform: translateY(100%); opacity: 0; }
+    0% {
+      transform: translateY(-100%);
+      opacity: 0;
+    }
+
+    50% {
+      opacity: 1;
+    }
+
+    100% {
+      transform: translateY(100%);
+      opacity: 0;
+    }
   }
+
   @keyframes scan-reverse {
-    0% { transform: translateY(100%); opacity: 0; }
-    50% { opacity: 1; }
-    100% { transform: translateY(-100%); opacity: 0; }
+    0% {
+      transform: translateY(100%);
+      opacity: 0;
+    }
+
+    50% {
+      opacity: 1;
+    }
+
+    100% {
+      transform: translateY(-100%);
+      opacity: 0;
+    }
   }
 }
 
 @layer utilities {
-  .animate-scan { animation: scan 2s linear infinite; }
-  .animate-scan-reverse { animation: scan-reverse 2s linear infinite; }
+  .animate-scan {
+    animation: scan 2s linear infinite;
+  }
+
+  .animate-scan-reverse {
+    animation: scan-reverse 2s linear infinite;
+  }
 }
 
 @layer base {
@@ -136,24 +161,28 @@
 
   h1 {
     font-size: clamp(40px, 9vw, 120px);
-    font-weight: 700;
-    line-height: 0.8;
-    letter-spacing: -0.04em;
+    font-weight: 900;
+    line-height: 0.9;
+    letter-spacing: 0.05em;
     text-transform: uppercase;
+    font-family: var(--font-heading);
   }
 
   h2 {
     font-size: clamp(28px, 6vw, 72px);
     line-height: 1.1;
-    letter-spacing: -0.02em;
-    font-weight: 700;
+    letter-spacing: 0.02em;
+    font-weight: 900;
     text-transform: uppercase;
+    font-family: var(--font-heading);
   }
 
   h3 {
     font-size: clamp(18px, 2vw, 24px);
-    letter-spacing: 0.05em;
+    letter-spacing: 0.1em;
     font-weight: 700;
+    font-family: var(--font-heading);
+    text-transform: uppercase;
   }
 
   p {
@@ -204,46 +233,33 @@
   }
 
   .btn-primary {
-    @apply relative overflow-hidden border-2 border-[var(--color-accent)] bg-transparent text-[var(--color-accent)] px-6 py-3 text-sm font-bold uppercase tracking-widest transition-colors duration-300 rounded-[10px] cursor-pointer inline-flex items-center justify-center gap-2;
-  }
-
-  .btn-primary::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    left: 0;
-    background-color: var(--color-accent);
-    transform: scaleX(0);
-    transform-origin: right;
-    transition: transform 0.4s var(--ease-signature);
-    z-index: -1;
-  }
-
-  .btn-primary:hover::before {
-    transform: scaleX(1);
-    transform-origin: left;
+    @apply relative overflow-hidden bg-[var(--color-accent)] text-white px-8 py-4 text-[0.8rem] font-bold uppercase tracking-widest transition-transform duration-200 cursor-pointer inline-flex items-center justify-center gap-3 border-none;
+    clip-path: var(--clip-oct);
+    font-family: var(--font-heading);
   }
 
   .btn-primary:hover {
-    @apply text-white border-[var(--color-accent)];
+    @apply bg-[var(--color-accent-tertiary)];
+    transform: scale(1.03);
   }
 
   .btn-secondary {
-    @apply flex items-center justify-center gap-2 bg-[var(--color-bg-surface)] border border-white/10 text-white px-5 py-3 rounded-[10px] text-sm font-semibold transition-all cursor-pointer;
+    @apply flex items-center justify-center gap-3 bg-[var(--color-bg-surface)] text-white px-6 py-4 text-[0.8rem] font-bold uppercase tracking-widest transition-transform duration-200 cursor-pointer border-none;
+    clip-path: var(--clip-oct);
+    font-family: var(--font-heading);
   }
 
   .btn-secondary:hover {
-    @apply border-[var(--color-accent)] bg-[var(--color-accent-fill)];
+    @apply bg-white/10;
+    transform: scale(1.03);
   }
 
   .high-clearance-input {
-    @apply font-mono text-[14px] uppercase tracking-[0.1em] border border-white/10 bg-[var(--color-bg-surface)] outline-none px-4 py-3 transition-all placeholder:text-white/20 rounded-[10px] text-white;
+    @apply font-mono text-[14px] uppercase tracking-[0.1em] border-b-2 border-white/20 bg-transparent outline-none px-4 py-3 transition-all placeholder:text-white/20 rounded-none text-white;
   }
 
   .high-clearance-input:focus {
-    @apply border-[var(--color-accent)]/40 bg-white/[0.03] shadow-accent-md;
+    @apply border-[var(--color-accent)] bg-white/[0.03];
   }
 
   #qr-reader__dashboard {
@@ -275,6 +291,7 @@
     height: auto !important;
     display: block;
     object-fit: cover;
+    background: black;
   }
 
   #qr-reader__dashboard_section_csr,
@@ -318,7 +335,6 @@
 }
 
 @keyframes marker-pulse {
-
   0%,
   100% {
     transform: scale(1);

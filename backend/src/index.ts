@@ -354,7 +354,8 @@ app.get('/api/game/state', requireAuth, route(async (request: AuthedRequest, res
 
   response.json({
     gameState: normalizedState,
-    lastMessage: team.lastMessage || null
+    lastMessage: team.lastMessage || null,
+    score: team.score || 0
   });
 }));
 
@@ -383,7 +384,8 @@ app.patch('/api/game/state', requireAuth, route(async (request: AuthedRequest, r
 
   response.json({
     gameState: nextState,
-    lastMessage: team.lastMessage || null
+    lastMessage: team.lastMessage || null,
+    score: team.score || 0
   });
 }));
 
@@ -411,7 +413,8 @@ app.post('/api/game/reset', requireAuth, route(async (request: AuthedRequest, re
 
   response.json({
     gameState: nextState,
-    lastMessage: team.lastMessage || null
+    lastMessage: team.lastMessage || null,
+    score: team.score || 0
   });
 }));
 
@@ -712,7 +715,7 @@ app.post('/api/runner/verify-location-qr', requireAuth, route(async (request: Au
   const teams = await getTeamsCollection();
   await teams.updateOne(
     { _id: team._id },
-    { $set: { 'gameState.lastValidatedAt': new Date(), updatedAt: new Date() } }
+    { $set: { 'gameState.lastValidatedAt': new Date(), 'gameState.stage': 'runner_entry', updatedAt: new Date() } }
   );
 
   // Award points for reaching the checkpoint

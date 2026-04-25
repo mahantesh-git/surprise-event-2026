@@ -16,18 +16,18 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 }
 
 const variantClasses: Record<ButtonVariant, string> = {
-  default: 'border border-[var(--color-accent)] bg-transparent text-[var(--color-accent)] hover:bg-[var(--color-accent)] hover:text-black transition-colors duration-200',
-  primary: 'border-2 border-[var(--color-accent)] bg-[var(--color-accent)]/10 text-[var(--color-accent)] hover:bg-[var(--color-accent)] hover:text-black transition-colors duration-200 shadow-accent-sm hover:shadow-accent-md',
-  danger: 'border border-[var(--color-accent)] bg-transparent text-[var(--color-accent)] hover:bg-[var(--color-accent)] hover:text-black transition-colors duration-200',
-  ghost: 'bg-transparent text-[#ffffff] hover:text-[var(--color-accent)] transition-colors duration-200',
-  secondary: 'border border-[rgba(255,255,255,0.2)] bg-transparent text-white hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] transition-colors duration-200',
-  sage: 'border border-[var(--color-accent)] bg-[var(--color-accent)] text-black hover:bg-[var(--color-accent)]/80 transition-colors duration-200 shadow-accent-md',
-  ink: 'border border-[rgba(255,255,255,0.2)] bg-[#1A1D21] text-white hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] transition-colors duration-200',
-  blue: 'border border-blue-500 bg-transparent text-blue-500 hover:bg-blue-500 hover:text-black transition-colors duration-200',
-  emerald: 'border border-[var(--color-accent)] bg-transparent text-[var(--color-accent)] hover:bg-[var(--color-accent)] hover:text-black transition-colors duration-200',
-  amber: 'border border-[var(--color-accent)] bg-transparent text-[var(--color-accent)] hover:bg-[var(--color-accent)] hover:text-black transition-colors duration-200',
-  rose: 'border border-[var(--color-accent)] bg-transparent text-[var(--color-accent)] hover:bg-[var(--color-accent)] hover:text-black transition-colors duration-200',
-  violet: 'border border-violet-500 bg-transparent text-violet-500 hover:bg-violet-500 hover:text-black transition-colors duration-200',
+  default: 'bg-transparent text-[var(--color-accent)] hover:bg-[var(--color-accent)] hover:text-white transition-colors duration-200 [clip-path:var(--clip-oct)]',
+  primary: 'bg-[var(--color-accent)]/10 text-[var(--color-accent)] hover:bg-[var(--color-accent)] hover:text-white transition-colors duration-200 [clip-path:var(--clip-oct)]',
+  danger: 'bg-transparent text-[var(--color-accent)] hover:bg-[var(--color-accent)] hover:text-white transition-colors duration-200 [clip-path:var(--clip-oct)]',
+  ghost: 'bg-transparent text-white hover:text-[var(--color-accent)] transition-colors duration-200 [clip-path:var(--clip-oct)]',
+  secondary: 'bg-[rgba(255,255,255,0.05)] text-white hover:bg-[var(--color-accent)] hover:text-white transition-colors duration-200 [clip-path:var(--clip-oct)]',
+  sage: 'bg-[var(--color-accent)] text-white hover:bg-[var(--color-accent)]/80 transition-colors duration-200 [clip-path:var(--clip-oct)]',
+  ink: 'bg-[#1A1D21] text-white hover:bg-[var(--color-accent)] hover:text-white transition-colors duration-200 [clip-path:var(--clip-oct)]',
+  blue: 'bg-transparent text-[var(--color-accent)] hover:bg-[var(--color-accent)] hover:text-white transition-colors duration-200 [clip-path:var(--clip-oct)]',
+  emerald: 'bg-transparent text-[var(--color-accent)] hover:bg-[var(--color-accent)] hover:text-white transition-colors duration-200 [clip-path:var(--clip-oct)]',
+  amber: 'bg-transparent text-[var(--color-accent)] hover:bg-[var(--color-accent)] hover:text-white transition-colors duration-200 [clip-path:var(--clip-oct)]',
+  rose: 'bg-transparent text-[var(--color-accent)] hover:bg-[var(--color-accent)] hover:text-white transition-colors duration-200 [clip-path:var(--clip-oct)]',
+  violet: 'bg-transparent text-[var(--color-accent)] hover:bg-[var(--color-accent)] hover:text-white transition-colors duration-200 [clip-path:var(--clip-oct)]',
 };
 
 const sizeClasses: Record<ButtonSize, string> = {

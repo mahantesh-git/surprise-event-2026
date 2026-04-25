@@ -71,6 +71,7 @@ import { useSocket } from '@/contexts/SocketContext';
 export function useGameState(role: Role) {
   const [session, setSession] = useState<TeamSession | null>(null);
   const [gameState, setGameState] = useState<GameState | null>(null);
+  const [score, setScore] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const storageKey = getStorageKey(role);
@@ -79,7 +80,19 @@ export function useGameState(role: Role) {
   const syncGameState = async (token: string) => {
     const response = await getGameState(token);
     const stateWithMsg = { ...response.gameState, lastMessage: response.lastMessage ?? null };
+    
     setGameState(stateWithMsg);
+    if (typeof response.score === 'number') {
+      setScore(response.score);
+    }
+
+    setSession(prev => {
+      if (!prev) return prev;
+      const next = { ...prev, gameState: stateWithMsg };
+      window.localStorage.setItem(storageKey, JSON.stringify(next));
+      return next;
+    });
+
     return stateWithMsg;
   };
 
@@ -186,6 +199,9 @@ export function useGameState(role: Role) {
     };
     setSession(nextSession);
     setGameState({ ...response.gameState, lastMessage: null });
+    if (typeof (response as any).score === 'number') {
+      setScore((response as any).score);
+    }
     window.localStorage.setItem(storageKey, JSON.stringify(nextSession));
   };
 
@@ -201,6 +217,9 @@ export function useGameState(role: Role) {
     const response = await updateGameState(session.token, updates);
     const stateWithMsg = { ...response.gameState, lastMessage: response.lastMessage ?? null };
     setGameState(stateWithMsg);
+    if (typeof response.score === 'number') {
+      setScore(response.score);
+    }
     setSession((currentSession) => {
       if (!currentSession) return currentSession;
       const nextSession = { ...currentSession, gameState: stateWithMsg, lastMessage: response.lastMessage ?? null };
@@ -214,6 +233,9 @@ export function useGameState(role: Role) {
     const response = await resetGameState(session.token);
     const stateWithMsg = { ...response.gameState, lastMessage: null };
     setGameState(stateWithMsg);
+    if (typeof response.score === 'number') {
+      setScore(response.score);
+    }
     setSession((currentSession) => {
       if (!currentSession) return currentSession;
       const nextSession = { ...currentSession, gameState: stateWithMsg, lastMessage: null };
@@ -228,5 +250,5 @@ export function useGameState(role: Role) {
     }
   };
 
-  return { session, gameState, loading, error, login, logout, updateState, resetGame, setError, sync };
+  return { session, gameState, score, loading, error, login, logout, updateState, resetGame, setError, sync };
 }

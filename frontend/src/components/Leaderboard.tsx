@@ -129,7 +129,7 @@ function MapView({ teams, questions, now }: { teams: LeaderboardTeam[], question
       const html = `
         <div class="team-marker-container" style="position:relative;display:flex;flex-direction:column;align-items:center;transform:translate(0,-100%);margin-top:-6px;pointer-events:none;font-family:var(--font-mono);">
           <!-- Tooltip Container -->
-          <div style="background:rgba(10,10,10,0.9);border:1px solid rgba(238, 58, 23, 0.4);padding:4px 10px;margin-bottom:8px;box-shadow:0 0 15px rgba(0,0,0,0.5);display:flex;flex-direction:column;align-items:center;white-space:nowrap;backdrop-filter:blur(4px);border-radius:2px;">
+          <div style="background:rgba(10,10,10,0.9);border:1px solid rgba(217, 31, 64, 0.4);padding:4px 10px;margin-bottom:8px;box-shadow:0 0 15px rgba(0,0,0,0.5);display:flex;flex-direction:column;align-items:center;white-space:nowrap;backdrop-filter:blur(4px);clip-path:var(--clip-oct);">
              <span class="team-name" style="color:#fff;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">${team.name}</span>
              <div style="display:flex;gap:12px;align-items:center;border-top:1px solid rgba(255,255,255,0.1);padding-top:2px;">
                <span class="team-progress" style="color:var(--color-accent);font-size:9px;font-weight:bold;">${team.solvedCount}/${questions.length}</span>
@@ -149,26 +149,26 @@ function MapView({ teams, questions, now }: { teams: LeaderboardTeam[], question
                   <polygon points="32,3 26,15 38,15" fill="var(--color-accent)" opacity="0.95"/>
                 </svg>
               </div>
-              <div class="team-pulse" style="position:absolute;width:18px;height:18px;background:rgba(238, 58, 23, 0.3);border-radius:50%;filter:blur(4px);opacity:0.8;${pulse ? 'animation:marker-pulse 2s infinite' : ''}"></div>
+              <div class="team-pulse" style="position:absolute;width:18px;height:18px;background:rgba(217, 31, 64, 0.3);clip-path:var(--clip-oct);filter:blur(4px);opacity:0.8;${pulse ? 'animation:marker-pulse 2s infinite' : ''}"></div>
                
               <!-- Tactical Help Pulse -->
               <div class="team-help-layer" style="position:absolute;width:32px;height:32px;display:${team.helpRequested ? 'block' : 'none'};pointer-events:none;">
-                <div style="position:absolute;inset:0;border:2px solid #ef4444;border-radius:50%;animation:ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;opacity:0.8;"></div>
-                <div style="position:absolute;inset:10px;background:#ef4444;border-radius:50%;filter:blur(6px);animation:pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;"></div>
+                <div style="position:absolute;inset:0;border:2px solid var(--color-accent);clip-path:var(--clip-oct);animation:ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;opacity:0.8;"></div>
+                <div style="position:absolute;inset:10px;background:var(--color-accent);clip-path:var(--clip-oct);filter:blur(6px);animation:pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;"></div>
               </div>
 
               <!-- Success Ripple (Recent Validation) -->
               <div class="team-success-layer" style="position:absolute;width:48px;height:48px;display:none;pointer-events:none;align-items:center;justify-content:center;">
-                <div style="position:absolute;inset:0;border:3px solid #10b981;border-radius:50%;animation:ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;opacity:0.6;"></div>
-                <div style="position:absolute;inset:8px;border:2px solid #34d399;border-radius:50%;animation:ping 2s cubic-bezier(0, 0, 0.2, 1) 0.5s infinite;opacity:0.4;"></div>
+                <div style="position:absolute;inset:0;border:3px solid #10b981;clip-path:var(--clip-oct);animation:ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;opacity:0.6;"></div>
+                <div style="position:absolute;inset:8px;border:2px solid #34d399;clip-path:var(--clip-oct);animation:ping 2s cubic-bezier(0, 0, 0.2, 1) 0.5s infinite;opacity:0.4;"></div>
               </div>
 
               <div style="width:8px;height:8px;background:var(--color-accent);transform:rotate(45deg);border:1px solid #000;box-shadow:0 0 8px var(--color-accent);"></div>
 
               <!-- Handoff Layer (Runner Done) -->
               <div class="team-handoff-layer" style="position:absolute;width:80px;height:80px;display:${team.stage === 'runner_done' ? 'flex' : 'none'};pointer-events:none;align-items:center;justify-content:center;z-index:0;">
-                <div style="position:absolute;inset:0;border:3px solid #10b981;border-radius:50%;animation:marker-ping 1.2s cubic-bezier(0, 0, 0.2, 1) infinite;opacity:0.8;box-shadow: 0 0 15px #10b981;"></div>
-                <div style="position:absolute;inset:15px;background:#10b981;border-radius:50%;filter:blur(12px);opacity:0.4;animation:marker-pulse 2s infinite;"></div>
+                <div style="position:absolute;inset:0;border:3px solid #10b981;clip-path:var(--clip-oct);animation:marker-ping 1.2s cubic-bezier(0, 0, 0.2, 1) infinite;opacity:0.8;box-shadow: 0 0 15px #10b981;"></div>
+                <div style="position:absolute;inset:15px;background:#10b981;clip-path:var(--clip-oct);filter:blur(12px);opacity:0.4;animation:marker-pulse 2s infinite;"></div>
               </div>
               <style>
                 @keyframes marker-ping {
@@ -387,7 +387,7 @@ export function Leaderboard() {
   if (loading) return <div className="text-white/80 text-[10px] tracking-widest uppercase p-12 text-center font-mono">Standby for Satellite Uplink...</div>;
 
   return (
-    <div ref={rootRef} className={`relative w-full overflow-hidden ${isFullscreen ? 'h-screen rounded-none border-none' : 'h-full rounded-xl border border-white/10'}`}>
+    <div ref={rootRef} className={`relative w-full overflow-hidden ${isFullscreen ? 'h-screen border-none' : 'h-full corner-card p-0 border border-white/10'}`}>
       {questions.length > 0 ? <MapView teams={teams} questions={questions} now={now} /> : <div className="absolute inset-0 flex items-center justify-center text-white/50 text-xs font-mono tracking-widest z-0">No Rounds Configured</div>}
 
       <div
@@ -443,8 +443,8 @@ export function Leaderboard() {
           </>
         ) : (
           <div className="absolute right-2 top-2 flex flex-col gap-2">
-            <button onClick={toggleFullscreen} className="bg-black/60 border border-white/10 text-white/50 p-3 rounded backdrop-blur-xl hover:text-white transition-all">{isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}</button>
-            <button onClick={() => setIsListVisible(true)} className="bg-black/60 border border-[var(--color-accent)]/30 text-[var(--color-accent)] p-3 rounded backdrop-blur-xl hover:bg-[var(--color-accent)]/10 transition-all"><Trophy className="w-5 h-5" /></button>
+            <button onClick={toggleFullscreen} className="bg-black/60 border border-white/10 text-white/50 p-3 clip-oct backdrop-blur-xl hover:text-white transition-all">{isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}</button>
+            <button onClick={() => setIsListVisible(true)} className="bg-black/60 border border-[var(--color-accent)]/30 text-[var(--color-accent)] p-3 clip-oct backdrop-blur-xl hover:bg-[var(--color-accent)]/10 transition-all"><Trophy className="w-5 h-5" /></button>
           </div>
         )}
       </div>

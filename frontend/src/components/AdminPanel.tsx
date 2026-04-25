@@ -229,7 +229,7 @@ export function AdminPanel({ onBack }: { onBack: () => void }) {
                 key={item.id}
                 onClick={() => setActivePage(item.id)}
                 className={cn(
-                  "flex-shrink-0 flex items-center gap-2 md:gap-4 px-3 md:px-4 py-2.5 md:py-3 text-[9px] md:text-[10px] font-bold uppercase tracking-[0.2em] transition-all relative group rounded-md md:rounded-none",
+                  "flex-shrink-0 flex items-center gap-2 md:gap-4 px-3 md:px-4 py-2.5 md:py-3 text-[9px] md:text-[10px] font-bold uppercase tracking-[0.2em] transition-all relative group",
                   active
                     ? "bg-[var(--color-accent)]/10 text-[var(--color-accent)] border-b-2 md:border-b-0 md:border-l-2 border-[var(--color-accent)]"
                     : "text-white/80 hover:text-white/90 hover:bg-white/[0.04]"

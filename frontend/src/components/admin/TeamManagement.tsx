@@ -169,8 +169,8 @@ export function TeamManagement({ token, teams, onRefresh, onError }: TeamManagem
                   <div className="font-black uppercase tracking-tight text-lg">{team.name}</div>
                   <div className="text-[10px] font-mono text-white/80 truncate">{team.email || 'NO_EMAIL_IDENTIFIED'}</div>
                   <div className="flex gap-2 mt-1">
-                    {team.solverName && <span className="text-[8px] font-mono bg-blue-500/10 text-blue-400 px-1.5 py-0.5 rounded border border-blue-500/20">S: {team.solverName.toUpperCase()}</span>}
-                    {team.runnerName && <span className="text-[8px] font-mono bg-orange-500/10 text-orange-400 px-1.5 py-0.5 rounded border border-orange-500/20">R: {team.runnerName.toUpperCase()}</span>}
+                    {team.solverName && <span className="text-[8px] font-mono bg-blue-500/10 text-blue-400 px-1.5 py-0.5 border border-blue-500/20">S: {team.solverName.toUpperCase()}</span>}
+                    {team.runnerName && <span className="text-[8px] font-mono bg-[var(--color-accent)]/10 text-[var(--color-accent)] px-1.5 py-0.5 border border-[var(--color-accent)]/20">R: {team.runnerName.toUpperCase()}</span>}
                   </div>
                 </div>
 

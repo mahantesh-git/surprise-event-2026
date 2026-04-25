@@ -41,7 +41,7 @@ export function CardTitle({ className, ...props }: React.HTMLAttributes<HTMLHead
   return (
     <h3 
       className={cn(
-        'text-m md:text-lg font-space-grotesk font-bold leading-tight uppercase text-white',
+        'text-m md:text-lg font-orbitron font-bold leading-tight uppercase text-white',
         className
       )} 
       {...props} 

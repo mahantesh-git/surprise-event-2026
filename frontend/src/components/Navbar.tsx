@@ -29,18 +29,18 @@ export const Navbar: React.FC<NavbarProps> = ({
       <nav
         className={cn(
           'flex items-center gap-4 sm:gap-8 px-4 py-2 sm:py-2.5',
-          'glass-morphism rounded-full shadow-2xl pointer-events-auto',
+          'glass-morphism rounded-none [clip-path:var(--clip-edges)] border-b border-[var(--color-accent)]/20 shadow-2xl pointer-events-auto',
           className
         )}
       >
         {/* Left: Brand */}
         <div className="flex items-center gap-2.5 shrink-0">
           {/* Red bars */}
-          <div className="flex gap-[3px]">
-            <div className="w-1 sm:w-1.5 h-3.5 sm:h-4 bg-[var(--color-accent)] rounded-sm"></div>
-            <div className="w-1 sm:w-1.5 h-3.5 sm:h-4 bg-[var(--color-accent)] rounded-sm"></div>
+          <div className="flex gap-[3px] skew-x-12">
+            <div className="w-1 sm:w-1.5 h-3.5 sm:h-4 bg-[var(--color-accent)] rounded-none"></div>
+            <div className="w-1 sm:w-1.5 h-3.5 sm:h-4 bg-[var(--color-accent)] rounded-none"></div>
           </div>
-          <span className="text-[10px] sm:text-[11px] font-bold tracking-[0.15em] sm:tracking-[0.2em] uppercase text-white whitespace-nowrap">
+          <span className="font-orbitron text-[10px] sm:text-[11px] font-bold tracking-[0.15em] sm:tracking-[0.2em] uppercase text-white whitespace-nowrap">
             {displayBrand}
           </span>
         </div>
@@ -61,7 +61,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           )}
 
           {metaText && (
-            <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.2em] text-[var(--color-accent)]">
+            <span className="font-orbitron text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.2em] text-[var(--color-accent)]">
               {metaText}
             </span>
           )}
@@ -70,13 +70,13 @@ export const Navbar: React.FC<NavbarProps> = ({
           {onMenuOpen && !metaText && (
             <button
               onClick={onMenuOpen}
-              className="text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.15em] text-white/50 hover:text-white transition-colors"
+              className="font-orbitron text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.15em] text-white/50 hover:text-white transition-colors"
             >
               {ctaText || 'Menu'}
             </button>
           )}
 
-          <div className="w-2 h-2 rounded-full bg-[var(--color-accent)]"></div>
+          <div className="w-2 h-2 bg-[var(--color-accent)] skew-x-12"></div>
         </div>
       </nav>
     </div>

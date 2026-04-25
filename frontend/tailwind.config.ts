@@ -26,6 +26,11 @@ const config: Config = {
         'accent-07': '#91B394', // sage green
         'accent-08': '#59E7CA', // aqua/teal
         'accent-09': '#996B4A', // warm brown
+
+        // EV2 palette
+        'ev2-navy': '#100F2C',
+        'ev2-red': '#D91F40',
+        'ev2-white': '#FFFFFF',
       },
 
       // Spacing using viewport units
@@ -37,11 +42,25 @@ const config: Config = {
         'gutter': 'clamp(0.5rem, 2vw, 1.5rem)',
       },
 
-      // Border radius system
+      fontFamily: {
+        orbitron: ['Orbitron', 'sans-serif'],
+        inter: ['Inter', 'sans-serif'],
+      },
+
+      // Border radius system (EV2: strictly angular)
       borderRadius: {
-        'pill': '52px',
-        'technical': '2px',
-        'subtle': '10px',
+        'pill': '0px',
+        'technical': '0px',
+        'subtle': '0px',
+        DEFAULT: '0px',
+        'none': '0px',
+        'sm': '0px',
+        'md': '0px',
+        'lg': '0px',
+        'xl': '0px',
+        '2xl': '0px',
+        '3xl': '0px',
+        'full': '0px',
       },
 
       // Font sizing with clamp for fluid typography
@@ -103,6 +122,10 @@ const config: Config = {
         slideUp: {
           'from': { transform: 'translateY(10px)', opacity: '0' },
           'to': { transform: 'translateY(0)', opacity: '1' },
+        },
+        scan: {
+          '0%, 100%': { transform: 'translateY(-100%)' },
+          '50%': { transform: 'translateY(100%)' },
         },
       },
 

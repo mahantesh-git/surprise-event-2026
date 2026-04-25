@@ -28,8 +28,8 @@ export function RoleSelection({ onSelect }: RoleSelectionProps) {
     <div className="relative min-h-screen text-white overflow-hidden flex flex-col justify-center px-6 md:px-12 pt-20 pb-12">
       {/* TOP BAR INDICATOR */}
       <div className="fixed top-8 left-8 z-[100] flex items-center gap-3">
-        <div className="w-2.5 h-2.5 bg-[#ff4500] animate-pulse shadow-[0_0_10px_#ff4500]" />
-        <span className="font-mono text-[11px] uppercase tracking-[0.3em] text-[#ff4500] font-bold">
+        <div className="w-2.5 h-2.5 bg-[var(--color-accent)] animate-pulse shadow-[0_0_10px_var(--color-accent)]" />
+        <span className="font-mono text-[11px] uppercase tracking-[0.3em] text-[var(--color-accent)] font-bold">
           PROTOCOL: INITIALIZATION_REQUIRED
         </span>
       </div>
@@ -44,10 +44,10 @@ export function RoleSelection({ onSelect }: RoleSelectionProps) {
             transition={{ duration: 0.7, ease: "easeOut" }}
           >
             {/* Headline */}
-            <h1 className="text-[clamp(3.5rem,8vw,7rem)] font-bold uppercase tracking-tighter leading-[0.85] mb-8 font-space-grotesk text-white">
+            <h1 className="text-[clamp(3.5rem,8vw,7rem)] font-bold uppercase tracking-tighter leading-none mb-8 font-orbitron text-white">
               QUEST <br />
-              <span className="text-white/10">THE CODE</span><br />
-              <span className="text-[var(--color-accent)]" style={{ textShadow: '0 0 50px rgba(238, 58, 23, 0.3)' }}>SCAVENGER</span>
+              <span className="text-white/20 text-[clamp(2rem,5vw,4rem)]">THE CODE</span><br />
+              <span className="text-[var(--color-accent)]" style={{ textShadow: '0 0 50px rgba(217, 31, 64, 0.3)' }}>SCAVENGER</span>
             </h1>
 
             {/* Subtext */}
@@ -109,16 +109,16 @@ export function RoleSelection({ onSelect }: RoleSelectionProps) {
               <div className="absolute bottom-0 left-0 w-8 h-8 border-b border-l border-white/10 group-hover:border-[var(--color-accent)]/40 transition-colors duration-500" />
 
               {/* Giant background number overlay */}
-              <div className="absolute -top-4 -right-2 text-[120px] font-bold opacity-[0.03] text-white group-hover:text-[var(--color-accent)] group-hover:opacity-[0.08] transition-all duration-700 leading-none tracking-tighter pointer-events-none font-space-grotesk italic">
+              <div className="absolute -top-4 -right-2 text-[120px] font-bold opacity-[0.03] text-white group-hover:text-[var(--color-accent)] group-hover:opacity-[0.08] transition-all duration-700 leading-none tracking-tighter pointer-events-none font-orbitron italic">
                 0{idx + 1}
               </div>
 
               <div className="relative z-10 flex flex-col h-full">
                 <div className="flex items-center gap-5 mb-4">
-                  <div className="w-14 h-14 rounded-xl bg-white/[0.04] glass-morphism backdrop-blur-sm border border-white/10 flex items-center justify-center text-white/40 group-hover:text-[var(--color-accent)] group-hover:border-[var(--color-accent)]/50 transition-all duration-500 group-hover:shadow-[0_0_20px_rgba(238,58,23,0.2)]">
+                  <div className="w-14 h-14 rounded-none [clip-path:var(--clip-oct)] bg-white/[0.04] glass-morphism backdrop-blur-sm border border-white/10 flex items-center justify-center text-white/40 group-hover:text-[var(--color-accent)] group-hover:border-[var(--color-accent)]/50 transition-all duration-500 group-hover:shadow-[0_0_20px_rgba(217,31,64,0.2)]">
                     {role.icon}
                   </div>
-                  <h3 className="text-4xl font-bold uppercase tracking-tight text-white group-hover:text-[var(--color-accent)] transition-colors duration-500 font-space-grotesk">
+                  <h3 className="text-4xl font-bold uppercase tracking-tight text-white group-hover:text-[var(--color-accent)] transition-colors duration-500 font-orbitron">
                     {role.label}
                   </h3>
                 </div>

@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 
 interface TacticalStatusProps {
   tone?: 'info' | 'success' | 'error' | 'warning';
-  label: string;
+  label?: string;
   message: string;
   icon: LucideIcon;
   className?: string;
@@ -13,7 +13,7 @@ interface TacticalStatusProps {
 
 export function TacticalStatus({ 
   tone = 'info', 
-  label, 
+  label = 'SYSTEM', 
   message, 
   icon: Icon,
   className 

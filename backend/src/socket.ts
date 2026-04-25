@@ -121,6 +121,14 @@ function attachRunnerHandlers(socket: Socket, auth: { teamId: string }) {
         timestamp: data.timestamp ?? Date.now(),
       });
 
+      // 1b. Broadcast to the team room so the solver can track the runner
+      io?.to(`team_${auth.teamId}`).emit('runner:location', {
+        lat,
+        lng,
+        heading: h,
+        timestamp: data.timestamp ?? Date.now(),
+      });
+
       // 2. Persist to DB throttled (2 s window)
       scheduleDbWrite(lat, lng, h);
     }

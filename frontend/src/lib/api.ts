@@ -132,11 +132,11 @@ export async function getSession(token: string) {
 }
 
 export async function getGameState(token: string) {
-  return requestJson<{ gameState: GameState; lastMessage?: ChatMessage }>('/game/state', { method: 'GET' }, token);
+  return requestJson<{ gameState: GameState; lastMessage?: ChatMessage; score?: number }>(`/game/state?_t=${Date.now()}`, { method: 'GET' }, token);
 }
 
 export async function updateGameState(token: string, updates: GameStateUpdate) {
-  return requestJson<{ gameState: GameState; lastMessage?: ChatMessage }>('/game/state', {
+  return requestJson<{ gameState: GameState; lastMessage?: ChatMessage; score?: number }>('/game/state', {
     method: 'PATCH',
     body: JSON.stringify(updates),
   }, token);
@@ -167,7 +167,7 @@ export async function completeRunnerGame(token: string) {
 }
 
 export async function resetGameState(token: string) {
-  return requestJson<{ gameState: GameState }>('/game/reset', {
+  return requestJson<{ gameState: GameState; lastMessage?: ChatMessage; score?: number }>('/game/reset', {
     method: 'POST',
   }, token);
 }

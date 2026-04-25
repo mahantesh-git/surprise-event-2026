@@ -126,30 +126,30 @@ function defineQuestTheme(monaco: Monaco) {
     inherit: true,
     rules: [
       { token: 'comment', foreground: '666666', fontStyle: 'italic' },
-      { token: 'keyword', foreground: 'EE3A17', fontStyle: 'bold' },
+      { token: 'keyword', foreground: 'D91F40', fontStyle: 'bold' },
       { token: 'string', foreground: 'E3E3E3' },
-      { token: 'number', foreground: 'EE3A17' },
+      { token: 'number', foreground: 'D91F40' },
       { token: 'type', foreground: 'E3E3E3' },
-      { token: 'function', foreground: 'EE3A17' },
+      { token: 'function', foreground: 'D91F40' },
       { token: 'variable', foreground: 'FFFFFF' },
       { token: 'delimiter', foreground: '444444' },
     ],
     colors: {
-      'editor.background': '#00000000',           // Fully transparent to let wrapper glass show through
+      'editor.background': '#00000000',
       'editor.foreground': '#E2E8F0',
-      'editor.lineHighlightBackground': '#EE3A1708', // Subtle accent highlight
-      'editor.selectionBackground': '#EE3A1730',  // --color-accent + 30 alpha
-      'editorCursor.foreground': '#EE3A17',       // --color-accent
+      'editor.lineHighlightBackground': '#D91F4008',
+      'editor.selectionBackground': '#D91F4030',
+      'editorCursor.foreground': '#D91F40',
       'editorLineNumber.foreground': '#2D3748',
-      'editorLineNumber.activeForeground': '#EE3A17', // --color-accent
-      'editor.inactiveSelectionBackground': '#EE3A1715',
+      'editorLineNumber.activeForeground': '#D91F40',
+      'editor.inactiveSelectionBackground': '#D91F4015',
       'editorIndentGuide.background1': '#1A1D21',
       'editorIndentGuide.activeBackground1': '#2D3748',
-      'scrollbarSlider.background': '#EE3A1710',
-      'scrollbarSlider.hoverBackground': '#EE3A1720',
-      'editorWidget.background': '#080101F0',       // Dark glass for widgets
-      'input.background': '#131314',              // --color-bg-void
-      'focusBorder': '#000000',                 // Black focus border
+      'scrollbarSlider.background': '#D91F4010',
+      'scrollbarSlider.hoverBackground': '#D91F4020',
+      'editorWidget.background': '#100F2CF0',
+      'input.background': '#100F2C',
+      'focusBorder': '#000000',
       'editor.focusBorder': '#000000',
     },
   });
@@ -226,9 +226,9 @@ export function CodeEditor({
   const monacoLang = LANGUAGE_OPTIONS.find(l => l.id === language)?.monacoLang ?? 'plaintext';
 
   return (
-    <div className="flex flex-col overflow-hidden glass-morphism rounded-lg">
+    <div className="flex flex-col overflow-hidden glass-morphism rounded-none border border-[var(--color-accent)]/20 shadow-[0_0_20px_rgba(217,31,64,0.1)]">
       {/* Language Tabs */}
-      <div className="flex items-center glass-morphism-bar overflow-x-auto scrollbar-hide">
+      <div className="flex items-center glass-morphism-bar overflow-x-auto scrollbar-hide border-b border-[var(--color-accent)]/20">
         {LANGUAGE_OPTIONS.map(opt => {
           const active = opt.id === language;
           return (

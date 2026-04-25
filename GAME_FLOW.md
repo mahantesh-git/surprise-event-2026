@@ -65,25 +65,24 @@ The Solver must communicate this passkey to their Runner — **verbally, by call
 
 ## 🏃 Runner's Journey (Out in the Field)
 
-### Step 1 — Open the Sector Map
-The Runner opens their Runner interface on their phone. A **GPS map** appears showing:
+### Step 1 — Await Ingress Authorization
+When the round begins, the Runner's interface is in **Lockdown Mode**. They will see an "Awaiting Operative" status. The sector map and mission coordinates are hidden to prevent pre-deployment.
+
+### Step 2 — Sync Tactical Data
+Once the Solver decrypts the puzzle and provides the passkey, they trigger the **"Authorize Field Ingress"** command. Instantly, the Runner's phone will vibrate and unlock the **Sector Map**.
+
+### Step 3 — Navigate to the Location
+The Runner can now see:
 - 🔵 Their current live position
 - 🟢 The target location for this round
 - 🗺️ The walking route to reach it
+They can walk/run to the spot or tap **"Open Sector Map"** to see the full tactical overlay.
 
-### Step 2 — Navigate to the Location
-The Runner walks/runs to the marked location. They can tap **"Navigate in Google Maps"** for turn-by-turn directions.
+### Step 4 — Scan the QR Code
+At the location, the Runner scans the physical **QR code**. The system verifies their physical presence via GPS and the scan data.
 
-### Step 3 — Scan the QR Code
-At the location, a physical **QR code** is posted. The Runner scans it using their phone's camera through the app. The system verifies they are physically at the correct spot.
-
-> ❌ Scanning the wrong QR or scanning from the wrong location will be rejected.
-
-### Step 4 — Enter the Passkey
-After scanning, the Runner is prompted to enter the **passkey** received from the Solver. This links both teammates and confirms both have done their part.
-
-### Step 5 — Complete the Mini-Challenge
-The system randomly triggers one of three physical mini-games:
+### Step 5 — Enter the Passkey & Complete Challenge
+The Runner enters the secret passkey from the Solver. This unlocks the **Mini-Challenge** (Target Lock, Neural Decode, or Cipher Crack).
 
 ---
 
@@ -120,10 +119,10 @@ A moving crosshair appears on screen. The Runner must **tap it 10 times** within
 
 Once the mini-challenge is complete:
 
-- ✅ A **trophy screen** appears on the Runner's phone — round confirmed
-- 📊 The **leaderboard updates** in real time for all spectators
-- 🔓 The **next round unlocks** — Solver gets a new challenge, Runner's map updates to the next location
-- ⏱️ Round time is **locked in** — this affects your leaderboard ranking
+- ✅ A **Victory Screen** appears on the Runner's phone.
+- 🔄 **Auto-Sync**: The Solver's screen instantly updates to the next challenge (no refresh needed).
+- 📊 The **leaderboard updates** in real time for all spectators.
+- ⏱️ Round time is **locked in** — speed is key for your ranking.
 
 ---
 
@@ -168,14 +167,13 @@ The admin announces the winners via Discord broadcast, which appears on every pl
 ├─────────────────────────────────────────────────┤
 │  SOLVER                   RUNNER                │
 │  ───────                  ──────                │
-│  1. Get puzzle            1. Open map           │
-│  2. Write & run code      2. Navigate to spot   │
-│  3. Solve → get passkey   3. Scan QR code       │
-│  4. Tell Runner passkey   4. Enter passkey      │
-│                           5. Complete game      │
+│  1. Decrypt Puzzle        1. Await Authorization│
+│  2. Generate Passkey      2. Receive Field Sync │
+│  3. Share Passkey         3. Navigate to Sector │
+│  4. Authorize Ingress     4. Scan QR + Passkey  │
+│                           5. Complete Challenge │
 ├─────────────────────────────────────────────────┤
-│  ROUND CLEARED → Leaderboard updates →          │
-│  Next round unlocks automatically               │
+│  ROUND CLEARED → Auto-Sync → Next Round          │
 └─────────────────────────────────────────────────┘
 
 Mini-Games by Round:

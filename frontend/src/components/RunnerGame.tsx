@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { TacticalStatus } from './TacticalStatus';
 import { Button } from '@/components/ui/button';
-import { verifyRunnerLocationQr, verifyRunnerPasskey, completeRunnerGame } from '@/lib/api';
+import { verifyRunnerLocationQr, verifyRunnerPasskey, completeRunnerGame, updateGameState } from '@/lib/api';
 import { QRScanner } from '@/components/QRScanner';
 import { MapPin } from 'lucide-react';
 
@@ -56,7 +56,7 @@ const TapGame = ({ onComplete }: { onComplete: () => void }) => {
       />
       <button
         onClick={() => { setTaps(0); setTimeLeft(15); haptic(100); }}
-        className="bg-zinc-800 hover:bg-zinc-700 px-8 py-4 rounded-xl font-bold text-sm uppercase tracking-widest transition-colors border border-zinc-700 text-white/80"
+        className="bg-zinc-800 hover:bg-zinc-700 px-8 py-4 font-bold text-sm uppercase tracking-widest transition-colors text-white/80 [clip-path:var(--clip-oct)]"
       >🔄 Try Again</button>
     </div>
   );
@@ -67,7 +67,7 @@ const TapGame = ({ onComplete }: { onComplete: () => void }) => {
         <span>HITS: <span className="text-[var(--color-accent)]">{taps}</span>/{required}</span>
         <span>TIME: <span className={timeLeft <= 5 ? 'text-[var(--color-accent)]' : 'text-white/80'}>{timeLeft}s</span></span>
       </div>
-      <div className="relative h-72 w-full bg-black rounded-xl overflow-hidden border border-white/10">
+      <div className="relative h-72 w-full bg-black overflow-hidden border-b border-white/10 [clip-path:var(--clip-oct)]">
         <div className="absolute inset-0 opacity-10 bg-[linear-gradient(to_right,#374151_1px,transparent_1px),linear-gradient(to_bottom,#374151_1px,transparent_1px)] bg-[size:2rem_2rem]" />
         <div className="absolute bottom-0 left-0 h-1 bg-[var(--color-accent)]/20 w-full">
           <motion.div className="h-full bg-[var(--color-accent)]" animate={{ width: `${(taps / required) * 100}%` }} transition={{ type: 'spring', stiffness: 300 }} />
@@ -133,7 +133,7 @@ const MemoryGame = ({ onComplete }: { onComplete: () => void }) => {
             <motion.div
               key={i} whileTap={{ scale: 0.9 }}
               onClick={() => flipped.length < 2 && !isFlipped && !isSolved && (haptic(15), setFlipped((f) => [...f, i]))}
-              className={`h-20 rounded-xl flex items-center justify-center text-2xl cursor-pointer transition-all duration-200 select-none border ${isFlipped || isSolved ? 'bg-[var(--color-accent)]/20 border-[var(--color-accent)]/40 text-white scale-105' : 'bg-zinc-900 border-zinc-800 hover:bg-zinc-800'
+              className={`h-20 flex items-center justify-center text-2xl cursor-pointer transition-all duration-200 select-none [clip-path:var(--clip-oct)] ${isFlipped || isSolved ? 'bg-[var(--color-accent)]/20 text-white scale-105' : 'bg-zinc-900 hover:bg-zinc-800'
                 }`}
             >
               {isFlipped || isSolved ? symbol : <span className="text-zinc-600 text-lg">?</span>}
@@ -155,10 +155,10 @@ const PatternGame = ({ onComplete }: { onComplete: () => void }) => {
   const [wrongFlash, setWrongFlash] = useState(false);
 
   const colorClasses = [
-    { bg: 'bg-[var(--color-accent)]', dim: 'bg-[var(--color-accent)]/20 border-[var(--color-accent)]/30' },
-    { bg: 'bg-blue-500', dim: 'bg-blue-500/20 border-blue-500/30' },
-    { bg: 'bg-emerald-500', dim: 'bg-emerald-500/20 border-emerald-500/30' },
-    { bg: 'bg-violet-500', dim: 'bg-violet-500/20 border-violet-500/30' },
+    { bg: 'bg-[var(--color-accent)]', dim: 'bg-[var(--color-accent)]/20' },
+    { bg: 'bg-[var(--color-accent)] brightness-150', dim: 'bg-[var(--color-accent)]/10' },
+    { bg: 'bg-[#99001A]', dim: 'bg-[#99001A]/40' },
+    { bg: 'bg-white', dim: 'bg-white/20' },
   ];
 
   const start = () => {
@@ -224,11 +224,11 @@ const PatternGame = ({ onComplete }: { onComplete: () => void }) => {
         {[0, 1, 2, 3].map((i) => (
           <motion.div
             key={i} whileTap={{ scale: 0.92 }} onClick={() => handlePress(i)}
-            className={`h-28 rounded-2xl cursor-pointer transition-all duration-200 border ${active === i ? `${colorClasses[i].bg} shadow-lg scale-105` : colorClasses[i].dim}`}
+            className={`h-28 cursor-pointer transition-all duration-200 border-0 [clip-path:var(--clip-oct)] ${active === i ? `${colorClasses[i].bg} shadow-lg scale-105` : colorClasses[i].dim}`}
           />
         ))}
       </div>
-      <button onClick={start} className="w-full bg-zinc-900 hover:bg-zinc-800 py-4 rounded-xl font-bold text-lg transition-colors border border-zinc-800">
+      <button onClick={start} className="w-full bg-zinc-900 hover:bg-zinc-800 py-4 font-bold text-lg transition-colors border-0 [clip-path:var(--clip-oct)] mt-4">
         {pattern.length === 0 ? '▶ Start Pattern' : '🔄 Replay'}
       </button>
     </div>
@@ -244,11 +244,20 @@ interface RunnerGameProps {
   currentRoundIndex: number;
   totalRounds: number;
   onRoundComplete: () => void;
+  stage?: string;
+  currentRound?: any;
+  onSwitchToMap?: () => void;
 }
 
 // ─── MAIN COMPONENT ───────────────────────────────────────────
-export function RunnerGame({ token, currentRoundIndex, totalRounds, onRoundComplete }: RunnerGameProps) {
-  const [screen, setScreen] = useState<RunnerScreen>('location');
+export function RunnerGame({ token, currentRoundIndex, totalRounds, onRoundComplete, stage, currentRound, onSwitchToMap }: RunnerGameProps) {
+  const [screen, setScreen] = useState<RunnerScreen>(() => {
+    // Only used for page-refresh recovery — does NOT run during normal flow
+    if (stage === 'runner_entry') return 'passkey';
+    if (stage === 'runner_game') return 'game';
+    if (stage === 'runner_done') return 'victory';
+    return 'location';
+  });
   const [passkey, setPasskey] = useState('');
   const [gameType, setGameType] = useState<GameType>('tap');
   const [error, setError] = useState<string | null>(null);
@@ -279,6 +288,11 @@ export function RunnerGame({ token, currentRoundIndex, totalRounds, onRoundCompl
 
   const handleGameComplete = async () => {
     setScreen('victory');
+    try {
+      await updateGameState(token, { stage: 'runner_done' });
+    } catch (err) {
+      console.error('[RunnerGame] Failed to update stage to runner_done:', err);
+    }
   };
 
   const handleFinishRound = async () => {
@@ -306,12 +320,20 @@ export function RunnerGame({ token, currentRoundIndex, totalRounds, onRoundCompl
                 <div className="w-16 h-16 bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/30 flex items-center justify-center mx-auto">
                   <MapPin className="w-8 h-8 text-[var(--color-accent)]" />
                 </div>
-                <span className="label-technical block">Location Verification</span>
-                <h2 className="text-xl font-bold tracking-widest uppercase">Arrived at Node?</h2>
+                <span className="label-technical block">Sector Ingress</span>
+                <h2 className="text-xl font-bold tracking-widest uppercase">Target Assigned</h2>
                 <p className="text-[10px] text-white/40 font-mono uppercase tracking-widest leading-relaxed">
-                  Verify your physical presence by scanning the Authorized QR code at this location.
+                  Navigate to the coordinates. Once you arrive, verify your physical presence by scanning the node's QR code.
                 </p>
               </div>
+
+              {currentRound && (
+                <div className="corner-card glass-morphism p-6 space-y-4">
+                  <div className="flex justify-between items-center"><span className="text-[10px] uppercase font-bold text-[var(--color-accent)]">Target</span><span className="font-mono text-xs text-right max-w-[150px]">{currentRound.coord.place}</span></div>
+                  <div className="flex justify-between items-center"><span className="text-[10px] uppercase font-bold text-[var(--color-accent)]">Volunteer</span><span className="font-mono text-xs">{currentRound.volunteer.name}</span></div>
+                  <div className="p-4 bg-white/5 border border-white/10 rounded text-center"><span className="text-[10px] uppercase text-white/40 block mb-1">Passkey</span><span className="text-xl font-bold tracking-[0.3em]">{currentRound.qrPasskey}</span></div>
+                </div>
+              )}
 
               {error && (
                 <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} className="flex justify-center">
@@ -324,12 +346,23 @@ export function RunnerGame({ token, currentRoundIndex, totalRounds, onRoundCompl
                 </motion.div>
               )}
 
-              <Button
-                className="w-full font-bold uppercase tracking-[0.2em] h-14 btn-primary" size="md"
-                onClick={() => { setError(null); setScreen('qr_scanner'); }}
-              >
-                <QrCode className="mr-2 h-5 w-5" /> SCAN LOCATION QR
-              </Button>
+              <div className="space-y-3">
+                <Button
+                  className="w-full font-bold uppercase tracking-[0.2em] h-14 btn-primary" size="md"
+                  onClick={() => { setError(null); setScreen('qr_scanner'); }}
+                >
+                  <QrCode className="mr-2 h-5 w-5" /> SCAN LOCATION QR
+                </Button>
+                
+                {onSwitchToMap && (
+                  <Button
+                    className="w-full font-bold uppercase tracking-[0.2em] h-14 bg-transparent border border-white/20 text-white/60 hover:bg-white/5 hover:text-white" size="md"
+                    onClick={onSwitchToMap}
+                  >
+                    <MapPin className="mr-2 h-5 w-5" /> OPEN SECTOR MAP
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         </motion.div>
@@ -372,15 +405,23 @@ export function RunnerGame({ token, currentRoundIndex, totalRounds, onRoundCompl
                 <span className="label-technical block">Biometric Authentication</span>
                 <h2 className="text-xl font-bold tracking-widest uppercase">Enter Location Passkey</h2>
                 <p className="text-[10px] text-white/40 font-mono uppercase tracking-widest leading-relaxed">
-                  Ask your Solver for the passkey. They received it after solving the puzzle.
+                  Enter the passkey to decrypt the node terminal.
                 </p>
               </div>
+
+              {currentRound && (
+                <div className="corner-card glass-morphism p-6 space-y-4 mb-6">
+                  <div className="flex justify-between items-center"><span className="text-[10px] uppercase font-bold text-[var(--color-accent)]">Target</span><span className="font-mono text-xs text-right max-w-[150px]">{currentRound.coord.place}</span></div>
+                  <div className="flex justify-between items-center"><span className="text-[10px] uppercase font-bold text-[var(--color-accent)]">Volunteer</span><span className="font-mono text-xs">{currentRound.volunteer.name}</span></div>
+                  <div className="p-4 bg-white/5 border border-white/10 rounded text-center"><span className="text-[10px] uppercase text-white/40 block mb-1">Passkey</span><span className="text-xl font-bold tracking-[0.3em]">{currentRound.qrPasskey}</span></div>
+                </div>
+              )}
 
               <div className="space-y-4">
                 <div className="relative">
                   <input
                     placeholder="PASSKEY"
-                    className="w-full bg-white/5 border border-white/10 text-center h-20 text-2xl tracking-[0.4em] font-black uppercase text-white placeholder:text-white/10 focus:border-white/20 focus:bg-white/10 transition-all duration-500 outline-none rounded-xl pr-12"
+                    className="w-full bg-white/5 border-b-2 border-white/10 text-center h-20 text-2xl tracking-[0.4em] font-black uppercase text-white placeholder:text-white/10 focus:border-[var(--color-accent)] focus:bg-white/10 transition-all duration-500 outline-none rounded-none pr-12"
                     value={passkey}
                     onChange={(e) => { setPasskey(e.target.value); setError(null); }}
                     onKeyDown={(e) => e.key === 'Enter' && handleVerifyPasskey()}
