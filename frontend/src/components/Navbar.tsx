@@ -25,7 +25,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const displayBrand = brandName === 'QUEST' ? 'Quest : The Code Scavenger' : brandName;
 
   return (
-    <div className="fixed top-4 sm:top-6 left-0 right-0 z-50 flex justify-center px-4 pointer-events-none reveal-up">
+    <div className="fixed top-4 sm:top-6 left-0 right-0 z-[9999] flex justify-center px-4 pointer-events-none reveal-up">
       <nav
         className={cn(
           'flex items-center gap-4 sm:gap-8 px-4 py-2 sm:py-2.5',

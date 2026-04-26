@@ -250,7 +250,20 @@ export async function adminLogin(email: string, password: string) {
 }
 
 export async function getAdminTeams(token: string) {
-  return requestJson<{ teams: Array<{ id: string; name: string; email: string; solverName: string; runnerName: string; createdAt: string; lastLoginAt: string | null }> }>('/admin/teams', { method: 'GET' }, token);
+  return requestJson<{ 
+    teams: Array<{ 
+      id: string; 
+      name: string; 
+      email: string; 
+      solverName: string; 
+      runnerName: string; 
+      createdAt: string; 
+      lastLoginAt: string | null;
+      score: number;
+      scoreHistory: Array<{ amount: number; reason: string; timestamp: string }>;
+      gameState: GameState;
+    }> 
+  }>('/admin/teams', { method: 'GET' }, token);
 }
 
 export async function createAdminTeam(token: string, payload: { name: string; email: string; password: string; solverName?: string; runnerName?: string }) {
@@ -312,6 +325,7 @@ export interface LeaderboardTeam {
   locationHistory?: { lat: number; lng: number }[];
   helpRequested?: boolean;
   lastValidatedAt?: string | null;
+  difficultyTier?: 'normal' | 'hard';
 }
 
 export async function getLeaderboard() {
@@ -391,5 +405,17 @@ export async function requestTacticalSupport(token: string, location?: { lat: nu
   return requestJson<{ ok: boolean }>('/team/request-help', {
     method: 'POST',
     body: JSON.stringify(location)
+  }, token);
+}
+
+export async function claimTeamRoundSwap(token: string) {
+  return requestJson<{ ok: boolean; error?: string }>('/team/claim-swap', {
+    method: 'POST'
+  }, token);
+}
+
+export async function swapAdminTeamRound(token: string, teamId: string) {
+  return requestJson<{ ok: boolean; error?: string }>(`/admin/teams/${teamId}/swap`, {
+    method: 'POST'
   }, token);
 }

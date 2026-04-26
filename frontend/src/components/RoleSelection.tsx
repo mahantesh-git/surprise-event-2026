@@ -25,7 +25,7 @@ export function RoleSelection({ onSelect }: RoleSelectionProps) {
   ];
 
   return (
-    <div className="relative min-h-screen text-white overflow-hidden flex flex-col justify-center px-6 md:px-12 pt-20 pb-12">
+    <div className="relative min-h-screen text-white overflow-hidden flex flex-col justify-center px-4 md:px-12 pt-20 pb-12">
       {/* TOP BAR INDICATOR */}
       <div className="fixed top-8 left-8 z-[100] flex items-center gap-3">
         <div className="w-2.5 h-2.5 bg-[var(--color-accent)] animate-pulse shadow-[0_0_10px_var(--color-accent)]" />
@@ -34,7 +34,7 @@ export function RoleSelection({ onSelect }: RoleSelectionProps) {
         </span>
       </div>
 
-      <div className="max-w-6xl mx-auto w-full relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
+      <div className="max-w-[1400px] mx-auto w-full relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center px-3 md:px-6">
 
         {/* Left Col - Hero Title */}
         <div className="lg:col-span-7 pr-0 lg:pr-8">

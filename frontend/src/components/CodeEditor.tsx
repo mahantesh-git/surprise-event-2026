@@ -1,4 +1,5 @@
 import { useRef, useEffect } from 'react';
+import { Terminal } from 'lucide-react';
 import MonacoEditor, { type Monaco } from '@monaco-editor/react';
 import type { editor } from 'monaco-editor';
 
@@ -226,7 +227,7 @@ export function CodeEditor({
   const monacoLang = LANGUAGE_OPTIONS.find(l => l.id === language)?.monacoLang ?? 'plaintext';
 
   return (
-    <div className="flex flex-col overflow-hidden glass-morphism rounded-none border border-[var(--color-accent)]/20 shadow-[0_0_20px_rgba(217,31,64,0.1)]">
+    <div className="flex flex-col h-full overflow-hidden glass-morphism rounded-none border border-[var(--color-accent)]/20 shadow-[0_0_20px_rgba(217,31,64,0.1)] pointer-events-auto relative">
       {/* Language Tabs */}
       <div className="flex items-center glass-morphism-bar overflow-x-auto scrollbar-hide border-b border-[var(--color-accent)]/20">
         {LANGUAGE_OPTIONS.map(opt => {
@@ -254,22 +255,35 @@ export function CodeEditor({
             </button>
           );
         })}
-        <div className="ml-auto flex-shrink-0 px-4 py-2 text-[9px] font-mono text-white/20 uppercase tracking-widest whitespace-nowrap">
+        
+        <button 
+          onClick={() => editorRef.current?.focus()}
+          className="ml-auto flex items-center gap-2 px-4 py-2 text-[9px] font-mono text-[var(--color-accent)] hover:bg-[var(--color-accent)]/10 uppercase tracking-widest transition-all"
+        >
+          <Terminal className="w-3 h-3" />
+          Focus Terminal
+        </button>
+
+        <div className="flex-shrink-0 px-4 py-2 text-[9px] font-mono text-white/20 uppercase tracking-widest whitespace-nowrap">
           Ctrl+Enter ▶ Run
         </div>
       </div>
 
       {/* Monaco Editor Wrapper */}
-      <div className="glass-morphism-editor border-t-0 [&_textarea]:caret-transparent">
+      <div 
+        className="glass-morphism-editor border-t-0 pointer-events-auto cursor-text min-h-[100px] flex-1"
+        onClick={() => editorRef.current?.focus()}
+      >
         <MonacoEditor
-          height={height}
+          height="100%"
           language={monacoLang}
           value={value}
           onChange={v => onChange(v ?? '')}
-          beforeMount={defineQuestTheme}
           onMount={handleMount}
           theme="quest-dark"
           options={{
+            readOnly: false,
+            domReadOnly: false,
             minimap: { enabled: false },
             fontSize: 13,
             fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace",

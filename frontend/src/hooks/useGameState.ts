@@ -12,6 +12,9 @@ export interface GameState {
   startTime?: string | null;
   finishTime?: string | null;
   lastMessage?: ChatMessage | null;
+  difficulty?: 'normal' | 'hard';
+  currentRoundStartTime?: string | null;
+  hasSwapped?: boolean;
 }
 
 export interface HandoffDetails {
@@ -181,10 +184,19 @@ export function useGameState(role: Role) {
       });
     };
 
+    const handleGameUpdate = (data: any) => {
+      console.log('[Socket] Game Update received:', data);
+      syncGameState(session.token).catch(console.error);
+    };
+
+
     socket.on('chat:message', handleChatMessage);
+    socket.on('game:update', handleGameUpdate);
     return () => {
       socket.off('chat:message', handleChatMessage);
+      socket.off('game:update', handleGameUpdate);
     };
+
   }, [socket, session]);
 
   const login = async (teamName: string, password: string) => {

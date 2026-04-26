@@ -2,6 +2,7 @@ import React from 'react';
 import { RainEffect } from './RainEffect';
 
 export function TacticalBackground() {
+  const bgUrl = import.meta.env.VITE_BACKGROUND_IMAGE_URL || '/assets/images/cyberpunk-city-2.jpg';
   return (
     <div className="fixed inset-0 z-0 bg-[#0a0200] overflow-hidden pointer-events-none">
       {/* ATMOSPHERIC BACKGROUND */}
@@ -12,7 +13,7 @@ export function TacticalBackground() {
         <div
           className="absolute inset-0"
           style={{
-            backgroundImage: 'url(/assets/images/cyberpunk-city-2.jpg)',
+            backgroundImage: `url(${bgUrl})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             filter: 'contrast(1.2) brightness(1.1)'

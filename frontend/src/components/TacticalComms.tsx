@@ -61,7 +61,7 @@ export function TacticalComms({ token, role, isOpen, onClose, lastMessage, teamN
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-white/[0.04] glass-morphism backdrop-blur-sm z-[100]"
+            className="fixed inset-0 bg-white/[0.04] glass-morphism backdrop-blur-sm z-[10002]"
           />
 
           {/* Dialog */}
@@ -69,7 +69,7 @@ export function TacticalComms({ token, role, isOpen, onClose, lastMessage, teamN
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="fixed left-4 right-4 bottom-4 md:left-auto md:right-8 md:bottom-8 md:w-[400px] z-[101]"
+            className="fixed left-4 right-4 bottom-4 md:left-auto md:right-8 md:bottom-8 md:w-[400px] z-[10003]"
           >
             <Card className="glass-morphism shadow-accent-md">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -82,7 +82,7 @@ export function TacticalComms({ token, role, isOpen, onClose, lastMessage, teamN
                       Tactical Comms
                     </CardTitle>
                     <p className="text-[10px] text-[var(--color-accent)]/60 uppercase tracking-widest">
-                      Encrypted Channel • {role.toUpperCase()}
+                      Encrypted Channel / {role.toUpperCase()}
                     </p>
                   </div>
                 </div>

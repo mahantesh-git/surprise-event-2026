@@ -428,8 +428,12 @@ export function Leaderboard() {
                     <div className="flex-1">
                       <h3 className="font-bold text-xs uppercase tracking-widest text-[var(--color-accent)] truncate">{t.name}</h3>
                       <div className="flex flex-wrap items-center gap-4 mt-2 text-[10px] text-white/70 uppercase tracking-widest font-mono">
-                        <span className="flex items-center gap-1.5 bg-white/[0.03] px-2 py-0.5"><Target className="w-3 h-3 text-[var(--color-accent)]/50" /> {t.solvedCount}/{questions.length}</span>
                         <span className="flex items-center gap-1.5 bg-white/[0.03] px-2 py-0.5"><Clock className="w-3 h-3 text-[var(--color-accent)]/50" /> {formatDuration(t.startTime, t.finishTime, now)}</span>
+                        {t.difficultyTier === 'hard' && (
+                          <span className="flex items-center gap-1.5 bg-[var(--color-accent)]/10 text-[var(--color-accent)] px-2 py-0.5 border border-[var(--color-accent)]/20 animate-pulse">
+                            <ShieldAlert className="w-3 h-3" /> HARD
+                          </span>
+                        )}
                       </div>
                     </div>
                     <div className="text-right ml-4">

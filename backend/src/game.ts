@@ -19,7 +19,14 @@ export function createInitialGameState(roundCount: number): GameState {
     handoff: null,
     startTime: null,
     finishTime: null,
+    difficulty: 'normal',
+    currentRoundStartTime: new Date().toISOString(),
   };
+}
+
+export function calculateDifficulty(elapsedSeconds: number): 'normal' | 'hard' {
+  // Hard mode threshold: If completed in under 3 minutes (180 seconds)
+  return elapsedSeconds < 180 ? 'hard' : 'normal';
 }
 
 export function isValidStage(value: unknown): value is GameState['stage'] {
@@ -60,6 +67,8 @@ export function normalizeGameState(state: GameState, roundCount: number): GameSt
     handoff: state.handoff && isHandoffDetails(state.handoff) ? state.handoff : null,
     startTime: typeof state.startTime === 'string' ? state.startTime : null,
     finishTime: typeof state.finishTime === 'string' ? state.finishTime : null,
+    difficulty: state.difficulty || 'normal',
+    currentRoundStartTime: state.currentRoundStartTime || new Date().toISOString(),
   };
 }
 
@@ -72,6 +81,8 @@ export function sanitizeGameStateUpdate(currentState: GameState, update: Partial
     handoff: currentState.handoff,
     startTime: currentState.startTime,
     finishTime: currentState.finishTime,
+    difficulty: currentState.difficulty || 'normal',
+    currentRoundStartTime: currentState.currentRoundStartTime || new Date().toISOString(),
   };
 
   if (update.round !== undefined) {
@@ -106,6 +117,16 @@ export function sanitizeGameStateUpdate(currentState: GameState, update: Partial
   if (update.finishTime !== undefined) {
     if (update.finishTime !== null && typeof update.finishTime !== 'string') return null;
     nextState.finishTime = update.finishTime;
+  }
+
+  if (update.difficulty !== undefined) {
+    if (update.difficulty !== 'normal' && update.difficulty !== 'hard') return null;
+    nextState.difficulty = update.difficulty;
+  }
+
+  if (update.currentRoundStartTime !== undefined) {
+    if (update.currentRoundStartTime !== null && typeof update.currentRoundStartTime !== 'string') return null;
+    nextState.currentRoundStartTime = update.currentRoundStartTime;
   }
 
   return nextState;

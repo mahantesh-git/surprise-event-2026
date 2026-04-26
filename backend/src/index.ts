@@ -8,10 +8,11 @@ import path from 'path';
 import { spawn } from 'child_process';
 import { ObjectId } from 'mongodb';
 import type { LoginPayload, GameState, QuestionDocument } from './types';
-import { closeClient, ensureIndexes, getQuestionsCollection, getTeamsCollection, getConfigCollection, getAdminPhrasesCollection } from './db';
+import { closeClient, ensureIndexes, getQuestionsCollection, getTeamsCollection, getConfigCollection, getAdminPhrasesCollection, getReservePoolCollection } from './db';
 import { requireAdmin, requireAuth, signAdminToken, signToken, normalizeRole, type AdminAuthedRequest, type AuthedRequest } from './auth';
 import { createTeam, findTeamByName, verifyTeamPassword, findTeamById } from './team-service';
-import { createInitialGameState, normalizeGameState, sanitizeGameStateUpdate } from './game';
+import { claimReserveRound, getCurrentQuestionForTeam } from './round-swap-service';
+import { createInitialGameState, normalizeGameState, sanitizeGameStateUpdate, calculateDifficulty } from './game';
 import { DEFAULT_QUESTIONS } from './defaultQuestions';
 import { asyncHandler, createApiErrorHandler, HttpError } from './errors';
 import type { ChatMessage } from './types';
@@ -94,7 +95,7 @@ async function generateQuestionQrAsset(question: Pick<QuestionDocument, 'round' 
 /**
  * Update score and record history in a single atomic operation
  */
-async function recordScoreChange(teamId: string | ObjectId, amount: number, reason: string) {
+export async function recordScoreChange(teamId: string | ObjectId, amount: number, reason: string) {
   const teams = await getTeamsCollection();
   const id = typeof teamId === 'string' ? toObjectId(teamId, 'team id') : teamId;
   
@@ -254,6 +255,48 @@ app.post('/api/admin/adjust-score', requireAdmin, route(async (request: AdminAut
   response.json({ ok: true });
 }));
 
+app.post('/api/game/penalty', requireAuth, route(async (request: AuthedRequest, response) => {
+  const { amount, reason } = request.body as { amount?: number; reason?: string };
+  if (typeof amount !== 'number' || !reason) {
+    response.status(400).json({ error: 'amount and reason are required' });
+    return;
+  }
+
+  await recordScoreChange(request.auth!.teamId, -amount, reason);
+  response.json({ ok: true });
+}));
+
+app.post('/api/admin/teams/:id/swap', requireAdmin, route(async (request: AdminAuthedRequest, response) => {
+  const teamId = request.params.id as string;
+  const result = await claimReserveRound(teamId, true);
+  if (!result.ok) {
+    response.status(400).json({ error: result.error });
+    return;
+  }
+  response.json(result);
+}));
+
+// Helper to inject the current question into the game state payload
+async function augmentGameState(teamId: string, baseState: GameState) {
+  const currentQ = await getCurrentQuestionForTeam(teamId);
+  const team = await findTeamById(teamId);
+  
+  const activeQuestionOverride = currentQ ? {
+    id: currentQ._id.toString(),
+    round: currentQ.round,
+    p1: { title: currentQ.p1?.title, hint: currentQ.p1?.hint, language: currentQ.p1?.language, code: currentQ.p1?.code },
+    coord: currentQ.coord,
+    volunteer: currentQ.volunteer,
+    qrPasskey: currentQ.qrPasskey
+  } : null;
+
+  return {
+    ...baseState,
+    activeQuestionOverride,
+    hasSwapped: !!(team?.swappedRounds && Object.keys(team.swappedRounds).length > 0)
+  };
+}
+
 app.post('/api/auth/login', route(async (request, response) => {
   const body = request.body as LoginPayload;
   const teamName = body.teamName?.trim();
@@ -300,6 +343,8 @@ app.post('/api/auth/login', route(async (request, response) => {
 
   await teams.updateOne({ _id: team._id }, { $set: { lastLoginAt: new Date(), updatedAt: new Date(), gameState } });
 
+  const augmentedState = await augmentGameState(team._id.toString(), gameState);
+
   response.json({
     token,
     role,
@@ -309,7 +354,7 @@ app.post('/api/auth/login', route(async (request, response) => {
       solverName: team.solverName,
       runnerName: team.runnerName,
     },
-    gameState,
+    gameState: augmentedState,
   });
 }));
 
@@ -352,8 +397,10 @@ app.get('/api/game/state', requireAuth, route(async (request: AuthedRequest, res
     await teams.updateOne({ _id: team._id }, { $set: { gameState: normalizedState, updatedAt: new Date() } });
   }
 
+  const augmentedState = await augmentGameState(team._id.toString(), normalizedState);
+
   response.json({
-    gameState: normalizedState,
+    gameState: augmentedState,
     lastMessage: team.lastMessage || null,
     score: team.score || 0
   });
@@ -382,8 +429,10 @@ app.patch('/api/game/state', requireAuth, route(async (request: AuthedRequest, r
     { $set: { gameState: nextState, updatedAt: new Date() } },
   );
 
+  const augmentedState = await augmentGameState(team._id.toString(), nextState);
+
   response.json({
-    gameState: nextState,
+    gameState: augmentedState,
     lastMessage: team.lastMessage || null,
     score: team.score || 0
   });
@@ -411,8 +460,10 @@ app.post('/api/game/reset', requireAuth, route(async (request: AuthedRequest, re
     { $set: { gameState: nextState, updatedAt: new Date() } },
   );
 
+  const augmentedState = await augmentGameState(team._id.toString(), nextState);
+
   response.json({
-    gameState: nextState,
+    gameState: augmentedState,
     lastMessage: team.lastMessage || null,
     score: team.score || 0
   });
@@ -515,11 +566,10 @@ app.post('/api/game/compile', requireAuth, route(async (request: AuthedRequest, 
   );
 
   // 2. Fetch Question for Verification
-  const questions = await getQuestionsCollection();
-  const question = await questions.findOne({ _id: toObjectId(questionId, 'questionId') });
+  const question = await getCurrentQuestionForTeam(team._id.toString());
 
-  if (!question) {
-    response.status(404).json({ error: 'Question not found' });
+  if (!question || question._id.toString() !== questionId) {
+    response.status(404).json({ error: 'Question not found or mismatch' });
     return;
   }
 
@@ -699,8 +749,7 @@ app.post('/api/runner/verify-location-qr', requireAuth, route(async (request: Au
     return;
   }
 
-  const questions = await getQuestionsCollection();
-  const question = await questions.findOne({ round: team.gameState.round + 1 });
+  const question = await getCurrentQuestionForTeam(team._id.toString());
   if (!question) {
     response.status(404).json({ error: 'No question found for this round' });
     return;
@@ -745,10 +794,9 @@ app.post('/api/runner/verify-passkey', requireAuth, route(async (request: Authed
     return;
   }
 
-  const questions = await getQuestionsCollection();
   const roundCount = await getRoundCount();
   const currentRoundIndex = team.gameState.round;
-  const question = await questions.findOne({ round: currentRoundIndex + 1 });
+  const question = await getCurrentQuestionForTeam(team._id.toString());
 
   if (!question) {
     response.status(404).json({ error: 'No question found for this round' });
@@ -793,6 +841,56 @@ app.post('/api/runner/complete-round', requireAuth, route(async (request: Authed
 
   const isLastRound = currentRound >= roundCount - 1;
 
+  // Calculate Points & Speed Bonus according to Master Spec
+  const basePoints = 200;
+  const isHard = team.gameState.difficulty === 'hard';
+  const difficultyBonus = isHard ? 283 : 0;
+  
+  let speedBonus = 0;
+  let speedReason = "";
+  let elapsedSeconds = 0;
+
+  if (team.gameState.currentRoundStartTime) {
+    const startTime = new Date(team.gameState.currentRoundStartTime).getTime();
+    const endTime = Date.now();
+    elapsedSeconds = (endTime - startTime) / 1000;
+    
+    // Time Tiers
+    const elapsedMinutes = elapsedSeconds / 60;
+    if (elapsedMinutes < 10) {
+      speedBonus = 500;
+    } else if (elapsedMinutes < 15) {
+      speedBonus = 250;
+    } else if (elapsedMinutes < 25) {
+      speedBonus = 100;
+    } else {
+      speedBonus = 0;
+    }
+
+    const mins = Math.floor(elapsedSeconds / 60);
+    const secs = Math.floor(elapsedSeconds % 60);
+    speedReason = ` (Time: ${mins}m ${secs}s)`;
+  }
+
+  // Fetch Global Difficulty Protocol
+  const config = await getConfigCollection();
+  const protocolConfig = await config.findOne({ key: 'difficultyProtocol' });
+  const protocol = protocolConfig?.value || 'auto'; // auto, normal, hard
+
+  let nextDifficulty: 'normal' | 'hard' = calculateDifficulty(elapsedSeconds);
+  if (protocol === 'normal') nextDifficulty = 'normal';
+  if (protocol === 'hard') nextDifficulty = 'hard';
+
+  // Calculate Hard Mode Decay Jackpot (Only if they were already in Hard mode for this round)
+  let decayJackpot = 0;
+  if (isHard) {
+    const jackpotStart = 1000;
+    const decayRate = 50; 
+    const decayInterval = 30;
+    const decayPeriods = Math.floor(elapsedSeconds / decayInterval);
+    decayJackpot = Math.max(0, jackpotStart - (decayPeriods * decayRate));
+  }
+
   let nextState: GameState;
   if (isLastRound) {
     nextState = {
@@ -800,6 +898,7 @@ app.post('/api/runner/complete-round', requireAuth, route(async (request: Authed
       stage: 'final_qr',
       roundsDone,
       finishTime: null,
+      difficulty: nextDifficulty,
     };
   } else {
     nextState = {
@@ -808,36 +907,35 @@ app.post('/api/runner/complete-round', requireAuth, route(async (request: Authed
       stage: 'p1_solve',
       roundsDone,
       handoff: null,
+      difficulty: nextDifficulty,
+      currentRoundStartTime: new Date().toISOString(),
     };
   }
 
   const teams = await getTeamsCollection();
-  await teams.updateOne({ _id: team._id }, { $set: { gameState: nextState, updatedAt: new Date() } });
+  await teams.updateOne({ _id: team._id }, { $set: { gameState: nextState, difficultyTier: nextDifficulty, updatedAt: new Date() } });
 
-  // Calculate Points & Speed Bonus
-  const basePoints = 800;
-  let speedBonus = 0;
-  let speedReason = "";
+  const totalPoints = basePoints + difficultyBonus + speedBonus + decayJackpot;
+  const hardReason = isHard ? ` (Hard +${decayJackpot} Speed Jackpot)` : '';
+  await recordScoreChange(team._id, totalPoints, `Round ${currentRound + 1} Cleared${hardReason}${speedReason}`);
 
-  if (team.gameState.lastValidatedAt) {
-    const startTime = new Date(team.gameState.lastValidatedAt).getTime();
-    const endTime = Date.now();
-    const elapsedSeconds = (endTime - startTime) / 1000;
-    
-    // Max bonus: 500 pts if solved within 300s (5 mins)
-    const MAX_BONUS = 500;
-    const DECAY_TIME = 300;
-    
-    speedBonus = Math.max(0, Math.floor(MAX_BONUS * (1 - elapsedSeconds / DECAY_TIME)));
-    const mins = Math.floor(elapsedSeconds / 60);
-    const secs = Math.floor(elapsedSeconds % 60);
-    speedReason = ` (Time: ${mins}m ${secs}s)`;
+  // Notify team of phase transition
+  if (isLastRound) {
+    const lastMessage: ChatMessage = {
+      text: "MISSION UPDATE: Final authentication required at Solver Terminal. Scanned data incoming.",
+      senderRole: 'system',
+      timestamp: Date.now()
+    };
+    await teams.updateOne({ _id: team._id }, { $set: { lastMessage, updatedAt: new Date() } });
+    notifyTeamMessage(team._id.toString(), 'game:update', { type: 'final_phase' });
+    notifyTeamMessage(team._id.toString(), 'chat:message', lastMessage);
+  } else {
+    // Normal round transition
+    notifyTeamMessage(team._id.toString(), 'game:update', { type: 'round_complete' });
   }
 
-  const totalPoints = basePoints + speedBonus;
-  await recordScoreChange(team._id, totalPoints, `Round ${currentRound + 1} Cleared${speedReason}`);
-
   response.json({ ok: true, gameState: nextState });
+
 }));
 
 app.post('/api/runner/verify-final-qr', requireAuth, route(async (request: AuthedRequest, response) => {
@@ -976,6 +1074,35 @@ app.put('/api/admin/config', requireAdmin, route(async (request: AdminAuthedRequ
   );
   response.json({ ok: true });
 }));
+app.post('/api/team/claim-swap', requireAuth, route(async (request: AuthedRequest, response) => {
+  const auth = request.auth!;
+  const result = await claimReserveRound(auth.teamId);
+  if (!result.ok) {
+    response.status(400).json({ error: result.error });
+    return;
+  }
+
+  // Record a notification message for the team
+  const teams = await getTeamsCollection();
+  const lastMessage: ChatMessage = {
+    text: `MISSION UPDATE: Round Swap executed by ${auth.role.toUpperCase()}. New coordinates received. -300 pts.`,
+    senderRole: 'system',
+    timestamp: Date.now()
+  };
+
+  await teams.updateOne(
+    { _id: new ObjectId(auth.teamId) },
+    { $set: { lastMessage, updatedAt: new Date() } }
+  );
+
+  // Broadcast to trigger instant sync and notification on both devices
+  notifyTeamMessage(auth.teamId, 'game:update', { type: 'burn_swap', role: auth.role });
+  notifyTeamMessage(auth.teamId, 'chat:message', lastMessage);
+  notifyTeamMessage('admin', 'chat:message', { ...lastMessage, teamId: auth.teamId });
+
+  response.json(result);
+}));
+
 
 app.get('/api/chat/phrases', requireAuth, route(async (_request: AuthedRequest, response) => {
   const config = await getConfigCollection();
@@ -1047,6 +1174,9 @@ app.get('/api/admin/teams', requireAdmin, route(async (_request: AdminAuthedRequ
       runnerName: team.runnerName || '',
       createdAt: team.createdAt,
       lastLoginAt: team.lastLoginAt || null,
+      score: team.score || 0,
+      scoreHistory: team.scoreHistory || [],
+      gameState: team.gameState
     })),
   });
 }));
@@ -1223,17 +1353,15 @@ app.delete('/api/admin/questions', requireAdmin, route(async (_request: AdminAut
 app.delete('/api/admin/database', requireAdmin, route(async (_request: AdminAuthedRequest, response) => {
   const teams = await getTeamsCollection();
   const questions = await getQuestionsCollection();
-
-  const [teamsResult, questionsResult] = await Promise.all([
-    teams.deleteMany({}),
-    questions.deleteMany({}),
+  const reservePool = await getReservePoolCollection();
+  
+  const [totalQuestions, totalReserve, teamCount] = await Promise.all([
+    questions.countDocuments(),
+    reservePool.countDocuments(),
+    teams.countDocuments()
   ]);
 
-  response.json({
-    ok: true,
-    deletedTeams: teamsResult.deletedCount,
-    deletedQuestions: questionsResult.deletedCount,
-  });
+  response.json({ ok: true, data: { status: 'online', totalQuestions, totalReserve, teamCount } });
 }));
 
 app.use(createApiErrorHandler());

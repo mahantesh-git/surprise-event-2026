@@ -7,7 +7,10 @@ import {
   X, 
   Database,
   RefreshCw,
-  Power
+  Power,
+  Zap,
+  Target,
+  Cpu
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -33,6 +36,16 @@ export function ConfigManagement({ token, config, onRefresh, onError }: ConfigMa
       onRefresh();
     } catch (err) {
       onError(err instanceof Error ? err.message : 'Failed to update config');
+    }
+  };
+
+  const handleUpdateProtocol = async (val: string) => {
+    if (!token) return;
+    try {
+      await updateAdminConfig(token, 'difficultyProtocol', val);
+      onRefresh();
+    } catch (err) {
+      onError(err instanceof Error ? err.message : 'Failed to update protocol');
     }
   };
 
@@ -105,6 +118,48 @@ export function ConfigManagement({ token, config, onRefresh, onError }: ConfigMa
                      config?.loginEnabled ? 'translate-x-7 bg-black' : 'translate-x-1'
                    }`} />
                  </button>
+              </div>
+           </section>
+
+           <section className="space-y-4">
+              <div className="flex items-center gap-4">
+                <Cpu className="text-[var(--color-accent)] w-4 h-4" />
+                <h3 className="text-[10px] font-mono uppercase tracking-[0.4em] text-white/60">Global_Difficulty_Protocol</h3>
+              </div>
+              <div className="corner-card glass-morphism p-8 space-y-6">
+                 <div className="space-y-1">
+                   <h4 className="font-black uppercase tracking-widest text-sm">Target Difficulty Scheduling</h4>
+                   <p className="text-[10px] font-mono text-white/60 uppercase tracking-tight">
+                     Forces the difficulty for the <span className="text-[var(--color-accent)]">NEXT ROUND</span> of all teams.
+                   </p>
+                 </div>
+                 
+                 <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { id: 'auto', label: 'AUTO', icon: RefreshCw, desc: 'Protocol Zero' },
+                      { id: 'normal', label: 'NORMAL', icon: Target, desc: 'Protocol Alpha' },
+                      { id: 'hard', label: 'HARD', icon: Zap, desc: 'Protocol Omega' },
+                    ].map((mode) => {
+                      const isActive = (config?.difficultyProtocol || 'auto') === mode.id;
+                      return (
+                        <button
+                          key={mode.id}
+                          onClick={() => handleUpdateProtocol(mode.id)}
+                          className={`flex flex-col items-center gap-3 p-4 border transition-all ${
+                            isActive 
+                              ? 'bg-[var(--color-accent)]/10 border-[var(--color-accent)] text-white' 
+                              : 'bg-white/[0.02] border-white/5 text-white/40 hover:text-white/60 hover:bg-white/[0.04]'
+                          }`}
+                        >
+                          <mode.icon className={`w-5 h-5 ${isActive ? 'text-[var(--color-accent)] animate-pulse' : ''}`} />
+                          <div className="text-center">
+                            <div className="text-[10px] font-black tracking-widest">{mode.label}</div>
+                            <div className="text-[8px] font-mono uppercase opacity-50">{mode.desc}</div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                 </div>
               </div>
            </section>
 

@@ -60,12 +60,20 @@ export async function getAdminPhrasesCollection(): Promise<Collection<any>> {
   return dbClient.db(getDatabaseName()).collection<any>('admin_phrases');
 }
 
+export async function getReservePoolCollection(): Promise<Collection<QuestionDocument>> {
+  const dbClient = await getClient();
+
+  return dbClient.db(getDatabaseName()).collection<QuestionDocument>('reserve_pool');
+}
+
 export async function ensureIndexes() {
   const teams = await getTeamsCollection();
   const questions = await getQuestionsCollection();
   const config = await getConfigCollection();
+  const reservePool = await getReservePoolCollection();
   await teams.createIndex({ nameNormalized: 1 }, { unique: true });
   await questions.createIndex({ round: 1 }, { unique: true });
+  await reservePool.createIndex({ round: 1 }, { unique: true });
   await config.createIndex({ key: 1 }, { unique: true });
 }
 

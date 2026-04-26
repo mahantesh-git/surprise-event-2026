@@ -6,9 +6,10 @@ interface PersistentProgressProps {
   totalRounds: number;
   currentRound: number;
   roundsDone: boolean[];
+  difficulty?: 'normal' | 'hard';
 }
 
-export function PersistentProgress({ totalRounds, currentRound, roundsDone }: PersistentProgressProps) {
+export function PersistentProgress({ totalRounds, currentRound, roundsDone, difficulty }: PersistentProgressProps) {
   return (
     <div className="fixed top-0 left-0 right-0 z-[100] h-1 bg-[var(--color-bg-surface)] flex gap-0.5">
       {Array.from({ length: totalRounds }).map((_, i) => {
@@ -28,7 +29,10 @@ export function PersistentProgress({ totalRounds, currentRound, roundsDone }: Pe
                 initial={{ x: '-100%' }}
                 animate={{ x: '100%' }}
                 transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}
-                className="absolute inset-0 bg-[var(--color-accent)] shadow-accent-xs"
+                className={cn(
+                  "absolute inset-0 shadow-accent-xs",
+                  difficulty === 'hard' ? "bg-red-600 shadow-[0_0_15px_red]" : "bg-[var(--color-accent)]"
+                )}
               />
             )}
           </div>

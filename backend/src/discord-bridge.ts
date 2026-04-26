@@ -134,7 +134,7 @@ export async function sendAdminAlert(text: string, location?: { lat: number; lng
   try {
     let fullText = text;
     if (location) {
-      fullText += `\n📍 LOCATION: ${location.lat}, ${location.lng}\n🗺️ MAP: https://www.google.com/maps?q=${location.lat},${location.lng}`;
+      fullText += `\nLOCATION: ${location.lat}, ${location.lng}\n MAP: https://www.google.com/maps?q=${location.lat},${location.lng}`;
     }
 
     // force: false uses cache if available, avoids extra API calls

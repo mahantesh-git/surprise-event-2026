@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Crosshair, Brain, LayoutGrid, CheckCircle2, RefreshCcw, Trophy,
-  Star, Fingerprint, QrCode, Shield, ChevronRight, AlertCircle, Activity, ClipboardPaste
+  Star, Fingerprint, QrCode, Shield, ChevronRight, AlertCircle, Activity, ClipboardPaste, Copy, Check,
+  Zap, MessageSquare, MapPin, Navigation
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { TacticalStatus } from './TacticalStatus';
 import { Button } from '@/components/ui/button';
 import { verifyRunnerLocationQr, verifyRunnerPasskey, completeRunnerGame, updateGameState } from '@/lib/api';
 import { QRScanner } from '@/components/QRScanner';
-import { MapPin } from 'lucide-react';
 
 // ─── HAPTIC UTILITY ───────────────────────────────────────────
 function haptic(pattern: number | number[] = 50) {
@@ -16,11 +17,11 @@ function haptic(pattern: number | number[] = 50) {
 }
 
 // ─── TAP GAME ─────────────────────────────────────────────────
-const TapGame = ({ onComplete }: { onComplete: () => void }) => {
+const TapGame = ({ onComplete, difficulty = 'normal' }: { onComplete: () => void, difficulty?: 'normal' | 'hard' }) => {
   const [taps, setTaps] = useState(0);
   const [target, setTarget] = useState({ x: 50, y: 50 });
-  const [timeLeft, setTimeLeft] = useState(15);
-  const required = 10;
+  const required = difficulty === 'hard' ? 25 : 15;
+  const [timeLeft, setTimeLeft] = useState(difficulty === 'hard' ? 20 : 25);
 
   useEffect(() => {
     if (timeLeft > 0 && taps < required) {
@@ -55,8 +56,8 @@ const TapGame = ({ onComplete }: { onComplete: () => void }) => {
         icon={RefreshCcw}
       />
       <button
-        onClick={() => { setTaps(0); setTimeLeft(15); haptic(100); }}
-        className="bg-zinc-800 hover:bg-zinc-700 px-8 py-4 font-bold text-sm uppercase tracking-widest transition-colors text-white/80 [clip-path:var(--clip-oct)]"
+        onClick={() => { setTaps(0); setTimeLeft(difficulty === 'hard' ? 20 : 25); haptic(100); }}
+        className="bg-zinc-800 hover:bg-zinc-700 px-8 py-4 font-bold text-sm uppercase tracking-widest transition-colors text-white/80"
       >🔄 Try Again</button>
     </div>
   );
@@ -67,7 +68,7 @@ const TapGame = ({ onComplete }: { onComplete: () => void }) => {
         <span>HITS: <span className="text-[var(--color-accent)]">{taps}</span>/{required}</span>
         <span>TIME: <span className={timeLeft <= 5 ? 'text-[var(--color-accent)]' : 'text-white/80'}>{timeLeft}s</span></span>
       </div>
-      <div className="relative h-72 w-full bg-black overflow-hidden border-b border-white/10 [clip-path:var(--clip-oct)]">
+      <div className="relative h-72 w-full bg-black overflow-hidden border-b border-white/10">
         <div className="absolute inset-0 opacity-10 bg-[linear-gradient(to_right,#374151_1px,transparent_1px),linear-gradient(to_bottom,#374151_1px,transparent_1px)] bg-[size:2rem_2rem]" />
         <div className="absolute bottom-0 left-0 h-1 bg-[var(--color-accent)]/20 w-full">
           <motion.div className="h-full bg-[var(--color-accent)]" animate={{ width: `${(taps / required) * 100}%` }} transition={{ type: 'spring', stiffness: 300 }} />
@@ -86,8 +87,9 @@ const TapGame = ({ onComplete }: { onComplete: () => void }) => {
 };
 
 // ─── MEMORY GAME ──────────────────────────────────────────────
-const MemoryGame = ({ onComplete }: { onComplete: () => void }) => {
-  const symbols = ['🚀', '💻', '⚡', '🧠', '🔒', '🔑'];
+const MemoryGame = ({ onComplete, difficulty = 'normal' }: { onComplete: () => void, difficulty?: 'normal' | 'hard' }) => {
+  const allSymbols = ['🚀', '💻', '⚡', '🧠', '🔒', '🔑', '🎯', '📡', '🛡️'];
+  const symbols = difficulty === 'hard' ? allSymbols : allSymbols.slice(0, 6);
   const [cards] = useState(() => [...symbols, ...symbols].sort(() => Math.random() - 0.5));
   const [flipped, setFlipped] = useState<number[]>([]);
   const [solved, setSolved] = useState<number[]>([]);
@@ -125,7 +127,7 @@ const MemoryGame = ({ onComplete }: { onComplete: () => void }) => {
       <div className="text-sm font-mono text-white/40 text-center">
         MATCHED: <span className="text-[var(--color-accent)]">{solved.length / 2}</span>/{symbols.length}
       </div>
-      <div className="grid grid-cols-3 gap-2.5">
+      <div className={`grid gap-2.5 ${difficulty === 'hard' ? 'grid-cols-4' : 'grid-cols-3'}`}>
         {cards.map((symbol, i) => {
           const isFlipped = flipped.includes(i);
           const isSolved = solved.includes(i);
@@ -133,7 +135,7 @@ const MemoryGame = ({ onComplete }: { onComplete: () => void }) => {
             <motion.div
               key={i} whileTap={{ scale: 0.9 }}
               onClick={() => flipped.length < 2 && !isFlipped && !isSolved && (haptic(15), setFlipped((f) => [...f, i]))}
-              className={`h-20 flex items-center justify-center text-2xl cursor-pointer transition-all duration-200 select-none [clip-path:var(--clip-oct)] ${isFlipped || isSolved ? 'bg-[var(--color-accent)]/20 text-white scale-105' : 'bg-zinc-900 hover:bg-zinc-800'
+              className={`h-20 flex items-center justify-center text-2xl cursor-pointer transition-all duration-200 select-none ${isFlipped || isSolved ? 'bg-[var(--color-accent)]/20 text-white scale-105' : 'bg-zinc-900 hover:bg-zinc-800'
                 }`}
             >
               {isFlipped || isSolved ? symbol : <span className="text-zinc-600 text-lg">?</span>}
@@ -146,7 +148,7 @@ const MemoryGame = ({ onComplete }: { onComplete: () => void }) => {
 };
 
 // ─── PATTERN GAME ─────────────────────────────────────────────
-const PatternGame = ({ onComplete }: { onComplete: () => void }) => {
+const PatternGame = ({ onComplete, difficulty = 'normal' }: { onComplete: () => void, difficulty?: 'normal' | 'hard' }) => {
   const [pattern, setPattern] = useState<number[]>([]);
   const [userPattern, setUserPattern] = useState<number[]>([]);
   const [playing, setPlaying] = useState(false);
@@ -162,7 +164,8 @@ const PatternGame = ({ onComplete }: { onComplete: () => void }) => {
   ];
 
   const start = () => {
-    const newPattern = Array.from({ length: 4 }, () => Math.floor(Math.random() * 4));
+    const patternLength = difficulty === 'hard' ? 7 : 4;
+    const newPattern = Array.from({ length: patternLength }, () => Math.floor(Math.random() * 4));
     setPattern(newPattern); setUserPattern([]); setPlaying(true); setWrongFlash(false);
     playPatternSeq(newPattern);
   };
@@ -224,11 +227,11 @@ const PatternGame = ({ onComplete }: { onComplete: () => void }) => {
         {[0, 1, 2, 3].map((i) => (
           <motion.div
             key={i} whileTap={{ scale: 0.92 }} onClick={() => handlePress(i)}
-            className={`h-28 cursor-pointer transition-all duration-200 border-0 [clip-path:var(--clip-oct)] ${active === i ? `${colorClasses[i].bg} shadow-lg scale-105` : colorClasses[i].dim}`}
+            className={`h-28 cursor-pointer transition-all duration-200 border-0 ${active === i ? `${colorClasses[i].bg} shadow-lg scale-105` : colorClasses[i].dim}`}
           />
         ))}
       </div>
-      <button onClick={start} className="w-full bg-zinc-900 hover:bg-zinc-800 py-4 font-bold text-lg transition-colors border-0 [clip-path:var(--clip-oct)] mt-4">
+      <button onClick={start} className="w-full bg-zinc-900 hover:bg-zinc-800 py-4 font-bold text-lg transition-colors border-0 mt-4">
         {pattern.length === 0 ? '▶ Start Pattern' : '🔄 Replay'}
       </button>
     </div>
@@ -247,21 +250,47 @@ interface RunnerGameProps {
   stage?: string;
   currentRound?: any;
   onSwitchToMap?: () => void;
+  difficulty?: 'normal' | 'hard';
 }
 
 // ─── MAIN COMPONENT ───────────────────────────────────────────
-export function RunnerGame({ token, currentRoundIndex, totalRounds, onRoundComplete, stage, currentRound, onSwitchToMap }: RunnerGameProps) {
+export function RunnerGame({ 
+  token, 
+  currentRoundIndex, 
+  totalRounds, 
+  onRoundComplete, 
+  stage, 
+  currentRound, 
+  onSwitchToMap, 
+  difficulty = 'normal'
+}: RunnerGameProps) {
   const [screen, setScreen] = useState<RunnerScreen>(() => {
-    // Only used for page-refresh recovery — does NOT run during normal flow
     if (stage === 'runner_entry') return 'passkey';
     if (stage === 'runner_game') return 'game';
     if (stage === 'runner_done') return 'victory';
     return 'location';
   });
+
+  useEffect(() => {
+    if (stage === 'runner_entry') setScreen('passkey');
+    else if (stage === 'runner_game') setScreen('game');
+    else if (stage === 'runner_done') setScreen('victory');
+    else if (stage === 'runner_travel') setScreen('location');
+  }, [stage]);
   const [passkey, setPasskey] = useState('');
   const [gameType, setGameType] = useState<GameType>('tap');
   const [error, setError] = useState<string | null>(null);
-  const [verifying, setVerifying] = useState(false);
+  const [isVerifyingPasskey, setVerifyingPasskey] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyPasskey = () => {
+    if (currentRound?.qrPasskey) {
+      navigator.clipboard.writeText(currentRound.qrPasskey);
+      setCopied(true);
+      haptic(30);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
   const [verifyingLocationQr, setVerifyingLocationQr] = useState(false);
   const [completing, setCompleting] = useState(false);
 
@@ -273,7 +302,7 @@ export function RunnerGame({ token, currentRoundIndex, totalRounds, onRoundCompl
 
   const handleVerifyPasskey = async () => {
     if (!passkey.trim()) return;
-    setVerifying(true);
+    setVerifyingPasskey(true);
     setError(null);
     try {
       const data = await verifyRunnerPasskey(token, passkey.trim());
@@ -282,7 +311,7 @@ export function RunnerGame({ token, currentRoundIndex, totalRounds, onRoundCompl
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Network error. Check your connection.');
     } finally {
-      setVerifying(false);
+      setVerifyingPasskey(false);
     }
   };
 
@@ -331,7 +360,17 @@ export function RunnerGame({ token, currentRoundIndex, totalRounds, onRoundCompl
                 <div className="corner-card glass-morphism p-6 space-y-4">
                   <div className="flex justify-between items-center"><span className="text-[10px] uppercase font-bold text-[var(--color-accent)]">Target</span><span className="font-mono text-xs text-right max-w-[150px]">{currentRound.coord.place}</span></div>
                   <div className="flex justify-between items-center"><span className="text-[10px] uppercase font-bold text-[var(--color-accent)]">Volunteer</span><span className="font-mono text-xs">{currentRound.volunteer.name}</span></div>
-                  <div className="p-4 bg-white/5 border border-white/10 rounded text-center"><span className="text-[10px] uppercase text-white/40 block mb-1">Passkey</span><span className="text-xl font-bold tracking-[0.3em]">{currentRound.qrPasskey}</span></div>
+                  <div className="p-4 bg-white/5 border border-white/10 rounded text-center relative group">
+                    <span className="text-[10px] uppercase text-white/40 block mb-1">Passkey</span>
+                    <span className="text-xl font-bold tracking-[0.3em]">{currentRound.qrPasskey}</span>
+                    <button 
+                      onClick={handleCopyPasskey}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-white/20 hover:text-[var(--color-accent)] transition-colors"
+                      title="Copy Passkey"
+                    >
+                      {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -348,11 +387,13 @@ export function RunnerGame({ token, currentRoundIndex, totalRounds, onRoundCompl
 
               <div className="space-y-3">
                 <Button
-                  className="w-full font-bold uppercase tracking-[0.2em] h-14 btn-primary" size="md"
+                  className="w-full font-bold uppercase tracking-[0.2em] h-14 btn-primary !bg-[var(--color-accent)] !text-white hover:brightness-125 transition-all" size="md"
                   onClick={() => { setError(null); setScreen('qr_scanner'); }}
                 >
                   <QrCode className="mr-2 h-5 w-5" /> SCAN LOCATION QR
                 </Button>
+
+
                 
                 {onSwitchToMap && (
                   <Button
@@ -413,7 +454,17 @@ export function RunnerGame({ token, currentRoundIndex, totalRounds, onRoundCompl
                 <div className="corner-card glass-morphism p-6 space-y-4 mb-6">
                   <div className="flex justify-between items-center"><span className="text-[10px] uppercase font-bold text-[var(--color-accent)]">Target</span><span className="font-mono text-xs text-right max-w-[150px]">{currentRound.coord.place}</span></div>
                   <div className="flex justify-between items-center"><span className="text-[10px] uppercase font-bold text-[var(--color-accent)]">Volunteer</span><span className="font-mono text-xs">{currentRound.volunteer.name}</span></div>
-                  <div className="p-4 bg-white/5 border border-white/10 rounded text-center"><span className="text-[10px] uppercase text-white/40 block mb-1">Passkey</span><span className="text-xl font-bold tracking-[0.3em]">{currentRound.qrPasskey}</span></div>
+                  <div className="p-4 bg-white/5 border border-white/10 rounded text-center relative group">
+                    <span className="text-[10px] uppercase text-white/40 block mb-1">Passkey</span>
+                    <span className="text-xl font-bold tracking-[0.3em]">{currentRound.qrPasskey}</span>
+                    <button 
+                      onClick={handleCopyPasskey}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-white/20 hover:text-[var(--color-accent)] transition-colors"
+                      title="Copy Passkey"
+                    >
+                      {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -463,9 +514,9 @@ export function RunnerGame({ token, currentRoundIndex, totalRounds, onRoundCompl
                 <Button
                   className="w-full font-bold uppercase tracking-[0.2em] h-14 btn-primary" size="md"
                   onClick={handleVerifyPasskey}
-                  disabled={verifying || !passkey.trim()}
+                  disabled={isVerifyingPasskey || !passkey.trim()}
                 >
-                  {verifying ? (
+                  {isVerifyingPasskey ? (
                     <span className="flex items-center gap-2">
                       <span className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
                       Verifying...
@@ -501,9 +552,9 @@ export function RunnerGame({ token, currentRoundIndex, totalRounds, onRoundCompl
 
             {/* Game Canvas */}
             <div className="p-6">
-              {gameType === 'tap' && <TapGame onComplete={handleGameComplete} />}
-              {gameType === 'memory' && <MemoryGame onComplete={handleGameComplete} />}
-              {gameType === 'pattern' && <PatternGame onComplete={handleGameComplete} />}
+              {gameType === 'tap' && <TapGame onComplete={handleGameComplete} difficulty={difficulty} />}
+              {gameType === 'memory' && <MemoryGame onComplete={handleGameComplete} difficulty={difficulty} />}
+              {gameType === 'pattern' && <PatternGame onComplete={handleGameComplete} difficulty={difficulty} />}
             </div>
             <div className="text-center text-white/20 text-[10px] font-mono py-4 uppercase tracking-widest">
               Complete the challenge to finish this round

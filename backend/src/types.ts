@@ -23,6 +23,9 @@ export interface GameState {
   currentHeading?: number | null;
   helpRequested?: boolean;
   lastValidatedAt?: string | Date;
+  difficulty?: 'normal' | 'hard';
+  currentRoundStartTime?: string | null;
+  hasSwapped?: boolean;
 }
 
 export interface ChatMessage {
@@ -41,6 +44,7 @@ export interface TeamDocument {
   passwordHash: string;
   gameState: GameState;
   score?: number;
+  difficultyTier?: 'normal' | 'hard';
   scoreHistory?: {
     amount: number;
     reason: string;
@@ -51,6 +55,7 @@ export interface TeamDocument {
   createdAt: Date;
   updatedAt: Date;
   lastLoginAt?: Date;
+  swappedRounds?: Record<string, string>; // Maps round index string to reserve_pool question _id
 }
 
 export interface LoginPayload {
@@ -110,6 +115,7 @@ export interface QuestionDocument {
   locationQrCode: string;
   cx: number;
   cy: number;
+  parTime?: number;
   createdAt: Date;
   updatedAt: Date;
 }

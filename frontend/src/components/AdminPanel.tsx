@@ -11,7 +11,8 @@ import {
   LogOut,
   ShieldAlert,
   AlertCircle,
-  MessageSquare
+  MessageSquare,
+  Sparkles
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -33,10 +34,11 @@ import { ConfigManagement } from '@/components/admin/ConfigManagement';
 import { LeaderboardView } from '@/components/admin/LeaderboardView';
 import { CommsManagement } from '@/components/admin/CommsManagement';
 import { TacticalStatus } from '@/components/TacticalStatus';
+import { TransitionPreview } from '@/components/TransitionPreview';
 
 const ADMIN_SESSION_KEY = 'quest-admin-session';
 
-type AdminPage = 'teams' | 'questions' | 'leaderboard' | 'config' | 'comms';
+type AdminPage = 'teams' | 'questions' | 'leaderboard' | 'config' | 'comms' | 'lab';
 
 export function AdminPanel({ onBack }: { onBack: () => void }) {
   const [token, setToken] = useState<string | null>(() => window.localStorage.getItem(ADMIN_SESSION_KEY));
@@ -191,6 +193,7 @@ export function AdminPanel({ onBack }: { onBack: () => void }) {
     { id: 'teams', label: 'Operatives', icon: Users },
     { id: 'questions', label: 'Sequences', icon: Terminal },
     { id: 'comms', label: 'Comms', icon: MessageSquare },
+    { id: 'lab', label: 'Visuals', icon: Sparkles },
     { id: 'config', label: 'Systems', icon: Settings },
   ] as const;
 
@@ -208,7 +211,7 @@ export function AdminPanel({ onBack }: { onBack: () => void }) {
               Control<span className="text-[var(--color-accent)]">_</span>Center
             </h2>
           </div>
-          
+
           {/* Mobile Actions */}
           <div className="flex md:hidden items-center gap-2">
             <Button variant="ghost" className="h-8 w-8 p-0 text-white/80 hover:text-white" onClick={onBack}>
@@ -302,6 +305,7 @@ export function AdminPanel({ onBack }: { onBack: () => void }) {
               className={cn("relative", activePage === 'leaderboard' ? "h-full" : "min-h-full")}
             >
               {activePage === 'leaderboard' && <LeaderboardView />}
+              {activePage === 'lab' && <TransitionPreview />}
               {activePage === 'teams' && (
                 <TeamManagement
                   token={token}

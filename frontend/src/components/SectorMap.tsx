@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { RoundQuestion } from '@/lib/api';
 import { useSocket } from '@/contexts/SocketContext';
-import { Navigation, ExternalLink, LocateFixed, AlertCircle, Maximize, Minimize } from 'lucide-react';
+import { Navigation, LocateFixed, AlertCircle, Maximize, Minimize } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -40,12 +42,12 @@ interface SectorMapProps {
   visible: boolean;
   role?: 'runner' | 'solver';
   runnerName?: string;
+  activeQuestion?: RoundQuestion | null;
 }
 
 type GeoStatus = 'idle' | 'watching' | 'denied' | 'unavailable';
 
-export function SectorMap({ rounds, currentRound, roundsDone, stage, visible, role = 'runner', runnerName = 'Operative' }: SectorMapProps) {
-  const mapContainerRef = useRef<HTMLDivElement>(null);
+export function SectorMap({ rounds, currentRound, activeQuestion, roundsDone, stage, visible, role = 'runner', runnerName = 'Operative' }: SectorMapProps) {
   const [mapInstance, setMapInstance] = useState<L.Map | null>(null);
   const targetMarkerRef = useRef<L.Marker | null>(null);
   const runnerMarkerRef = useRef<L.Marker | null>(null);
@@ -58,21 +60,52 @@ export function SectorMap({ rounds, currentRound, roundsDone, stage, visible, ro
   const pathLayerRef = useRef<L.Polyline | null>(null);
   const prevRoundRef = useRef<number>(currentRound);
   const hasCenteredRef = useRef<boolean>(false);
+  // shellRef: the React-managed wrapper div (in-page OR portalled)
+  const shellRef = useRef<HTMLDivElement>(null);
+  // leafletDivRef: the actual Leaflet container — created once, never unmounted by React
+  const leafletDivRef = useRef<HTMLDivElement | null>(null);
+  if (!leafletDivRef.current) {
+    const d = document.createElement('div');
+    d.style.cssText = 'position:absolute;inset:0;width:100%;height:100%';
+    leafletDivRef.current = d;
+  }
+
+  const toggleFullScreen = () => setIsFullScreen(prev => !prev);
+
+  // Re-attach the imperative Leaflet div into whichever shell is current.
+  // This runs after every render (portal toggle), keeping Leaflet alive.
+  useEffect(() => {
+    if (shellRef.current && leafletDivRef.current) {
+      if (!shellRef.current.contains(leafletDivRef.current)) {
+        shellRef.current.appendChild(leafletDivRef.current);
+      }
+    }
+  });
+
+  // Tell Leaflet to resize after fullscreen changes
+  useEffect(() => {
+    if (!mapInstance) return;
+    const t1 = setTimeout(() => mapInstance.invalidateSize(), 150);
+    const t2 = setTimeout(() => mapInstance.invalidateSize(), 400);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, [isFullScreen, mapInstance]);
+
 
   const isRunnerStage = ['runner_travel', 'runner_game', 'runner_done', 'final_qr'].includes(stage);
-  const visibleRoundIndex = isRunnerStage ? currentRound : currentRound - 1;
-  const current = visibleRoundIndex >= 0 ? rounds?.[Math.min(visibleRoundIndex, rounds.length - 1)] : null;
+  // Solver should see the current round even during p1_solve
+  const visibleRoundIndex = (isRunnerStage || role === 'solver') ? currentRound : currentRound - 1;
+  const current = activeQuestion || (visibleRoundIndex >= 0 ? rounds?.[Math.min(visibleRoundIndex, rounds.length - 1)] : null);
 
   const defaultLat = 15.4229;
   const defaultLng = 75.6162;
 
-  const storageKeyPrefix = `quest_map_v1_${currentRound}`;
+  const storageKeyPrefix = `quest_map_v1_${visibleRoundIndex}`;
 
   const [routeCoords, setRouteCoords] = useState<L.LatLngTuple[]>(() => {
     try {
       const stored = localStorage.getItem(`${storageKeyPrefix}_route`);
       if (stored) return JSON.parse(stored);
-    } catch (e) {}
+    } catch (e) { }
     return [];
   });
 
@@ -91,7 +124,7 @@ export function SectorMap({ rounds, currentRound, roundsDone, stage, visible, ro
       const storedHistory = localStorage.getItem(`${storageKeyPrefix}_history`);
       if (storedHistory) {
         const parsed = JSON.parse(storedHistory);
-        pathHistoryRef.current = Array.isArray(parsed) 
+        pathHistoryRef.current = Array.isArray(parsed)
           ? parsed.filter(c => c && typeof c[0] === 'number' && !isNaN(c[0]) && typeof c[1] === 'number' && !isNaN(c[1]))
           : [];
       } else {
@@ -194,15 +227,22 @@ export function SectorMap({ rounds, currentRound, roundsDone, stage, visible, ro
 
   useEffect(() => {
     if (prevRoundRef.current === currentRound) return;
+
+    // Force cleanup ONLY on actual round transition
     pathHistoryRef.current = [];
+
+    // Cleanup storage for previous round
     localStorage.removeItem(`quest_map_v1_${prevRoundRef.current}_coords`);
     localStorage.removeItem(`quest_map_v1_${prevRoundRef.current}_history`);
     localStorage.removeItem(`quest_map_v1_${prevRoundRef.current}_route`);
+
     if (pathLayerRef.current && mapInstance) {
       mapInstance.removeLayer(pathLayerRef.current);
       pathLayerRef.current = null;
     }
+
     setRouteCoords([]);
+
     if (routeGlowRef.current && mapInstance) {
       mapInstance.removeLayer(routeGlowRef.current);
       routeGlowRef.current = null;
@@ -211,13 +251,19 @@ export function SectorMap({ rounds, currentRound, roundsDone, stage, visible, ro
       mapInstance.removeLayer(routeLayerRef.current);
       routeLayerRef.current = null;
     }
+
     hasCenteredRef.current = false;
     prevRoundRef.current = currentRound;
-  }, [currentRound, mapInstance]);
+  }, [currentRound, current?.id, mapInstance]);
 
   useEffect(() => {
-    if (!mapContainerRef.current || mapInstance) return;
-    const map = L.map(mapContainerRef.current, {
+    if (mapInstance || !leafletDivRef.current) return;
+    // Temporarily add to body so Leaflet can measure size;
+    // the re-attach useEffect moves it into shellRef right after.
+    if (!leafletDivRef.current.parentElement) {
+      document.body.appendChild(leafletDivRef.current);
+    }
+    const map = L.map(leafletDivRef.current, {
       zoomControl: false,
       attributionControl: false,
       center: [defaultLat, defaultLng],
@@ -245,13 +291,14 @@ export function SectorMap({ rounds, currentRound, roundsDone, stage, visible, ro
     }
   }, [visible, isFullScreen, mapInstance]);
 
+  const shouldShowTarget = isRunnerStage || role === 'solver';
   useEffect(() => {
     if (!mapInstance) return;
     if (targetMarkerRef.current) {
       mapInstance.removeLayer(targetMarkerRef.current);
       targetMarkerRef.current = null;
     }
-    if (hasTarget && isRunnerStage && targetLat !== null && targetLng !== null && !isNaN(targetLat) && !isNaN(targetLng)) {
+    if (hasTarget && shouldShowTarget && targetLat !== null && targetLng !== null && !isNaN(targetLat) && !isNaN(targetLng)) {
       const icon = L.divIcon({
         className: 'target-marker',
         html: `
@@ -299,7 +346,7 @@ export function SectorMap({ rounds, currentRound, roundsDone, stage, visible, ro
     } else if (!runnerCoords && !hasCenteredRef.current && defaultLat !== null && defaultLng !== null) {
       mapInstance.setView([defaultLat, defaultLng], 17);
     }
-  }, [mapInstance, hasTarget, isRunnerStage, targetLat, targetLng, runnerCoords]);
+  }, [mapInstance, hasTarget, isRunnerStage, role, targetLat, targetLng, runnerCoords]);
 
   useEffect(() => {
     if (!mapInstance || !runnerCoords) return;
@@ -376,7 +423,7 @@ export function SectorMap({ rounds, currentRound, roundsDone, stage, visible, ro
 
     const currentPos: L.LatLngTuple = [lat, lng];
     const lastPos = pathHistoryRef.current[pathHistoryRef.current.length - 1];
-    
+
     // Safety check for distance calculation
     const isValidForPath = !isNaN(lat) && !isNaN(lng) && (!lastPos || (typeof lastPos[0] === 'number' && !isNaN(lastPos[0])));
 
@@ -421,11 +468,19 @@ export function SectorMap({ rounds, currentRound, roundsDone, stage, visible, ro
   }, [mapInstance, routeCoords]);
 
   // Fetch new route from OSRM
+  const lastRouteFetchRef = useRef<[number, number] | null>(null);
   useEffect(() => {
     if (!mapInstance || !runnerCoords || !hasTarget || targetLat === null || targetLng === null) return;
     const [rLat, rLng] = runnerCoords;
+
+    // Only fetch if moved significantly (> 5m) or first time
+    if (lastRouteFetchRef.current) {
+      const dist = mapInstance.distance([rLat, rLng], lastRouteFetchRef.current);
+      if (dist < 5 && routeCoords.length > 0) return;
+    }
+
     const url = `https://router.project-osrm.org/route/v1/foot/${rLng},${rLat};${targetLng},${targetLat}?overview=full&geometries=geojson`;
-    
+
     fetch(url)
       .then(r => r.json())
       .then(data => {
@@ -434,6 +489,7 @@ export function SectorMap({ rounds, currentRound, roundsDone, stage, visible, ro
           const coords: L.LatLngTuple[] = [[rLat, rLng], ...rawCoords, [targetLat!, targetLng!]];
           setRouteCoords(coords);
           localStorage.setItem(`${storageKeyPrefix}_route`, JSON.stringify(coords));
+          lastRouteFetchRef.current = [rLat, rLng];
         }
       })
       .catch(err => {
@@ -446,112 +502,88 @@ export function SectorMap({ rounds, currentRound, roundsDone, stage, visible, ro
       ? `https://www.google.com/maps/dir/?api=1&origin=${runnerCoords[0]},${runnerCoords[1]}&destination=${targetLat},${targetLng}&travelmode=walking`
       : `https://www.google.com/maps/search/?api=1&query=${targetLat},${targetLng}`
     : null;
+  
+  // The shell div — React renders it. The imperative Leaflet div lives inside it.
+  // Normal: rendered in the page flow (scrolls naturally, no fixed positioning tricks)
+  // Fullscreen: portalled to document.body so position:fixed escapes framer-motion transforms
+  const getNavBottom = () => {
+    const nav = document.querySelector('nav');
+    return nav ? nav.getBoundingClientRect().bottom + 8 : 80;
+  };
+
+  const shell = (
+    <div
+      ref={shellRef}
+      className={cn(
+        'relative overflow-hidden',
+        isFullScreen
+          ? 'bg-black shadow-2xl border-t border-white/10'
+          : 'w-full h-[360px] sm:h-[420px] glass-morphism corner-card shadow-black-lg'
+      )}
+      style={isFullScreen
+        ? { position: 'fixed', top: getNavBottom(), left: 0, right: 0, bottom: 0, zIndex: 9000 }
+        : undefined}
+    >
+      {/* leafletDivRef is appended here imperatively by useEffect */}
+
+      {/* Expand / Collapse */}
+      <button
+        onClick={toggleFullScreen}
+        className="absolute top-3 right-3 z-[1000] p-2 bg-black/70 backdrop-blur-sm border border-white/20 text-white hover:bg-white/10 transition-all rounded-sm"
+        aria-label={isFullScreen ? 'Collapse map' : 'Expand map'}
+      >
+        {isFullScreen ? <Minimize className="h-5 w-5" /> : <Maximize className="h-5 w-5" />}
+      </button>
+
+      {/* GPS */}
+      {runnerCoords && (
+        <div className="absolute bottom-3 left-3 z-[1000] px-2 py-1 bg-black/70 backdrop-blur-sm border border-white/10 rounded-sm font-mono text-[9px] uppercase tracking-widest text-white/60">
+          GPS ±{Math.round(runnerCoords[2])}m
+        </div>
+      )}
+
+      {/* Recenter */}
+      {isRunnerStage && runnerCoords && (
+        <button
+          onClick={() => { if (mapInstance) mapInstance.setView([runnerCoords[0], runnerCoords[1]], 18); }}
+          className="absolute bottom-3 right-3 z-[1000] p-2 bg-black/70 backdrop-blur-sm border border-white/20 text-white hover:bg-white/10 transition-all rounded-sm"
+          title="Recenter"
+        >
+          <LocateFixed className="h-5 w-5" />
+        </button>
+      )}
+
+      {/* GPS denied overlay */}
+      {isRunnerStage && (geoStatus === 'denied' || geoStatus === 'unavailable') && (
+        <div className="absolute inset-0 z-[1001] flex flex-col items-center justify-center bg-black/90 backdrop-blur-md p-6 text-center">
+          <AlertCircle className="h-8 w-8 text-[var(--color-accent)] mb-3" />
+          <h3 className="text-sm font-bold uppercase tracking-widest text-white mb-3">GPS Link Severed</h3>
+          <button
+            onClick={() => { setGeoStatus('idle'); startWatching(); }}
+            className="px-4 py-2 bg-[var(--color-accent)] text-black font-bold text-[9px] uppercase tracking-widest hover:opacity-90 transition-all"
+          >
+            Restore Uplink
+          </button>
+        </div>
+      )}
+    </div>
+  );
 
   return (
-    <div className={isFullScreen ? "" : "space-y-3"}>
-      {isFullScreen && (
-        <style>{`
-          body { overflow: hidden !important; }
-          .corner-card { clip-path: none !important; transform: none !important; backdrop-filter: none !important; filter: none !important; }
-          .reveal-up { transform: none !important; animation: none !important; backdrop-filter: none !important; filter: none !important; }
-          .min-h-screen, #root { transform: none !important; contain: none !important; perspective: none !important; }
-        `}</style>
-      )}
-      <div className={isFullScreen ? "fixed inset-0 z-[9999] bg-black/90 backdrop-blur-md" : "relative w-full h-[360px] sm:h-[420px] glass-morphism corner-card overflow-hidden shadow-black-lg"}>
-        <div ref={mapContainerRef} className="absolute inset-0 w-full h-full" />
+    <div className="space-y-3">
+      {/* Normal: shell lives in page flow. Fullscreen: portalled to body (escapes transforms). */}
+      {isFullScreen ? createPortal(shell, document.body) : shell}
 
-        {isRunnerStage && (geoStatus === 'denied' || geoStatus === 'unavailable') && (
-          <div className="absolute inset-0 z-[1001] flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm p-6">
-            <div className="w-full max-w-xs space-y-4">
-              <div className="flex justify-center">
-                <div className="relative w-16 h-16">
-                  <div className="absolute inset-0 border border-[var(--color-accent)] animate-ping opacity-20" />
-                  <div className="w-full h-full bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/50 flex items-center justify-center"><AlertCircle className="h-7 w-7 text-[var(--color-accent)]" /></div>
-                </div>
-              </div>
-              <div className="text-center space-y-1">
-                <p className="text-[9px] font-mono uppercase tracking-[0.2em] text-[var(--color-accent)]">{geoStatus === 'denied' ? 'Location Access Denied' : 'GPS Unavailable'}</p>
-                <h3 className="text-base font-bold uppercase tracking-widest text-white">Enable Location to Continue</h3>
-              </div>
-              <div className="space-y-2 text-[10px] font-mono text-white/60 border border-white/10 bg-white/5 p-4">
-                <p className="text-white/40 uppercase tracking-widest text-[9px] mb-2">Fix Steps</p>
-                <div className="flex gap-2.5"><span className="text-[var(--color-accent)] shrink-0">01.</span><span>Tap the <span className="text-white">🔒 lock icon</span> in browser</span></div>
-                <div className="flex gap-2.5"><span className="text-[var(--color-accent)] shrink-0">02.</span><span>Allow Location Permissions</span></div>
-              </div>
-              <button onClick={() => { setGeoStatus('idle'); startWatching(); }} className="w-full h-11 bg-[var(--color-accent)] text-black font-bold text-[10px] uppercase tracking-[0.2em] flex items-center justify-center gap-2 transition-opacity hover:opacity-90 active:scale-95"><LocateFixed className="h-4 w-4" />Retry Location Access</button>
-            </div>
-          </div>
-        )}
-
-        <button onClick={() => setIsFullScreen(!isFullScreen)} className={`absolute right-4 z-[1000] p-2 bg-black/60 backdrop-blur-sm border border-white/10 text-white hover:bg-white/10 transition-colors shadow-black-lg clip-oct ${isFullScreen ? 'top-20 sm:top-24' : 'top-4'}`} aria-label="Toggle Fullscreen">
-          {isFullScreen ? <Minimize className="h-5 w-5" /> : <Maximize className="h-5 w-5" />}
-        </button>
-
-        {hasTarget && (
-          <div className="absolute top-4 left-4 z-[1000] p-3 bg-black/60 backdrop-blur-sm border border-white/10 shadow-black-lg pointer-events-none">
-            <div className="grid grid-cols-1 gap-2">
-              <div><span className="text-[8px] font-bold text-[var(--color-accent)] uppercase block leading-none mb-1 tracking-widest">TARGET_LAT</span><div className="font-mono text-[11px] text-white/90 tracking-tighter">{current?.coord?.lat ?? '---'}</div></div>
-              <div className="pt-2 border-t border-white/5"><span className="text-[8px] font-bold text-[var(--color-accent)] uppercase block leading-none mb-1 tracking-widest">TARGET_LNG</span><div className="font-mono text-[11px] text-white/90 tracking-tighter">{current?.coord?.lng ?? '---'}</div></div>
-            </div>
-          </div>
-        )}
-
-        <div className="absolute bottom-0 left-0 right-0 z-[1000] flex items-center justify-between gap-2 px-3 py-2 bg-black/60 backdrop-blur-sm border-t border-white/10">
-          <div className="flex items-center gap-3 flex-wrap">
-            {runnerCoords && (() => {
-              const [lat, lng, acc] = runnerCoords;
-              const isGood = acc <= 100;
-              const color = isGood ? '#00BFFF' : 'var(--color-accent)';
-              const label = isGood ? `GPS ±${Math.round(acc)}m` : `~±${Math.round(acc)}m`;
-              return (
-                <>
-                  <div className="flex items-center gap-1.5 border-r border-white/10 pr-3">
-                    <div className="flex flex-col">
-                      <span className="text-[7px] text-white/40 uppercase tracking-tighter leading-none mb-0.5">CURRENT_COORD</span>
-                      <span className="font-mono text-[9px] text-white/90 tracking-tighter leading-none">{lat.toFixed(5)}, {lng.toFixed(5)}</span>
-                    </div>
-                  </div>
-                  <span key="gps-status" className="flex items-center gap-1 font-mono text-[9px] uppercase tracking-widest" style={{ color }}><LocateFixed className="h-3 w-3 animate-pulse shrink-0" />{label}</span>
-                  {lastUpdateTime && (
-                    <span className="text-[8px] font-mono text-white/30 uppercase tracking-widest">
-                      Seen: {Math.floor((Date.now() - lastUpdateTime) / 1000)}s ago
-                    </span>
-                  )}
-                </>
-              );
-            })()}
-            {hasTarget && !runnerCoords && <span className="flex items-center gap-1 font-mono text-[9px] uppercase tracking-widest text-white/60"><Navigation className="h-3 w-3 shrink-0" />Target Locked</span>}
-          </div>
-
-          {isRunnerStage && (
-            <button onClick={() => { if (geoStatus !== 'watching') startWatching(); else if (mapInstance && runnerCoords) { const [lat, lng, accuracy] = runnerCoords; if (accuracy < 1000) { if (hasTarget && targetLat !== null && targetLng !== null) mapInstance.fitBounds(L.latLngBounds([[lat, lng], [targetLat, targetLng]]), { padding: [60, 60], maxZoom: 19 }); else mapInstance.setView([lat, lng], accuracy < 200 ? 18 : 15); } else if (targetLat !== null && targetLng !== null) mapInstance.setView([targetLat, targetLng], 18); } }} className="flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-widest text-white/80 hover:text-white transition-colors active:scale-95 shrink-0">
-              <LocateFixed className="h-3.5 w-3.5" />
-              {geoStatus === 'watching' ? 'Recenter' : (role === 'solver' ? 'Locate Runner' : 'Locate Me')}
-            </button>
-          )}
-        </div>
-      </div>
-
-      {role === 'runner' && navUrl && (
-        <a href={navUrl} target="_blank" rel="noopener noreferrer" className="btn-primary flex items-center justify-center gap-2 sm:gap-3 w-full h-14 border-white/20 text-white hover:border-white hover:bg-white hover:text-black transition-all"><Navigation className="h-4 w-4" />{runnerCoords ? 'Navigate to Target' : 'Explore Target Site'}<ExternalLink className="h-3.5 w-3.5 opacity-60" /></a>
-      )}
-
-      {!isFullScreen && (
-        <div className="p-4 glass-morphism border-white/10 space-y-4">
-          <div className="flex items-center justify-between border-b border-white/5 pb-2">
-            <h4 className="text-[10px] font-bold text-white/40 uppercase tracking-[0.2em]">Tactical Legend</h4>
-            <div className="flex gap-4">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-sm bg-[var(--color-accent)]" style={{ boxShadow: '0 0 6px var(--color-accent)' }} />
-                <span className="text-[9px] font-mono text-white/60 uppercase tracking-widest">Target</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-[#00BFFF]" style={{ boxShadow: '0 0 6px #00BFFF' }} />
-                <span className="text-[#00BFFF] font-mono text-[9px] uppercase tracking-widest">{runnerCoords ? (role === 'solver' ? (runnerName || 'Runner') : 'You (Live)') : 'GPS Pending...'}</span>
-              </div>
-            </div>
-          </div>
-        </div>
+      {role === 'runner' && navUrl && !isFullScreen && (
+        <a
+          href={navUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="btn-primary flex items-center justify-center gap-2 sm:gap-3 w-full h-12 border-white/20 text-white hover:border-white hover:bg-white hover:text-black transition-all shadow-black-lg text-xs font-bold uppercase tracking-widest"
+        >
+          <Navigation className="h-4 w-4" />
+          Navigate to Target
+        </a>
       )}
     </div>
   );
