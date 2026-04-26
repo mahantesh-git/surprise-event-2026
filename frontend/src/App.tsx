@@ -139,36 +139,62 @@ const TacticalProgressBar = ({ stage }: { stage: string }) => {
 
             return (
               <div key={step.id} className="flex flex-col items-center group flex-1">
-                {/* Point Indicator */}
-                <motion.div
-                  initial={false}
-                  animate={{
-                    scale: isActive ? 1.1 : 1,
-                    backgroundColor: isCompleted ? 'var(--color-accent)' : 'rgba(0,0,0,0.6)',
-                    borderColor: (isActive || isCompleted) ? 'var(--color-accent)' : 'rgba(255,255,255,0.1)'
-                  }}
-                  className={cn(
-                    "w-12 h-12 flex items-center justify-center transition-shadow duration-700",
-                    "clip-oct border relative z-10",
-                    isCompleted && "shadow-[0_0_25px_var(--color-accent)]",
-                    isActive && "shadow-[0_0_15px_rgba(217,31,64,0.3)]"
-                  )}
-                >
+                <div className="relative w-12 h-12">
                   {isActive && (
-                    <motion.div
-                      layoutId="active-glow"
-                      className="absolute inset-0 bg-[var(--color-accent)] opacity-20 blur-xl"
-                      animate={{ opacity: [0.1, 0.3, 0.1] }}
-                      transition={{ repeat: Infinity, duration: 2 }}
-                    />
+                    <>
+                      {/* Central blinking pulse - smoothed */}
+                      <motion.div
+                        className="absolute inset-0 bg-[var(--color-accent)] opacity-20 blur-md pointer-events-none"
+                        style={{ clipPath: 'var(--clip-oct)' }}
+                        animate={{ opacity: [0.05, 0.3, 0.05] }}
+                        transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
+                      />
+                      
+                      {/* Expanding signal waves - smoothed loop with fade-in/out */}
+                      {[1, 2, 3].map((i) => (
+                        <motion.div
+                          key={i}
+                          className="absolute inset-0 border-2 border-[var(--color-accent)] pointer-events-none"
+                          style={{ clipPath: 'var(--clip-oct)' }}
+                          animate={{ 
+                            scale: [1, 2.4], 
+                            opacity: [0, 0.7, 0],
+                            borderWidth: ['2px', '0.1px']
+                          }}
+                          transition={{ 
+                            repeat: Infinity, 
+                            duration: 4.5, 
+                            delay: i * 1.5,
+                            ease: "linear"
+                          }}
+                        />
+                      ))}
+                    </>
                   )}
-                  <Icon className={cn(
-                    "w-5 h-5 z-20 transition-colors duration-500",
-                    isCompleted ? "text-white" :
-                      isActive ? "text-[var(--color-accent)]" :
-                        "text-white/20"
-                  )} />
-                </motion.div>
+                  
+                  {/* Main Point Indicator */}
+                  <motion.div
+                    initial={false}
+                    animate={{
+                      scale: isActive ? 1.1 : 1,
+                      backgroundColor: isCompleted ? 'var(--color-accent)' : 'rgba(0,0,0,0.6)',
+                      borderColor: (isActive || isCompleted) ? 'var(--color-accent)' : 'rgba(255,255,255,0.1)'
+                    }}
+                    className={cn(
+                      "w-full h-full flex items-center justify-center transition-shadow duration-700",
+                      "clip-oct border relative z-10",
+                      isCompleted && "shadow-[0_0_25px_var(--color-accent)]",
+                      isActive && "shadow-[0_0_15px_rgba(217,31,64,0.3)]"
+                    )}
+                  >
+                    <Icon className={cn(
+                      "w-5 h-5 z-20 transition-colors duration-500",
+                      isCompleted ? "text-white" :
+                        isActive ? "text-[var(--color-accent)]" :
+                          "text-white/20"
+                    )} />
+                  </motion.div>
+                </div>
 
                 {/* Label */}
                 <div className="mt-4 text-center">
@@ -205,12 +231,12 @@ export default function App() {
 
   // Force Map tab when moving to travel phase, and back to Intel for final QR
   useEffect(() => {
-    if (gameState?.stage === 'runner_travel') {
+    if (gameState?.stage === 'runner_travel' && role === 'runner') {
       setRunnerTab('map');
     } else if (gameState?.stage === 'final_qr') {
       setRunnerTab('intel');
     }
-  }, [gameState?.stage]);
+  }, [gameState?.stage, role]);
 
   const [rounds, setRounds] = useState<RoundQuestion[]>(() => {
     try {
@@ -576,7 +602,6 @@ export default function App() {
           place: currentRound.coord.place,
         },
       });
-      setRunnerTab('map');
     } finally {
       setIsSyncingRunner(false);
     }
@@ -798,7 +823,7 @@ export default function App() {
             animate={{ opacity: 1, scale: 1 }}
             className="flex-1 flex flex-col p-4"
           >
-            {runnerTab === 'map' && ['runner_travel', 'runner_entry', 'runner_game', 'runner_done', 'final_qr'].includes(gameState.stage) ? (
+            {role === 'runner' && runnerTab === 'map' && ['runner_travel', 'runner_entry', 'runner_game', 'runner_done', 'final_qr'].includes(gameState.stage) ? (
               <motion.div key="awaiting-map" variants={clipVariants} initial="initial" animate="animate" exit="exit" className="flex-1 min-h-[500px] w-full">
                 <SectorMap rounds={rounds} currentRound={gameState.round} activeQuestion={currentRound} roundsDone={gameState.roundsDone} stage={gameState.stage} visible={true} role={role} runnerName={session?.team?.runnerName} />
               </motion.div>
@@ -997,7 +1022,7 @@ export default function App() {
 
               {['runner_travel', 'runner_entry', 'runner_game', 'runner_done'].includes(gameState.stage) && (
                 <motion.div key="runner_phase" variants={glitchVariants} initial="initial" animate="animate" exit="exit" className="flex-1 flex flex-col">
-                  {runnerTab === 'map' ? (
+                  {role === 'runner' && runnerTab === 'map' ? (
                     <motion.div key="active-map" variants={clipVariants} initial="initial" animate="animate" exit="exit" className="flex-1 min-h-[500px] relative">
                       <SectorMap rounds={rounds} currentRound={gameState.round} activeQuestion={currentRound} roundsDone={gameState.roundsDone} stage={gameState.stage} visible={true} role={role} runnerName={session?.team?.runnerName} />
                     </motion.div>

@@ -346,10 +346,6 @@ export function RunnerGame({
 
             <div className="space-y-6">
               <div className="text-center space-y-3">
-                <div className="w-16 h-16 bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/30 flex items-center justify-center mx-auto">
-                  <MapPin className="w-8 h-8 text-[var(--color-accent)]" />
-                </div>
-                <span className="label-technical block">Sector Ingress</span>
                 <h2 className="text-xl font-bold tracking-widest uppercase">Target Assigned</h2>
                 <p className="text-[10px] text-white/40 font-mono uppercase tracking-widest leading-relaxed">
                   Navigate to the coordinates. Once you arrive, verify your physical presence by scanning the node's QR code.
