@@ -1,6 +1,6 @@
 /**
  * Formats the elapsed duration between a start time and an end time
- * (or "now" if the game isn't finished yet) into HH:MM:SS.
+ * (or"now" if the game isn't finished yet) into HH:MM:SS.
  */
 export function formatDuration(
   start: string | null,

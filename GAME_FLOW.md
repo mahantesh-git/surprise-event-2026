@@ -126,24 +126,43 @@ Once the mini-challenge is complete:
 
 ---
 
-## 📡 Getting Help (Admin Support)
+## 📡 Advanced Tactical Systems
 
-If a team is stuck or has a problem during the event:
+### 📍 Spectator Live-Link (Map Sync)
+The Solver isn't just sitting blind. The **Sector Map** on the Solver's HUD provides a live feed of the Runner's progress, including:
+- **Live GPS Position**: See exactly where your partner is in real-time.
+- **Path History**: View the route taken by the operative.
+- **Bearing & Direction**: See which way they are facing to provide verbal navigation support.
 
-1. Press the **"Request Help"** button in the app
-2. The admin receives an instant alert on **Discord**
-3. The admin responds in Discord
-4. The **response appears directly on the team's screen** in real time
+### 🔄 Tactical Round Swap
+If a field location is physically blocked (e.g., construction) or a puzzle is obstructed, the team can request a **Tactical Swap**. 
+- Admins can instantly pull a fresh mission from the **Reserve Pool**.
+- This bypasses the current round and provides a new target, ensuring the game never grinds to a halt.
+
+### 💬 Tactical Comms Channel
+Operatives have a built-in communication bridge.
+- **Request Help**: Ping Command (Admins) for immediate assistance.
+- **Direct Intel**: Admin responses and system alerts appear as high-priority transmissions directly on your HUD.
 
 ---
 
-## 📊 The Leaderboard
+## 📊 Scoring & Ranking
 
-The leaderboard is visible to **everyone** throughout the event (players, spectators, organizers).
+The leaderboard is visible to everyone throughout the event. Rankings are determined by **Total Points**, followed by **Total Time**.
 
-Rankings are based on:
-1. **Rounds completed** — more rounds = higher rank
-2. **Total time** — for teams with equal rounds, faster time wins
+### 💎 How to Earn Points
+- **Checkpoint Authorization**: +200 points for every successful QR scan.
+- **Data Extraction**: +200 points base for completing the mini-challenge.
+- **Difficulty Bonus**: **+283 points** automatically awarded if the round is cleared in **Hard Mode**.
+- **Speed Rewards**: Extra points for rapid completion:
+  - Under 10 minutes: **+500 points**
+  - Under 15 minutes: **+250 points**
+  - Under 25 minutes: **+100 points**
+
+### 🔥 Adaptive Difficulty (Hard Mode)
+The system monitors your efficiency. If a team clears a round in **under 3 minutes**, the next round automatically scales to **Hard Mode**.
+- **Increased Complexity**: Mini-games become more difficult (e.g., faster targets, larger grids).
+- **Decaying Jackpot**: Hard Mode rounds feature a **1,000-point jackpot** that decays by 50 points every 30 seconds. Move fast to claim the maximum reward!
 
 > 🔴 Live updates happen the moment a round is cleared — no refreshing needed.
 

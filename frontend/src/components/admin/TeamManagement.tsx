@@ -180,7 +180,7 @@ export function TeamManagement({ token, teams, onRefresh, onError }: TeamManagem
                       className="text-white/10 hover:text-blue-400 transition-colors p-1"
                       title="Force Round Swap"
                     >
-                      <RefreshCw className={cn("w-4 h-4", isSwapping === team.id && "animate-spin")} />
+                      <RefreshCw className={cn("w-4 h-4", isSwapping === team.id &&"animate-spin")} />
                     </button>
                     <button 
                       onClick={() => handleDeleteTeam(team.id)}
@@ -227,7 +227,7 @@ export function TeamManagement({ token, teams, onRefresh, onError }: TeamManagem
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setSelectedTeam(null)}
-              className="absolute inset-0 bg-black/80 backdrop-blur-md"
+              className="absolute inset-0 bg-black/80"
             />
             
             <motion.div
@@ -256,7 +256,7 @@ export function TeamManagement({ token, teams, onRefresh, onError }: TeamManagem
                   </button>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="p-4 bg-white/[0.03] border border-white/5 corner-card">
                     <div className="text-[8px] font-mono text-white/40 uppercase tracking-widest mb-1">Total Score</div>
                     <div className="text-2xl font-black text-[var(--color-accent)]">{selectedTeam.score || 0}</div>
@@ -280,7 +280,7 @@ export function TeamManagement({ token, teams, onRefresh, onError }: TeamManagem
                     <Users className="w-3 h-3" />
                     <h3 className="text-[10px] font-mono uppercase tracking-[0.3em]">Personnel_Profiles</h3>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="p-4 glass-morphism border-blue-500/10">
                       <div className="text-[8px] font-mono text-blue-400/60 uppercase tracking-widest mb-2 flex items-center gap-2">
                         <Activity className="w-3 h-3" /> Solver
@@ -310,9 +310,8 @@ export function TeamManagement({ token, teams, onRefresh, onError }: TeamManagem
                     {selectedTeam.scoreHistory && selectedTeam.scoreHistory.length > 0 ? (
                       [...selectedTeam.scoreHistory].reverse().map((log: any, idx: number) => (
                         <div key={idx} className="flex items-center gap-4 p-4 bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] transition-colors">
-                          <div className={cn(
-                            "w-12 text-center font-black text-sm",
-                            log.amount >= 0 ? "text-emerald-400" : "text-red-500"
+                          <div className={cn("w-12 text-center font-black text-sm",
+                            log.amount >= 0 ?"text-emerald-400" :"text-red-500"
                           )}>
                             {log.amount >= 0 ? '+' : ''}{log.amount}
                           </div>

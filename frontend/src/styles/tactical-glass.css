@@ -2,8 +2,6 @@
 
 .glass-morphism {
   background: rgba(15, 3, 3, 0.45) !important;
-  backdrop-filter: blur(14px) saturate(1.4) !important;
-  -webkit-backdrop-filter: blur(14px) saturate(1.4) !important;
   border: 1px solid rgba(200, 50, 20, 0.18) !important;
   position: relative;
   overflow: hidden;
@@ -20,29 +18,21 @@
 
 .glass-morphism-dark {
   background: rgba(8, 1, 1, 0.6) !important;
-  backdrop-filter: blur(16px) saturate(1.4) !important;
-  -webkit-backdrop-filter: blur(16px) saturate(1.4) !important;
   border: 1px solid rgba(200, 50, 20, 0.15) !important;
 }
 
 .glass-morphism-inner {
   background: rgba(180, 30, 10, 0.08) !important;
   border: 1px solid rgba(200, 50, 20, 0.2) !important;
-  backdrop-filter: blur(8px) !important;
-  -webkit-backdrop-filter: blur(8px) !important;
 }
 
 .glass-morphism-editor {
   background: rgba(8, 1, 1, 0.4) !important;
-  backdrop-filter: blur(20px) saturate(1.4) !important;
-  -webkit-backdrop-filter: blur(20px) saturate(1.4) !important;
   border: 1px solid rgba(200, 50, 20, 0.15) !important;
 }
 
 .glass-morphism-bar {
   background: rgba(10, 2, 2, 0.65) !important;
-  backdrop-filter: blur(18px) saturate(1.4) !important;
-  -webkit-backdrop-filter: blur(18px) saturate(1.4) !important;
   border: 1px solid rgba(200, 50, 20, 0.2) !important;
 }
 
@@ -73,8 +63,6 @@
 .high-clearance-input {
   background: rgba(180, 30, 10, 0.05) !important;
   border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  backdrop-filter: blur(4px) !important;
-  -webkit-backdrop-filter: blur(4px) !important;
   color: white !important;
 }
 

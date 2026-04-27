@@ -131,7 +131,7 @@ export function QuestionManagement({ token, questions, onRefresh, onError }: Que
                   <span className="text-[10px] font-mono tracking-[0.3em] uppercase opacity-80">Global_Params</span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-[8px] uppercase tracking-[0.3em] text-white/70 ml-1">Stage_Sequence</label>
                     <Input type="number" value={draft.round} onChange={e => setDraft({ ...draft, round: Number(e.target.value) })} className="bg-white/[0.03] border-white/5 h-11 font-mono text-xs" />
@@ -170,7 +170,7 @@ export function QuestionManagement({ token, questions, onRefresh, onError }: Que
                 <div className="space-y-4">
                   <Input placeholder="MISSION_TITLE" value={draft.p1.title} onChange={e => setDraft({ ...draft, p1: { ...draft.p1, title: e.target.value } })} className="bg-white/[0.03] border-white/5 text-[10px] uppercase h-11" />
 
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <select
                       value={draft.p1.language || 'python'}
                       onChange={e => setDraft({ ...draft, p1: { ...draft.p1, language: e.target.value as any } })}

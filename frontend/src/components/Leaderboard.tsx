@@ -36,7 +36,7 @@ function AnimatedScore({ value }: { value: number }) {
     const animate = (now: number) => {
       const elapsed = now - startTime;
       const progress = Math.min(elapsed / duration, 1);
-      
+
       // Linear interpolation for simple counting
       const current = Math.floor(start + (end - start) * progress);
       setDisplayValue(current);
@@ -68,13 +68,13 @@ function MapView({ teams, questions, now }: { teams: LeaderboardTeam[], question
       zoomControl: true,
       attributionControl: false,
       maxZoom: 24,
-    }).setView([15.4340, 75.6465], 18); // JT BCA Gadag Campus Center
+    }).setView([15.4340, 75.6465], 19); // JT BCA Gadag Campus Center
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      className: 'map-tiles grayscale invert opacity-50',
-      maxZoom: 24,
-      maxNativeZoom: 19,
-    }).addTo(map);
+    // Google Satellite: pure satellite imagery without labels, native up to zoom 21
+    L.tileLayer(
+      'https://mt{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
+      { subdomains: '0123', maxZoom: 24, maxNativeZoom: 21 }
+    ).addTo(map);
 
     const layerGroup = L.layerGroup().addTo(map);
 
@@ -100,36 +100,29 @@ function MapView({ teams, questions, now }: { teams: LeaderboardTeam[], question
     const layerGroup = layerGroupRef.current;
     if (!layerGroup || !questions.length) return;
 
+    const activeIds = new Set<string>();
+
     teams.forEach((team) => {
       const runnerStages = ['runner_travel', 'runner_game', 'runner_done'];
       const isInField = runnerStages.includes(team.stage);
 
-      let lat: number, lng: number, hasRealGps = false;
-
-      // ✅ Priority 1: real GPS from the runner's device
-      if (team.currentLat != null && team.currentLng != null) {
-        lat = team.currentLat;
-        lng = team.currentLng;
-        hasRealGps = true;
-      } else {
-        // ✅ Priority 2: checkpoint location (last confirmed or current target)
-        const locationIdx = Math.max(0, isInField ? team.round : team.round - 1);
-        if (locationIdx >= questions.length) return;
-
-        const question = questions[locationIdx];
-        if (!question?.coord?.lat || !question?.coord?.lng) return;
-
-        lat = parseCoord(question.coord.lat);
-        lng = parseCoord(question.coord.lng);
-        if (isNaN(lat) || isNaN(lng)) return;
+      // Only plot if we have real GPS from the runner's device
+      if (team.currentLat == null || team.currentLng == null) {
+        return;
       }
+
+      const lat = team.currentLat;
+      const lng = team.currentLng;
+      const hasRealGps = true;
+
+      activeIds.add(team.id);
 
       const pulse = !team.finishTime && isInField && hasRealGps;
       const durStr = formatDuration(team.startTime, team.finishTime, now);
       const html = `
         <div class="team-marker-container" style="position:relative;display:flex;flex-direction:column;align-items:center;transform:translate(0,-100%);margin-top:-6px;pointer-events:none;font-family:var(--font-mono);">
           <!-- Tooltip Container -->
-          <div style="background:rgba(10,10,10,0.9);border:1px solid rgba(217, 31, 64, 0.4);padding:4px 10px;margin-bottom:8px;box-shadow:0 0 15px rgba(0,0,0,0.5);display:flex;flex-direction:column;align-items:center;white-space:nowrap;backdrop-filter:blur(4px);clip-path:var(--clip-oct);">
+          <div style="background:rgba(10,10,10,0.9);border:1px solid rgba(217, 31, 64, 0.4);padding:4px 10px;margin-bottom:8px;box-shadow:0 0 15px rgba(0,0,0,0.5);display:flex;flex-direction:column;align-items:center;white-space:nowrap;clip-path:var(--clip-oct);">
              <span class="team-name" style="color:#fff;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">${team.name}</span>
              <div style="display:flex;gap:12px;align-items:center;border-top:1px solid rgba(255,255,255,0.1);padding-top:2px;">
                <span class="team-progress" style="color:var(--color-accent);font-size:9px;font-weight:bold;">${team.solvedCount}/${questions.length}</span>
@@ -139,16 +132,6 @@ function MapView({ teams, questions, now }: { teams: LeaderboardTeam[], question
           
           <!-- Diamond Marker -->
           <div style="position:relative;width:12px;height:12px;display:flex;align-items:center;justify-content:center;">
-              <div class="team-direction" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;transform:rotate(${team.currentHeading || 0}deg);transition:transform 0.15s linear;opacity:${team.currentHeading !== null ? 1 : 0};z-index:20;">
-                <svg width="40" height="40" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" overflow="visible">
-                  <!-- Outer glow cone -->
-                  <path d="M32 32 L18 4 A30 30 0 0 1 46 4 Z" fill="var(--color-accent)" fill-opacity="0.18" />
-                  <!-- Inner solid cone -->
-                  <path d="M32 32 L22 10 A14 14 0 0 1 42 10 Z" fill="var(--color-accent)" fill-opacity="0.55" />
-                  <!-- Arrowhead tip -->
-                  <polygon points="32,3 26,15 38,15" fill="var(--color-accent)" opacity="0.95"/>
-                </svg>
-              </div>
               <div class="team-pulse" style="position:absolute;width:18px;height:18px;background:rgba(217, 31, 64, 0.3);clip-path:var(--clip-oct);filter:blur(4px);opacity:0.8;${pulse ? 'animation:marker-pulse 2s infinite' : ''}"></div>
                
               <!-- Tactical Help Pulse -->
@@ -195,7 +178,6 @@ function MapView({ teams, questions, now }: { teams: LeaderboardTeam[], question
           const nameEl = el.querySelector('.team-name');
           const progressEl = el.querySelector('.team-progress');
           const timeEl = el.querySelector('.team-time');
-          const dirEl = el.querySelector('.team-direction') as HTMLElement;
           const pulseEl = el.querySelector('.team-pulse') as HTMLElement;
           const helpEl = el.querySelector('.team-help-layer') as HTMLElement;
           const successEl = el.querySelector('.team-success-layer') as HTMLElement;
@@ -207,21 +189,6 @@ function MapView({ teams, questions, now }: { teams: LeaderboardTeam[], question
 
           if (handoffEl) {
             handoffEl.style.display = team.stage === 'runner_done' ? 'flex' : 'none';
-          }
-
-          if (dirEl) {
-            if (team.currentHeading !== null) {
-              dirEl.style.opacity = '1';
-              const prevRot = (dirEl as any)._lastRot || 0;
-              let diff = team.currentHeading - (prevRot % 360);
-              if (diff > 180) diff -= 360;
-              if (diff < -180) diff += 360;
-              const newRot = prevRot + diff;
-              (dirEl as any)._lastRot = newRot;
-              dirEl.style.transform = `rotate(${newRot}deg)`;
-            } else {
-              dirEl.style.opacity = '0';
-            }
           }
 
           if (pulseEl) {
@@ -246,7 +213,7 @@ function MapView({ teams, questions, now }: { teams: LeaderboardTeam[], question
     });
 
     Object.keys(markersRef.current).forEach(id => {
-      if (!teams.find(t => t.id === id)) {
+      if (!activeIds.has(id)) {
         markersRef.current[id].remove();
         delete markersRef.current[id];
       }
@@ -316,8 +283,8 @@ export function Leaderboard() {
           if (!live) return restTeam; // first load — no WS data yet
           return {
             ...restTeam,                               // REST wins for score/stage/round
-            currentLat:     live.currentLat,           // WS wins for live position
-            currentLng:     live.currentLng,
+            currentLat: live.currentLat,           // WS wins for live position
+            currentLng: live.currentLng,
             currentHeading: live.currentHeading,
           };
         });
@@ -365,7 +332,20 @@ export function Leaderboard() {
         const bEnd = b.finishTime ? new Date(b.finishTime).getTime() : currentNow;
         return (aEnd - aStart) - (bEnd - bStart);
       });
-      setTeams(sorted);
+      // Preserve live GPS data received via WS — do NOT let REST overwrite it
+      setTeams(prev => {
+        const prevMap = new Map(prev.map(t => [t.id, t]));
+        return sorted.map(restTeam => {
+          const live = prevMap.get(restTeam.id);
+          if (!live) return restTeam;
+          return {
+            ...restTeam,
+            currentLat: live.currentLat,
+            currentLng: live.currentLng,
+            currentHeading: live.currentHeading,
+          };
+        });
+      });
     };
 
     socket.on('runner:location', handleRunnerLocation);
@@ -387,16 +367,16 @@ export function Leaderboard() {
   if (loading) return <div className="text-white/80 text-[10px] tracking-widest uppercase p-12 text-center font-mono">Standby for Satellite Uplink...</div>;
 
   return (
-    <div ref={rootRef} className={`relative w-full overflow-hidden ${isFullscreen ? 'h-screen border-none' : 'h-full corner-card p-0 border border-white/10'}`}>
+    <div ref={rootRef} className={`relative w-full overflow-hidden ${isFullscreen ? 'h-screen border-none' : 'h-full p-0 border border-white/10'}`}>
       {questions.length > 0 ? <MapView teams={teams} questions={questions} now={now} /> : <div className="absolute inset-0 flex items-center justify-center text-white/50 text-xs font-mono tracking-widest z-0">No Rounds Configured</div>}
 
       <div
-        className={`absolute top-4 flex flex-col h-[calc(100%-2rem)] max-h-[700px] z-20 transition-all duration-300 ${isListVisible ? 'w-[360px] max-w-[calc(100%-2rem)] corner-card border border-white/10 shadow-2xl glass-morphism' : 'w-auto'}`}
+        className={`absolute top-4 flex flex-col h-[calc(100%-2rem)] max-h-[700px] z-20 transition-all duration-300 ${isListVisible ? 'w-[min(360px,calc(100vw-1rem))] corner-card border border-white/10 shadow-2xl glass-morphism' : 'w-auto'}`}
         style={{ right: '1rem', left: 'auto' }}
       >
         {isListVisible ? (
           <>
-            <div className="flex items-center justify-between p-4 border-b border-white/5 bg-black/40 backdrop-blur-md">
+            <div className="flex items-center justify-between p-4 border-b border-white/5 bg-black/40">
               <div className="flex items-center gap-2">
                 <Trophy className="w-5 h-5 text-[var(--color-accent)]" />
                 <h2 className="text-sm font-black uppercase tracking-[0.2em] text-white/90">Leaderboard</h2>
@@ -415,8 +395,7 @@ export function Leaderboard() {
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: idx * 0.05 }}
-                  className={cn(
-                    "corner-card glass-morphism-dark p-3 relative group transition-all duration-500",
+                  className={cn("corner-card glass-morphism-dark p-3 relative group transition-all duration-500",
                     t.stage === 'runner_done' && "ring-1 ring-emerald-500/50 shadow-[0_0_20px_rgba(16,185,129,0.15)]"
                   )}
                 >
@@ -425,9 +404,9 @@ export function Leaderboard() {
                   )}
                   <div className="absolute right-3 top-1/2 -translate-y-1/2 opacity-10 text-3xl font-black italic select-none font-space-grotesk group-hover:opacity-20 group-hover:text-[var(--color-accent)] transition-all">#{idx + 1}</div>
                   <div className="pr-12 relative z-10 flex justify-between items-start">
-                    <div className="flex-1">
+                    <div className="flex-1 min-w-0">
                       <h3 className="font-bold text-xs uppercase tracking-widest text-[var(--color-accent)] truncate">{t.name}</h3>
-                      <div className="flex flex-wrap items-center gap-4 mt-2 text-[10px] text-white/70 uppercase tracking-widest font-mono">
+                      <div className="flex flex-wrap items-center gap-2 mt-2 text-[10px] text-white/70 uppercase tracking-widest font-mono">
                         <span className="flex items-center gap-1.5 bg-white/[0.03] px-2 py-0.5"><Clock className="w-3 h-3 text-[var(--color-accent)]/50" /> {formatDuration(t.startTime, t.finishTime, now)}</span>
                         {t.difficultyTier === 'hard' && (
                           <span className="flex items-center gap-1.5 bg-[var(--color-accent)]/10 text-[var(--color-accent)] px-2 py-0.5 border border-[var(--color-accent)]/20 animate-pulse">
@@ -447,8 +426,8 @@ export function Leaderboard() {
           </>
         ) : (
           <div className="absolute right-2 top-2 flex flex-col gap-2">
-            <button onClick={toggleFullscreen} className="bg-black/60 border border-white/10 text-white/50 p-3 clip-oct backdrop-blur-xl hover:text-white transition-all">{isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}</button>
-            <button onClick={() => setIsListVisible(true)} className="bg-black/60 border border-[var(--color-accent)]/30 text-[var(--color-accent)] p-3 clip-oct backdrop-blur-xl hover:bg-[var(--color-accent)]/10 transition-all"><Trophy className="w-5 h-5" /></button>
+            <button onClick={toggleFullscreen} className="bg-black/60 border border-white/10 text-white/50 p-3 clip-oct  hover:text-white transition-all">{isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}</button>
+            <button onClick={() => setIsListVisible(true)} className="bg-black/60 border border-[var(--color-accent)]/30 text-[var(--color-accent)] p-3 clip-oct  hover:bg-[var(--color-accent)]/10 transition-all"><Trophy className="w-5 h-5" /></button>
           </div>
         )}
       </div>

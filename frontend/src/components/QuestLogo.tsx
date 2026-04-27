@@ -1,6 +1,6 @@
 import React from 'react';
 
-export function QuestLogo({ className = "w-12 h-12" }: { className?: string }) {
+export function QuestLogo({ className ="w-12 h-12" }: { className?: string }) {
   return (
     <div className={`relative ${className} group`}>
       {/* Outer Glow */}

@@ -28,23 +28,26 @@ Two teammates. One goal. Ten rounds.
 
 ## 🚀 Core Features
 
-### Dual-Role Gated Orchestration
-- **Role Separation**: Solver and Runner see different, synchronized views based on the round's progress.
-- **Encryption Gating**: Runner's tactical map and mission targets are strictly locked until the Solver successfully decrypts the round's passkey.
-- **Real-Time Hand-off**: Automated synchronization ensures that when a Runner completes a challenge, the Solver's terminal is instantly provisioned for the next round.
+### ⚡ Advanced Game Mechanics
 
-### Discord Tactical Bridge
-- Admins manage the event entirely via Discord slash commands
-- `/broadcast`, `/team`, `/runner`, `/solver` send messages directly to players' screens
-- Players can request help — admin replies in Discord, player sees it instantly on screen
+#### Dynamic Scoring Engine
+- **Base Reward**: 200 points for every successful checkpoint (QR scan) and puzzle completion.
+- **Difficulty Bonus**: +283 bonus points automatically awarded for clearing missions in **Hard Mode**.
+- **Speed Tiers**: Extra rewards for rapid deployment:
+  - `< 10 min`: +500 points
+  - `< 15 min`: +250 points
+  - `< 25 min`: +100 points
 
-### Real-Time Leaderboard & Sync
-- **Fast-Polling Engine**: Multi-layer state synchronization ensures sub-3s latency between roles without manual refreshes.
-- **Live Leaderboard**: Tracks round completion time and ranking per team, visible at `/leaderboard`.
+#### Adaptive Difficulty Scaling
+- **Intelligence-Based Scaling**: The system monitors operative performance. Completing a mission in under **3 minutes** automatically triggers **Hard Mode** for the next round.
+- **Decaying Jackpot**: Hard Mode features a special 1,000-point jackpot that decays by 50 points every 30 seconds, incentivizing extreme speed.
 
-### Premium HUD Architecture
-- **Cinematic Design**: Dark tactical HUD with glassmorphism, scanlines, and Orbitron typography.
-- **Interactive GPS**: Sector map with live geolocation and walking route overlays.
+#### Tactical Round Swap (Reserve Pool)
+- **Obstruction Bypass**: Admins can trigger a "Tactical Swap," instantly pulling a fresh mission from a secondary **Reserve Pool**. This allows teams to bypass physical obstructions or buggy puzzles without losing progress.
+
+#### Spectator Live-Link & Comms
+- **Live-Map Tracking**: Solvers have real-time visibility of the Runner's GPS location, path history, and bearing on the Sector Map.
+- **Tactical Support Channel**: Integrated "Request Help" mechanism with two-way alerts between the team and the Admin Control Center.
 
 ---
 

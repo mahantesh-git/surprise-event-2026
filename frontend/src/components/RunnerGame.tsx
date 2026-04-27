@@ -34,7 +34,8 @@ const TapGame = ({ onComplete, difficulty = 'normal' }: { onComplete: () => void
   const handleTap = () => {
     haptic(25);
     setTaps((t) => t + 1);
-    setTarget({ x: Math.random() * 60 + 20, y: Math.random() * 60 + 20 });
+    // Constrain to 15–75% to avoid tap target clipping near edges on small phones
+    setTarget({ x: Math.random() * 60 + 15, y: Math.random() * 55 + 15 });
   };
 
   if (taps >= required) return (
@@ -57,7 +58,7 @@ const TapGame = ({ onComplete, difficulty = 'normal' }: { onComplete: () => void
       />
       <button
         onClick={() => { setTaps(0); setTimeLeft(difficulty === 'hard' ? 20 : 25); haptic(100); }}
-        className="bg-zinc-800 hover:bg-zinc-700 px-8 py-4 font-bold text-sm uppercase tracking-widest transition-colors text-white/80"
+        className="bg-zinc-800 hover:bg-zinc-700 px-8 py-4 font-bold text-sm uppercase tracking-widest transition-colors text-white/80 clip-oct"
       >🔄 Try Again</button>
     </div>
   );
@@ -68,7 +69,8 @@ const TapGame = ({ onComplete, difficulty = 'normal' }: { onComplete: () => void
         <span>HITS: <span className="text-[var(--color-accent)]">{taps}</span>/{required}</span>
         <span>TIME: <span className={timeLeft <= 5 ? 'text-[var(--color-accent)]' : 'text-white/80'}>{timeLeft}s</span></span>
       </div>
-      <div className="relative h-72 w-full bg-black overflow-hidden border-b border-white/10">
+      {/* Arena: fluid height — scales from 200px on small phones to 360px on large screens */}
+      <div className="relative w-full bg-black overflow-hidden border-b border-white/10" style={{ height: 'clamp(200px, 42dvh, 360px)' }}>
         <div className="absolute inset-0 opacity-10 bg-[linear-gradient(to_right,#374151_1px,transparent_1px),linear-gradient(to_bottom,#374151_1px,transparent_1px)] bg-[size:2rem_2rem]" />
         <div className="absolute bottom-0 left-0 h-1 bg-[var(--color-accent)]/20 w-full">
           <motion.div className="h-full bg-[var(--color-accent)]" animate={{ width: `${(taps / required) * 100}%` }} transition={{ type: 'spring', stiffness: 300 }} />
@@ -77,7 +79,7 @@ const TapGame = ({ onComplete, difficulty = 'normal' }: { onComplete: () => void
           animate={{ left: `${target.x}%`, top: `${target.y}%` }}
           transition={{ type: 'spring', stiffness: 300, damping: 20 }}
           onClick={handleTap}
-          className="absolute w-16 h-16 bg-[var(--color-accent)] rounded-full shadow-accent-lg flex items-center justify-center -translate-x-1/2 -translate-y-1/2 active:scale-75 transition-transform"
+          className="absolute w-16 h-16 bg-[var(--color-accent)] clip-oct shadow-accent-lg flex items-center justify-center -translate-x-1/2 -translate-y-1/2 active:scale-75 transition-transform"
         >
           <Crosshair className="text-black w-7 h-7" />
         </motion.button>
@@ -127,7 +129,7 @@ const MemoryGame = ({ onComplete, difficulty = 'normal' }: { onComplete: () => v
       <div className="text-sm font-mono text-white/40 text-center">
         MATCHED: <span className="text-[var(--color-accent)]">{solved.length / 2}</span>/{symbols.length}
       </div>
-      <div className={`grid gap-2.5 ${difficulty === 'hard' ? 'grid-cols-4' : 'grid-cols-3'}`}>
+      <div className={`grid gap-2 xs:gap-2.5 ${difficulty === 'hard' ? 'grid-cols-4' : 'grid-cols-3'}`}>
         {cards.map((symbol, i) => {
           const isFlipped = flipped.includes(i);
           const isSolved = solved.includes(i);
@@ -135,8 +137,9 @@ const MemoryGame = ({ onComplete, difficulty = 'normal' }: { onComplete: () => v
             <motion.div
               key={i} whileTap={{ scale: 0.9 }}
               onClick={() => flipped.length < 2 && !isFlipped && !isSolved && (haptic(15), setFlipped((f) => [...f, i]))}
-              className={`h-20 flex items-center justify-center text-2xl cursor-pointer transition-all duration-200 select-none ${isFlipped || isSolved ? 'bg-[var(--color-accent)]/20 text-white scale-105' : 'bg-zinc-900 hover:bg-zinc-800'
+              className={`flex items-center justify-center text-2xl cursor-pointer transition-all duration-200 select-none ${isFlipped || isSolved ? 'bg-[var(--color-accent)]/20 text-white scale-105' : 'bg-zinc-900 hover:bg-zinc-800'
                 }`}
+              style={{ height: 'clamp(60px, 18vw, 88px)' }}
             >
               {isFlipped || isSolved ? symbol : <span className="text-zinc-600 text-lg">?</span>}
             </motion.div>
@@ -227,11 +230,12 @@ const PatternGame = ({ onComplete, difficulty = 'normal' }: { onComplete: () => 
         {[0, 1, 2, 3].map((i) => (
           <motion.div
             key={i} whileTap={{ scale: 0.92 }} onClick={() => handlePress(i)}
-            className={`h-28 cursor-pointer transition-all duration-200 border-0 ${active === i ? `${colorClasses[i].bg} shadow-lg scale-105` : colorClasses[i].dim}`}
+            className={`cursor-pointer transition-all duration-200 border-0 ${active === i ? `${colorClasses[i].bg} shadow-lg scale-105` : colorClasses[i].dim}`}
+            style={{ height: 'clamp(80px, 22vw, 120px)' }}
           />
         ))}
       </div>
-      <button onClick={start} className="w-full bg-zinc-900 hover:bg-zinc-800 py-4 font-bold text-lg transition-colors border-0 mt-4">
+      <button onClick={start} className="w-full bg-zinc-900 hover:bg-zinc-800 py-4 font-bold text-lg transition-colors border-0 mt-4 clip-oct">
         {pattern.length === 0 ? '▶ Start Pattern' : '🔄 Replay'}
       </button>
     </div>
@@ -358,7 +362,7 @@ export function RunnerGame({
                   <div className="flex justify-between items-center"><span className="text-[10px] uppercase font-bold text-[var(--color-accent)]">Volunteer</span><span className="font-mono text-xs">{currentRound.volunteer.name}</span></div>
                   <div className="p-4 bg-white/5 border border-white/10 rounded text-center relative group">
                     <span className="text-[10px] uppercase text-white/40 block mb-1">Passkey</span>
-                    <span className="text-xl font-bold tracking-[0.3em]">{currentRound.qrPasskey}</span>
+                    <span className="text-xl font-bold tracking-[0.3em] break-all">{currentRound.qrPasskey}</span>
                     <button 
                       onClick={handleCopyPasskey}
                       className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-white/20 hover:text-[var(--color-accent)] transition-colors"
@@ -452,7 +456,7 @@ export function RunnerGame({
                   <div className="flex justify-between items-center"><span className="text-[10px] uppercase font-bold text-[var(--color-accent)]">Volunteer</span><span className="font-mono text-xs">{currentRound.volunteer.name}</span></div>
                   <div className="p-4 bg-white/5 border border-white/10 rounded text-center relative group">
                     <span className="text-[10px] uppercase text-white/40 block mb-1">Passkey</span>
-                    <span className="text-xl font-bold tracking-[0.3em]">{currentRound.qrPasskey}</span>
+                    <span className="text-xl font-bold tracking-[0.3em] break-all">{currentRound.qrPasskey}</span>
                     <button 
                       onClick={handleCopyPasskey}
                       className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-white/20 hover:text-[var(--color-accent)] transition-colors"

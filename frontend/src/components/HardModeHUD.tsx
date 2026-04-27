@@ -50,22 +50,19 @@ export function HardModeHUD({ startTime }: HardModeHUDProps) {
         className="relative group"
       >
         {/* Glow Effect */}
-        <div className={cn(
-          "absolute -inset-1 bg-[var(--color-accent)]/20 blur-xl rounded-lg transition-opacity duration-1000",
-          jackpot > 0 ? "opacity-100" : "opacity-0"
+        <div className={cn("absolute -inset-1 bg-[var(--color-accent)]/20 blur-xl rounded-lg transition-opacity duration-1000",
+          jackpot > 0 ?"opacity-100" :"opacity-0"
         )} />
 
-        <div className={cn(
-          "relative corner-card glass-morphism p-4 md:p-5 border-white/5 flex flex-col gap-3 min-w-[180px]",
-          jackpot > 0 ? "border-[var(--color-accent)]/30" : "opacity-80"
+        <div className={cn("relative corner-card glass-morphism p-4 md:p-5 border-white/5 flex flex-col gap-3 min-w-[180px]",
+          jackpot > 0 ?"border-[var(--color-accent)]/30" :"opacity-80"
         )}>
           {/* Status Label */}
           <div className="flex items-center justify-between border-b border-white/5 pb-2">
             <div className="flex items-center gap-1.5">
-              <Zap className={cn("w-3 h-3 fill-[var(--color-accent)]", jackpot > 0 && "animate-pulse")} />
-              <span className={cn(
-                "text-[8px] font-mono uppercase tracking-[0.2em] font-black",
-                jackpot > 0 ? "text-[var(--color-accent)]" : "text-white/40"
+              <Zap className={cn("w-3 h-3 fill-[var(--color-accent)]", jackpot > 0 &&"animate-pulse")} />
+              <span className={cn("text-[8px] font-mono uppercase tracking-[0.2em] font-black",
+                jackpot > 0 ?"text-[var(--color-accent)]" :"text-white/40"
               )}>
                 {jackpot > 0 ? 'Omega_Jackpot' : 'Jackpot_Depleted'}
               </span>
@@ -82,9 +79,8 @@ export function HardModeHUD({ startTime }: HardModeHUDProps) {
           <div className="flex flex-col">
             <div className="flex items-baseline gap-1">
               <span className="text-[var(--color-accent)] text-sm font-mono font-bold opacity-60">$</span>
-              <span className={cn(
-                "text-3xl font-black tracking-tighter tabular-nums",
-                jackpot > 0 ? "text-white" : "text-white/20"
+              <span className={cn("text-3xl font-black tracking-tighter tabular-nums",
+                jackpot > 0 ?"text-white" :"text-white/20"
               )}>
                 {jackpot.toLocaleString()}
               </span>
@@ -105,9 +101,8 @@ export function HardModeHUD({ startTime }: HardModeHUDProps) {
               <motion.div 
                 initial={false}
                 animate={{ width: `${(timeLeft / 30) * 100}%` }}
-                className={cn(
-                  "absolute top-0 left-0 h-full transition-colors duration-500",
-                  jackpot > 0 ? "bg-[var(--color-accent)]" : "bg-white/10"
+                className={cn("absolute top-0 left-0 h-full transition-colors duration-500",
+                  jackpot > 0 ?"bg-[var(--color-accent)]" :"bg-white/10"
                 )}
               />
             </div>

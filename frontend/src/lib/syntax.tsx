@@ -41,7 +41,7 @@ export function highlightCode(code: string): React.ReactNode[] {
     return (
       <div key={i} className="min-h-[1.5em] flex gap-4">
         <span className="w-8 text-white/10 select-none text-right font-mono text-[10px]">{i + 1}</span>
-        <div className="flex-1 whitespace-pre">{items.length > 0 ? items : "\u00A0"}</div>
+        <div className="flex-1 whitespace-pre">{items.length > 0 ? items :"\u00A0"}</div>
       </div>
     );
   });

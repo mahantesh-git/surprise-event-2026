@@ -30,7 +30,7 @@ export const Modal: React.FC<ModalProps> = ({
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 z-[100] bg-white/[0.04] glass-morphism backdrop-blur-sm"
+        className="fixed inset-0 z-[100] bg-white/[0.04] glass-morphism"
         onClick={onClose}
         role="presentation"
       />

@@ -20,7 +20,7 @@ export function SwapConfirmModal({ isOpen, onClose, onConfirm, isLoading }: Swap
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={!isLoading ? onClose : undefined}
-            className="absolute inset-0 bg-black/85 backdrop-blur-xl"
+            className="absolute inset-0 bg-black/85"
           />
 
           <motion.div
@@ -57,8 +57,7 @@ export function SwapConfirmModal({ isOpen, onClose, onConfirm, isLoading }: Swap
                 >
                   {isLoading ? (
                     <div className="w-4 h-4 border-2 border-black/20 border-t-black rounded-full animate-spin" />
-                  ) : (
-                    "Execute Reconfiguration"
+                  ) : ("Execute Reconfiguration"
                   )}
                 </Button>
                 <Button

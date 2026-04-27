@@ -231,14 +231,13 @@ export function AdminPanel({ onBack }: { onBack: () => void }) {
               <button
                 key={item.id}
                 onClick={() => setActivePage(item.id)}
-                className={cn(
-                  "flex-shrink-0 flex items-center gap-2 md:gap-4 px-3 md:px-4 py-2.5 md:py-3 text-[9px] md:text-[10px] font-bold uppercase tracking-[0.2em] transition-all relative group",
+                className={cn("flex-shrink-0 flex items-center gap-2 md:gap-4 px-3 md:px-4 py-2.5 md:py-3 text-[9px] md:text-[10px] font-bold uppercase tracking-[0.2em] transition-all relative group",
                   active
-                    ? "bg-[var(--color-accent)]/10 text-[var(--color-accent)] border-b-2 md:border-b-0 md:border-l-2 border-[var(--color-accent)]"
-                    : "text-white/80 hover:text-white/90 hover:bg-white/[0.04]"
+                    ?"bg-[var(--color-accent)]/10 text-[var(--color-accent)] border-b-2 md:border-b-0 md:border-l-2 border-[var(--color-accent)]"
+                    :"text-white/80 hover:text-white/90 hover:bg-white/[0.04]"
                 )}
               >
-                <Icon className={cn("w-3.5 h-3.5 md:w-4 md:h-4", active ? "text-[var(--color-accent)]" : "text-white/60 group-hover:text-white/80")} />
+                <Icon className={cn("w-3.5 h-3.5 md:w-4 md:h-4", active ?"text-[var(--color-accent)]" :"text-white/60 group-hover:text-white/80")} />
                 <span className="whitespace-nowrap">{item.label}</span>
                 {active && (
                   <motion.div
@@ -271,7 +270,7 @@ export function AdminPanel({ onBack }: { onBack: () => void }) {
           <span className="text-[15vw] font-black leading-none uppercase">{activePage}</span>
         </div>
 
-        <header className="h-20 border-b border-white/5 px-8 flex items-center justify-between glass-morphism z-10 flex-shrink-0">
+        <header className="min-h-[3.5rem] md:min-h-[5rem] border-b border-white/5 px-4 md:px-8 py-2 md:py-4 flex flex-wrap items-center justify-between gap-4 glass-morphism z-10 flex-shrink-0">
           <div className="flex items-center gap-4">
             <div className="h-1 w-8 bg-[var(--color-accent)]/50" />
             <h3 className="text-xs font-mono uppercase tracking-[0.5em] text-white/90">
@@ -291,9 +290,8 @@ export function AdminPanel({ onBack }: { onBack: () => void }) {
           )}
         </header>
 
-        <div className={cn(
-          "flex-1 relative",
-          activePage === 'leaderboard' ? "overflow-hidden" : "overflow-y-auto custom-scrollbar p-8"
+        <div className={cn("flex-1 relative",
+          activePage === 'leaderboard' ?"overflow-hidden" :"overflow-y-auto custom-scrollbar p-4 md:p-8"
         )}>
           <AnimatePresence mode="wait">
             <motion.div
@@ -302,7 +300,7 @@ export function AdminPanel({ onBack }: { onBack: () => void }) {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.2 }}
-              className={cn("relative", activePage === 'leaderboard' ? "h-full" : "min-h-full")}
+              className={cn("relative", activePage === 'leaderboard' ?"h-full" :"min-h-full")}
             >
               {activePage === 'leaderboard' && <LeaderboardView />}
               {activePage === 'lab' && <TransitionPreview />}

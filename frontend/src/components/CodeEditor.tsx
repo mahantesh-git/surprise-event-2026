@@ -29,7 +29,7 @@ export const LANGUAGE_TEMPLATES: Record<SupportedLanguage, string> = {
   cpp:
     '#include <iostream>\nusing namespace std;\n\nint main() {\n    // Write your solution here\n    return 0;\n}\n',
   go:
-    'package main\n\nimport "fmt"\n\nfunc main() {\n    // Write your solution here\n    _ = fmt.Println\n}\n',
+    'package main\n\nimport"fmt"\n\nfunc main() {\n    // Write your solution here\n    _ = fmt.Println\n}\n',
 };
 
 const LANGUAGE_COMPLETIONS: Record<string, string[]> = {
@@ -286,7 +286,7 @@ export function CodeEditor({
             domReadOnly: false,
             minimap: { enabled: false },
             fontSize: 13,
-            fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace",
+            fontFamily:"'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace",
             fontLigatures: true,
             lineHeight: 22,
             padding: { top: 14, bottom: 14 },

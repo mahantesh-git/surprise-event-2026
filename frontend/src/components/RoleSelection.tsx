@@ -41,7 +41,7 @@ export function RoleSelection({ onSelect }: RoleSelectionProps) {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, ease: "easeOut" }}
+            transition={{ duration: 0.7, ease:"easeOut" }}
           >
             {/* Headline */}
             <h1 className="text-[clamp(3.5rem,8vw,7rem)] font-bold uppercase tracking-tighter leading-none mb-8 font-orbitron text-white">
@@ -64,7 +64,7 @@ export function RoleSelection({ onSelect }: RoleSelectionProps) {
               key={role.key}
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: role.delay + 0.3, duration: 0.6, ease: "easeOut" }}
+              transition={{ delay: role.delay + 0.3, duration: 0.6, ease:"easeOut" }}
               whileHover={{ x: 10 }}
               onClick={() => onSelect(role.key)}
               className="corner-card group relative text-left glass-morphism hover:border-[var(--color-accent)]/50 transition-all duration-500 cursor-crosshair overflow-hidden p-8 !rounded-none"
@@ -80,7 +80,7 @@ export function RoleSelection({ onSelect }: RoleSelectionProps) {
                     'radial-gradient(circle at 70% 30%, rgba(238, 58, 23, 0.15) 0%, transparent 70%)',
                   ]
                 }}
-                transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+                transition={{ duration: 8, repeat: Infinity, ease:"linear" }}
               />
 
               {/* Static faint aura for idle state */}
@@ -100,7 +100,7 @@ export function RoleSelection({ onSelect }: RoleSelectionProps) {
                     '0 0 10px rgba(238, 58, 23, 0.3), inset 0 0 10px rgba(238, 58, 23, 0.2)'
                   ]
                 }}
-                transition={{ duration: 0.8, repeat: Infinity, ease: "easeInOut" }}
+                transition={{ duration: 0.8, repeat: Infinity, ease:"easeInOut" }}
                 style={{ clipPath: 'var(--clip-oct)' }}
               />
 
@@ -115,7 +115,7 @@ export function RoleSelection({ onSelect }: RoleSelectionProps) {
 
               <div className="relative z-10 flex flex-col h-full">
                 <div className="flex items-center gap-5 mb-4">
-                  <div className="w-14 h-14 rounded-none [clip-path:var(--clip-oct)] bg-white/[0.04] glass-morphism backdrop-blur-sm border border-white/10 flex items-center justify-center text-white/40 group-hover:text-[var(--color-accent)] group-hover:border-[var(--color-accent)]/50 transition-all duration-500 group-hover:shadow-[0_0_20px_rgba(217,31,64,0.2)]">
+                  <div className="w-14 h-14 rounded-none [clip-path:var(--clip-oct)] bg-white/[0.04] glass-morphism  border border-white/10 flex items-center justify-center text-white/40 group-hover:text-[var(--color-accent)] group-hover:border-[var(--color-accent)]/50 transition-all duration-500 group-hover:shadow-[0_0_20px_rgba(217,31,64,0.2)]">
                     {role.icon}
                   </div>
                   <h3 className="text-4xl font-bold uppercase tracking-tight text-white group-hover:text-[var(--color-accent)] transition-colors duration-500 font-orbitron">

@@ -50,7 +50,7 @@ export const TacticalProgressBar = ({ stage }: { stage: string }) => {
   };
 
   return (
-    <div className="w-full bg-black/40 border border-white/5 backdrop-blur-md relative overflow-hidden my-4">
+    <div className="w-full bg-black/40 border border-white/5  relative overflow-hidden my-4">
       <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-[var(--color-accent)] to-transparent opacity-30" />
       
       <div className="py-8 px-6 md:px-12 flex justify-between items-start relative max-w-4xl mx-auto">
@@ -65,38 +65,31 @@ export const TacticalProgressBar = ({ stage }: { stage: string }) => {
             <div key={step.id} className="relative z-10 flex flex-col items-center group flex-1">
               {/* Point Indicator */}
               <div 
-                className={cn(
-                  "w-12 h-12 flex items-center justify-center transition-all duration-700 border",
-                  status === 'completed' ? "bg-[var(--color-accent)] border-[var(--color-accent)] shadow-[0_0_25px_var(--color-accent)]" :
-                  status === 'active' ? "bg-black border-[var(--color-accent)] animate-pulse shadow-[0_0_15px_rgba(217,31,64,0.3)]" :
-                  "bg-black/60 border-white/20"
+                className={cn("w-12 h-12 flex items-center justify-center transition-all duration-700 border",
+                  status === 'completed' ?"bg-[var(--color-accent)] border-[var(--color-accent)] shadow-[0_0_25px_var(--color-accent)]" :
+                  status === 'active' ?"bg-black border-[var(--color-accent)] animate-pulse shadow-[0_0_15px_rgba(217,31,64,0.3)]" :"bg-black/60 border-white/20"
                 )}
                 style={{ clipPath: 'var(--clip-oct)' }}
               >
-                <Icon className={cn(
-                  "w-5 h-5",
-                  status === 'completed' ? "text-white" :
-                  status === 'active' ? "text-[var(--color-accent)]" :
-                  "text-white/20"
+                <Icon className={cn("w-5 h-5",
+                  status === 'completed' ?"text-white" :
+                  status === 'active' ?"text-[var(--color-accent)]" :"text-white/20"
                 )} />
               </div>
               
               {/* Label */}
               <div className="mt-4 text-center">
-                <span className={cn(
-                  "block font-heading text-[10px] tracking-[0.2em] uppercase font-bold whitespace-nowrap",
-                  status === 'completed' ? "text-white" :
-                  status === 'active' ? "text-[var(--color-accent)]" :
-                  "text-white/30"
+                <span className={cn("block font-heading text-[10px] tracking-[0.2em] uppercase font-bold whitespace-nowrap",
+                  status === 'completed' ?"text-white" :
+                  status === 'active' ?"text-[var(--color-accent)]" :"text-white/30"
                 )}>{step.label}</span>
                 <span className="block font-mono text-[8px] opacity-40 uppercase mt-1 hidden lg:block">{step.desc}</span>
               </div>
 
               {/* Progress Line Filler */}
               {idx < steps.length - 1 && (
-                <div className={cn(
-                  "absolute top-6 left-[calc(50%+24px)] w-[calc(100%-48px)] h-[1px] -z-10",
-                  status === 'completed' ? "bg-[var(--color-accent)]" : "bg-white/5"
+                <div className={cn("absolute top-6 left-[calc(50%+24px)] w-[calc(100%-48px)] h-[1px] -z-10",
+                  status === 'completed' ?"bg-[var(--color-accent)]" :"bg-white/5"
                 )} />
               )}
             </div>

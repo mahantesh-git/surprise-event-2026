@@ -134,7 +134,7 @@ export function ConfigManagement({ token, config, onRefresh, onError }: ConfigMa
                    </p>
                  </div>
                  
-                 <div className="grid grid-cols-3 gap-2">
+                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4">
                     {[
                       { id: 'auto', label: 'AUTO', icon: RefreshCw, desc: 'Protocol Zero' },
                       { id: 'normal', label: 'NORMAL', icon: Target, desc: 'Protocol Alpha' },

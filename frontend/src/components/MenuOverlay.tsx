@@ -52,7 +52,7 @@ export function MenuOverlay({ isOpen, onClose, role, teamName, onLogout, onNavig
             inset: 0,
             zIndex: 300,
             background: 'rgba(20, 20, 25, 0.8)',
-            backdropFilter: 'blur(24px)',
+            ,
             display: 'flex',
             flexDirection: 'column',
             padding: '24px 48px',

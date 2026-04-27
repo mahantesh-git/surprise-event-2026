@@ -27,9 +27,9 @@ export class ErrorBoundary extends React.Component<Props, State> {
 
   public render() {
     if (this.state.hasError) {
-      let errorMessage = "An unexpected error occurred.";
+      let errorMessage ="An unexpected error occurred.";
       try {
-        const parsed = JSON.parse(this.state.error?.message || "{}");
+        const parsed = JSON.parse(this.state.error?.message ||"{}");
         if (parsed.error) {
           errorMessage = `Error: ${parsed.error}`;
         }
@@ -39,7 +39,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
 
       return (
         <div className="min-h-screen flex items-center justify-center p-6 bg-[var(--color-bg-void)]">
-          <div className="corner-card bg-[var(--color-bg-surface)] backdrop-blur-xl p-8 max-w-md w-full border border-[var(--color-accent)]/20 text-center relative">
+          <div className="corner-card bg-[var(--color-bg-surface)]  p-8 max-w-md w-full border border-[var(--color-accent)]/20 text-center relative">
             <div className="absolute top-0 right-0 p-4 font-mono text-[8px] text-[var(--color-accent)]/20 uppercase tracking-widest pointer-events-none">
               ERR_SYSTEM_FATAL
             </div>

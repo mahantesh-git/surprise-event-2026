@@ -2,7 +2,7 @@ import { Leaderboard } from '@/components/Leaderboard';
 
 export function LeaderboardView() {
   return (
-    <div className="h-full relative overflow-hidden corner-card glass-morphism">
+    <div className="h-full relative overflow-hidden glass-morphism rounded-none border-0">
       <div className="absolute inset-0 z-0">
         <Leaderboard />
       </div>

@@ -106,7 +106,7 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
         <div className="relative overflow-hidden border border-white/5 bg-[var(--color-bg-surface)]">
           <div id="qr-reader" className="w-full min-h-[300px] flex items-center justify-center">
             {errorMsg && (
-              <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-6">
+              <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60  p-6">
                 <TacticalStatus
                   tone="error"
                   label="System Fault"

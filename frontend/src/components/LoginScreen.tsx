@@ -38,7 +38,7 @@ export function LoginScreen({
           <div className="flex items-center gap-3">
             <motion.div
               animate={{ opacity: [1, 0, 1] }}
-              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+              transition={{ duration: 1, repeat: Infinity, ease:"linear" }}
               className="w-2 h-2 bg-[var(--color-accent)]"
             />
             <span className="font-mono text-[11px] uppercase tracking-[0.3em] text-[var(--color-accent)]">
@@ -55,7 +55,7 @@ export function LoginScreen({
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
+            transition={{ duration: 0.8, ease:"easeOut" }}
           >
             <h1 className="font-orbitron text-[80px] md:text-[120px] font-black uppercase leading-[0.8] tracking-tighter mb-2 opacity-95">
               {role.toUpperCase()}

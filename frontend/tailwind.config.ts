@@ -137,6 +137,16 @@ const config: Config = {
         '70': '0.7',
       },
     },
+
+    // Add xs breakpoint for small phones (360px) below Tailwind's default sm (640px)
+    screens: {
+      'xs': '360px',
+      'sm': '640px',
+      'md': '768px',
+      'lg': '1024px',
+      'xl': '1280px',
+      '2xl': '1536px',
+    },
   },
   plugins: [],
 };

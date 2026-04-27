@@ -61,7 +61,7 @@ export function TacticalComms({ token, role, isOpen, onClose, lastMessage, teamN
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-white/[0.04] glass-morphism backdrop-blur-sm z-[10002]"
+            className="fixed inset-0 bg-white/[0.04] glass-morphism  z-[10002]"
           />
 
           {/* Dialog */}
@@ -114,10 +114,7 @@ export function TacticalComms({ token, role, isOpen, onClose, lastMessage, teamN
                           key={phrase}
                           onClick={() => handleSend(phrase)}
                           disabled={sending !== null}
-                          className={cn(
-                            "group relative flex items-center justify-between p-3 text-left transition-all duration-300",
-                            "bg-[var(--color-accent)]/5 border border-[var(--color-accent)]/10 hover:border-[var(--color-accent)]/40 hover:bg-[var(--color-accent)]/10",
-                            "disabled:opacity-50 disabled:cursor-not-allowed"
+                          className={cn("group relative flex items-center justify-between p-3 text-left transition-all duration-300","bg-[var(--color-accent)]/5 border border-[var(--color-accent)]/10 hover:border-[var(--color-accent)]/40 hover:bg-[var(--color-accent)]/10","disabled:opacity-50 disabled:cursor-not-allowed"
                           )}
                         >
                           <span className="text-sm font-medium text-white group-hover:text-[var(--color-accent)] transition-colors">

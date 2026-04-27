@@ -25,7 +25,7 @@ export function TransitionPreview() {
         x: 0,
         transition: {
           duration: 0.4,
-          ease: "easeOut" as const
+          ease:"easeOut" as const
         }
       },
       exit: { 
@@ -57,33 +57,33 @@ export function TransitionPreview() {
       animate: { 
         opacity: 1, 
         scale: 1,
-        transition: { duration: 0.5, ease: "easeOut" as const }
+        transition: { duration: 0.5, ease:"easeOut" as const }
       },
       exit: { 
         opacity: 0, 
         scale: 1.02,
-        transition: { duration: 0.4, ease: "easeIn" as const }
+        transition: { duration: 0.4, ease:"easeIn" as const }
       }
     }
   };
 
   const content = {
     glitch: {
-      title: "Tactical Round Update",
-      desc: "Synchronizing Data Nodes...",
-      color: "cyan",
+      title:"Tactical Round Update",
+      desc:"Synchronizing Data Nodes...",
+      color:"cyan",
       icon: Zap
     },
     clip: {
-      title: "Sector Map Unlocked",
-      desc: "Analyzing Terrain Topography...",
-      color: "neon",
+      title:"Sector Map Unlocked",
+      desc:"Analyzing Terrain Topography...",
+      color:"neon",
       icon: Map
     },
     fade: {
-      title: "System Navigation",
-      desc: "Accessing Command Interface...",
-      color: "white",
+      title:"System Navigation",
+      desc:"Accessing Command Interface...",
+      color:"white",
       icon: Navigation
     }
   };
@@ -91,7 +91,7 @@ export function TransitionPreview() {
   const current = content[activeTab];
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[600px] w-full p-12 bg-black/40 border border-white/5 backdrop-blur-xl rounded-2xl overflow-hidden relative">
+    <div className="flex flex-col items-center justify-center min-h-[600px] w-full p-12 bg-black/40 border border-white/5  rounded-2xl overflow-hidden relative">
       <div className="absolute inset-0 pointer-events-none opacity-20">
         <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,rgba(0,255,255,0.05),transparent_70%)]" />
       </div>
