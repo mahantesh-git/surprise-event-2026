@@ -134,15 +134,18 @@ The Solver isn't just sitting blind. The **Sector Map** on the Solver's HUD prov
 - **Path History**: View the route taken by the operative.
 - **Bearing & Direction**: See which way they are facing to provide verbal navigation support.
 
-### 🔄 Tactical Round Swap
-If a field location is physically blocked (e.g., construction) or a puzzle is obstructed, the team can request a **Tactical Swap**. 
-- Admins can instantly pull a fresh mission from the **Reserve Pool**.
-- This bypasses the current round and provides a new target, ensuring the game never grinds to a halt.
+### 🎙️ Integrated Walkie-Talkie (PTT)
+Operatives no longer need external apps or calls to coordinate. The platform features a high-fidelity, built-in **Push-To-Talk (PTT)** system:
+- **Push-To-Talk**: Press the mic icon (or `Spacebar` on laptop) to transmit audio.
+- **Bi-Directional**: Real-time voice link between Runner and Solver.
+- **Production Reliable**: Powered by **WebRTC** with global **TURN Server** support, ensuring the link works even if one person is on 5G/LTE and the other is on WiFi.
+- **Privacy Guaranteed**: Voice traffic is isolated to your team only—other teams cannot hear you.
 
-### 💬 Tactical Comms Channel
-Operatives have a built-in communication bridge.
-- **Request Help**: Ping Command (Admins) for immediate assistance.
-- **Direct Intel**: Admin responses and system alerts appear as high-priority transmissions directly on your HUD.
+### 💬 Tactical Comms & Intel
+The communication bridge is now smarter and less intrusive:
+- **Direct Intel**: Receive system alerts, passkeys, and coordinator messages in a dedicated tactical feed.
+- **Smart Notifications**: The system tracks which alerts you've already seen, preventing "notification spam" when you refresh the page.
+- **Request Support**: Use the "Request Intel" feature to ping Command (Admins) for immediate clarification on a sector.
 
 ---
 

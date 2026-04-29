@@ -45,9 +45,10 @@ Two teammates. One goal. Ten rounds.
 #### Tactical Round Swap (Reserve Pool)
 - **Obstruction Bypass**: Admins can trigger a "Tactical Swap," instantly pulling a fresh mission from a secondary **Reserve Pool**. This allows teams to bypass physical obstructions or buggy puzzles without losing progress.
 
-#### Spectator Live-Link & Comms
+#### 📍 Spectator Live-Link & Comms
 - **Live-Map Tracking**: Solvers have real-time visibility of the Runner's GPS location, path history, and bearing on the Sector Map.
-- **Tactical Support Channel**: Integrated "Request Help" mechanism with two-way alerts between the team and the Admin Control Center.
+- **🎙️ Integrated Walkie-Talkie**: Built-in Push-To-Talk (PTT) voice link between teammates, eliminating the need for external calls.
+- **Tactical Support Channel**: Integrated "Request Help" mechanism with two-way alerts and smart notification persistence.
 
 ---
 
@@ -58,7 +59,8 @@ Two teammates. One goal. Ten rounds.
 | Frontend | React 18 + Vite, TypeScript, Framer Motion |
 | Backend | Node.js, Express, TypeScript |
 | Database | MongoDB Atlas |
-| Real-time | Socket.IO |
+| Real-time | Socket.IO + WebRTC |
+| Audio Relay | OpenRelay (TURN Server) |
 | Maps | Leaflet.js + OSRM routing |
 | Discord | Discord.js v14 |
 | Code Execution | Piston API (self-hosted via Docker) |

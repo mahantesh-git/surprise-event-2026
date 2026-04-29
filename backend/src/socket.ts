@@ -48,6 +48,22 @@ export function initSocketServer(httpServer: HttpServer): SocketServer {
       } else {
         socket.join('solvers');
       }
+
+      // WebRTC Signaling relay (Team-internal only)
+      socket.on('webrtc:signal', (data: { signal: any }) => {
+        // Broadcast to the team room, excluding the sender
+        socket.to(`team_${auth.teamId}`).emit('webrtc:signal', {
+          from: auth.role, // helps the recipient know if it's runner or solver
+          signal: data.signal
+        });
+      });
+
+      socket.on('webrtc:status', (data: { transmitting: boolean }) => {
+        socket.to(`team_${auth.teamId}`).emit('webrtc:status', {
+          from: auth.role,
+          transmitting: data.transmitting
+        });
+      });
     } else if (auth.kind === 'admin') {
       socket.join('admin');
     }

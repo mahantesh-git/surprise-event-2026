@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { updateRunnerLocation } from '@/lib/api';
 import { useSocket } from '@/contexts/SocketContext';
 
@@ -164,4 +164,15 @@ export function useRunnerGps(token: string | null, stage: string | null) {
     // They are accessed via refs above — adding them would cause the GPS
     // watch to restart every time the socket reconnects, creating gaps.
   }, [token, stage]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const [pos, setPos] = useState<{ lat: number; lng: number; heading: number | null } | null>(null);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setPos(latestPositionRef.current);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  return pos;
 }

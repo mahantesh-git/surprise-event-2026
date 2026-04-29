@@ -395,14 +395,7 @@ export function RunnerGame({
 
 
                 
-                {onSwitchToMap && (
-                  <Button
-                    className="w-full font-bold uppercase tracking-[0.2em] h-14 bg-transparent border border-white/20 text-white/60 hover:bg-white/5 hover:text-white" size="md"
-                    onClick={onSwitchToMap}
-                  >
-                    <MapPin className="mr-2 h-5 w-5" /> OPEN SECTOR MAP
-                  </Button>
-                )}
+
               </div>
             </div>
           </div>

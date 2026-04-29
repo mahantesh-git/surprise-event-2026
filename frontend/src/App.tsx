@@ -47,6 +47,8 @@ import { TacticalStatus } from '@/components/TacticalStatus';
 import { QRCodeSVG } from 'qrcode.react';
 import { HardModeHUD } from '@/components/HardModeHUD';
 import { SwapConfirmModal } from '@/components/SwapConfirmModal';
+import { WalkieTalkie } from '@/components/WalkieTalkie';
+import { getDistance } from '@/lib/geofence';
 const SOLVER_FULLSCREEN_EXIT_KEY = import.meta.env.VITE_SOLVER_EXIT_KEY || 'quest-exit';
 
 const notify = (msg: string, type: 'success' | 'info' | 'error' = 'info') => {
@@ -216,7 +218,6 @@ const TacticalProgressBar = ({ stage }: { stage: string }) => {
 
 export default function App() {
   const [pathname, setPathname] = useState(() => window.location.pathname);
-  const [runnerTab, setRunnerTab] = useState<'intel' | 'map'>('intel');
   const [teamName, setTeamName] = useState('');
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState<string | null>(null);
@@ -224,14 +225,7 @@ export default function App() {
   const role = normalizedPathname === '/solver' || normalizedPathname === '/runner' ? (normalizedPathname.slice(1) as Role) : null;
   const { session, gameState, score, loading, login, logout, resetGame, updateState, sync } = useGameState((role ?? 'solver') as Role);
 
-  // Force Map tab when moving to travel phase, and back to Intel for final QR
-  useEffect(() => {
-    if (gameState?.stage === 'runner_travel' && role === 'runner') {
-      setRunnerTab('map');
-    } else if (gameState?.stage === 'final_qr') {
-      setRunnerTab('intel');
-    }
-  }, [gameState?.stage, role]);
+  // Tab switcher removed — runner always shows mission content directly
 
   const [rounds, setRounds] = useState<RoundQuestion[]>(() => {
     try {
@@ -271,7 +265,7 @@ export default function App() {
   const [reenteringFullscreen, setReenteringFullscreen] = useState(false);
   const [swapConfirmOpen, setSwapConfirmOpen] = useState(false);
   const [devMode, setDevMode] = useState(false);
-  const [notifications, setNotifications] = useState<Array<{ id: number; message: string; tone: 'info' | 'success' | 'error' | 'warning'; label: string }>>([]);
+  const [notifications, setNotifications] = useState<Array<{ id: string; message: string; tone: 'info' | 'success' | 'error' | 'warning'; label: string }>>([]);
   const [isObjectiveOpen, setIsObjectiveOpen] = useState(true);
 
   const previousRoundStateRef = useRef<number | null>(null);
@@ -329,9 +323,47 @@ export default function App() {
     setLoginError(null);
   };
 
-  useRunnerGps(session?.token ?? null, gameState?.stage ?? null);
+  const baseRound = (rounds && rounds.length > 0 && gameState) ? rounds[Math.min(gameState.round, rounds.length - 1)] : null;
+  const currentRound = gameState ? ((gameState as any)?.activeQuestionOverride || baseRound) : null;
 
-  const { connect: socketConnect, disconnect: socketDisconnect } = useSocket();
+  const currentPos = useRunnerGps(session?.token ?? null, gameState?.stage ?? null);
+  const [distanceToTarget, setDistanceToTarget] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (role === 'runner' && currentPos && currentRound && currentRound.coord) {
+      const targetLat = parseFloat(currentRound.coord.lat);
+      const targetLng = parseFloat(currentRound.coord.lng);
+
+      if (!isNaN(targetLat) && !isNaN(targetLng)) {
+        const dist = getDistance(currentPos.lat, currentPos.lng, targetLat, targetLng);
+        setDistanceToTarget(dist);
+
+        // Multi-stage silent proximity triggers
+        if (gameState?.stage === 'runner_travel') {
+          // 50m Alert
+          if (dist <= 50 && dist > 45 && lastRunnerHandoffNoticeRef.current !== `prox:50:${gameState.round}`) {
+            if (window.navigator.vibrate) window.navigator.vibrate([100]);
+            lastRunnerHandoffNoticeRef.current = `prox:50:${gameState.round}`;
+          }
+          // 25m Alert
+          if (dist <= 25 && dist > 20 && lastRunnerHandoffNoticeRef.current !== `prox:25:${gameState.round}`) {
+            if (window.navigator.vibrate) window.navigator.vibrate([100, 50, 100]);
+            lastRunnerHandoffNoticeRef.current = `prox:25:${gameState.round}`;
+          }
+          // 15m Target Reached
+          if (dist <= 15 && lastRunnerHandoffNoticeRef.current !== `geofence:${gameState.round}`) {
+            if (window.navigator.vibrate) window.navigator.vibrate([200, 100, 200, 100, 200]);
+            notify("TARGET REACHED: PROCEED TO QR SCAN", "success");
+            lastRunnerHandoffNoticeRef.current = `geofence:${gameState.round}`;
+          }
+        }
+      }
+    } else {
+      setDistanceToTarget(null);
+    }
+  }, [currentPos, currentRound, role, gameState?.stage, gameState?.round]);
+
+  const { socket, connect: socketConnect, disconnect: socketDisconnect } = useSocket();
   useEffect(() => {
     if (pathname === '/admin') return;
     if (session?.token) {
@@ -421,8 +453,7 @@ export default function App() {
     }
   };
 
-  const baseRound = (rounds && rounds.length > 0 && gameState) ? rounds[Math.min(gameState.round, rounds.length - 1)] : null;
-  const currentRound = gameState ? ((gameState as any)?.activeQuestionOverride || baseRound) : null;
+
 
   const isMyTurn = gameState ? (
     (role === 'solver' && ['p1_solve', 'p1_solved'].includes(gameState.stage)) ||
@@ -485,7 +516,7 @@ export default function App() {
   }, [gameState?.stage, role, session?.token]);
 
   const pushNotification = (message: string, tone: 'info' | 'success' | 'error' | 'warning' = 'info', label: string = 'System') => {
-    const id = Date.now();
+    const id = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     setNotifications(prev => [...prev, { id, message, tone, label }]);
     window.setTimeout(() => setNotifications(prev => prev.filter(n => n.id !== id)), 4500);
   };
@@ -494,6 +525,21 @@ export default function App() {
     if (!gameState || !session || !role) return;
     const prevRound = previousRoundStateRef.current;
     const handoffKey = `${gameState.round}:${gameState.handoff?.passkey ?? ''}`;
+
+    // Initialization: On first load, populate refs so we don't notify for old events
+    if (previousRoundStateRef.current === null) {
+      previousRoundStateRef.current = gameState.round;
+      if (gameState.lastMessage) {
+        lastMessageNoticeRef.current = gameState.lastMessage.timestamp;
+      }
+      if (gameState.stage === 'runner_travel' && gameState.handoff?.passkey) {
+        lastRunnerHandoffNoticeRef.current = handoffKey;
+      }
+      if (gameState.stage === 'complete') {
+        lastSolverCompleteNoticeRef.current = true;
+      }
+      return; // Skip notification logic on first mount
+    }
 
     if (role === 'runner' && gameState.stage === 'runner_travel' && gameState.handoff?.passkey && lastRunnerHandoffNoticeRef.current !== handoffKey) {
       pushNotification(`Solver synchronized round ${gameState.round + 1}. Travel to coordinates.`.toUpperCase());
@@ -762,90 +808,23 @@ export default function App() {
           finishTime={gameState?.finishTime}
         />
 
-        <div className={cn("pt-28 pb-40 px-3 relative z-10 flex flex-col max-w-[1400px] mx-auto w-full h-[100dvh]",
+        <div className={cn("pt-24 sm:pt-28 pb-40 px-3 relative z-10 flex flex-col max-w-[1400px] mx-auto w-full h-[100dvh]",
           role === 'runner' ? "overflow-y-auto custom-scrollbar" : "overflow-hidden"
         )}>
-          {/* ── Runner Map Overlay: fixed full-screen below navbar ───────────────────
-             When on the map tab we render the map as a fixed layer covering the
-             full screen below the navbar so the runner gets maximum map area.
-             The tab switcher is pinned at the bottom of the overlay. */}
-          {gameState && role === 'runner' && runnerTab === 'map' &&
-            ['runner_travel', 'runner_entry', 'runner_game', 'runner_done', 'final_qr'].includes(gameState.stage) &&
-            gameState.stage !== 'complete' && (
-              <div className="fixed inset-x-0 z-[8000] flex flex-col gap-3 bg-black" style={{ top: 'calc(env(safe-area-inset-top, 0px) + 64px)', height: 'calc(100dvh - env(safe-area-inset-top, 0px) - 64px)', paddingBottom: 'calc(80px + env(safe-area-inset-bottom, 0px))' }}>
-                {/* Map fills all remaining space */}
-                <div className="flex-1 min-h-0">
-                  <SectorMap
-                    rounds={rounds}
-                    currentRound={gameState.round}
-                    activeQuestion={currentRound}
-                    roundsDone={gameState.roundsDone}
-                    stage={gameState.stage}
-                    visible={true}
-                    role={role}
-                    runnerName={session?.team?.runnerName}
-                  />
-                </div>
-                {/* Tab switcher pinned at bottom of overlay */}
-                {gameState.stage !== 'final_qr' && (
-                  <div className="flex gap-1 h-14 shrink-0 border-t border-white/10 relative z-10">
-                    <button
-                      onClick={() => setRunnerTab('intel')}
-                      className="flex-1 h-full flex items-center justify-center gap-2 bg-black/80  text-white/50 hover:text-white transition-all font-bold uppercase tracking-[0.2em] text-[10px] border-r border-white/10"
-                    >
-                      <Activity className="w-3.5 h-3.5" />
-                      <span>Tactical Intel</span>
-                    </button>
-                    <button
-                      onClick={() => setRunnerTab('map')}
-                      className="flex-1 h-full flex items-center justify-center gap-2 bg-white text-black transition-all font-bold uppercase tracking-[0.2em] text-[10px]"
-                    >
-                      <MapPin className="w-3.5 h-3.5" />
-                      <span>Sector Map</span>
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
+          {/* ── Runner Map is now strictly forbidden ─────────────────── */}
 
-          {/* ── Intel tab switcher (shown only in normal page flow / intel tab) ── */}
-          {gameState && role === 'runner' && runnerTab !== 'map' &&
-            ['runner_travel', 'runner_entry', 'runner_game', 'runner_done', 'final_qr'].includes(gameState.stage) &&
-            gameState.stage !== 'complete' && gameState.stage !== 'final_qr' && (
-              <div className="mb-8 flex gap-1 h-14 shrink-0">
-                <button
-                  onClick={() => setRunnerTab('intel')}
-                  className={cn("flex-1 h-full flex items-center justify-center gap-2 transition-all duration-300 font-bold uppercase tracking-[0.2em] text-[10px] relative overflow-hidden group border border-white/5", "bg-white text-black"
-                  )}
-                >
-                  <motion.div layoutId="tab-active-bg" className="absolute inset-0 bg-white" />
-                  <Activity className="w-3.5 h-3.5 z-20 text-black" />
-                  <span className="z-20">Tactical Intel</span>
-                </button>
-                <button
-                  onClick={() => setRunnerTab('map')}
-                  className={cn("flex-1 h-full flex items-center justify-center gap-2 transition-all duration-300 font-bold uppercase tracking-[0.2em] text-[10px] relative overflow-hidden group border border-white/5", "bg-black text-white/20 hover:text-white/40"
-                  )}
-                >
-                  <MapPin className="w-3.5 h-3.5 z-20 text-white/20" />
-                  <span className="z-20">Sector Map</span>
-                </button>
-              </div>
-            )}
 
-          {/* Round header — hidden when map overlay is active to avoid layout waste */}
-          {!(role === 'runner' && runnerTab === 'map') && (
-            <div className="border-b border-white/10 pb-4 mb-6 flex justify-between items-end">
-              <div>
-                <span className="label-technical text-[var(--color-accent)] mb-1 block">Operational Telemetry</span>
-                <h1 className="text-3xl font-bold uppercase tracking-tighter">Round <span className="text-[var(--color-accent)]">0{gameState.round + 1}</span></h1>
-              </div>
-              <Badge variant="outline" className="uppercase tracking-widest px-3 py-1 border-[var(--color-accent)]/40 text-[var(--color-accent)]">{role}</Badge>
+
+          <div className="border-b border-white/10 pb-4 mb-6 flex justify-between items-end">
+            <div>
+              <span className="label-technical text-[var(--color-accent)] mb-1 block">Operational Telemetry</span>
+              <h1 className="text-3xl font-bold uppercase tracking-tighter">Round <span className="text-[var(--color-accent)]">0{gameState.round + 1}</span></h1>
             </div>
-          )}
+            <Badge variant="outline" className="uppercase tracking-widest px-3 py-1 border-[var(--color-accent)]/40 text-[var(--color-accent)]">{role}</Badge>
+          </div>
 
           {role === 'solver' && ['runner_travel', 'runner_entry', 'runner_game', 'runner_done', 'final_qr'].includes(gameState.stage) && (
-            <div className="mb-8 px-2">
+            <div className="mb-8 px-2 relative z-20">
               <TacticalProgressBar stage={gameState.stage} />
             </div>
           )}
@@ -856,45 +835,45 @@ export default function App() {
               animate={{ opacity: 1, scale: 1 }}
               className="flex-1 flex flex-col p-4"
             >
-              {/* Runner map tab: handled by the fixed overlay above — render nothing here */}
-              {role === 'runner' && runnerTab === 'map' && ['runner_travel', 'runner_entry', 'runner_game', 'runner_done', 'final_qr'].includes(gameState.stage) ? (
-                null
-              ) : (
-                <div className="max-w-6xl w-full text-center space-y-12 relative mx-auto my-auto px-3">
-                  {/* Spinner + Heading — hidden for solver when the map is displayed */}
-                  {!(role === 'solver' && ['runner_travel', 'runner_entry', 'runner_game', 'runner_done'].includes(gameState.stage)) && (
-                    <>
+              <div className="max-w-6xl w-full flex flex-col space-y-8 relative mx-auto my-auto px-3">
+                {/* Solver Tactical View during Runner phases */}
+                {role === 'solver' && ['runner_travel', 'runner_entry', 'runner_game', 'runner_done', 'final_qr'].includes(gameState.stage) ? (
+                  <div className="w-full flex flex-col h-[500px]">
+
+                    <div className="flex-1 relative rounded overflow-hidden border border-white/10 shadow-2xl">
+                      <SectorMap rounds={rounds} currentRound={gameState.round} activeQuestion={currentRound} roundsDone={gameState.roundsDone} stage={gameState.stage} visible={true} role="solver" runnerName={session?.team?.runnerName} />
+                    </div>
+
+                  </div>
+                ) : (
+                  <div className="max-w-md mx-auto text-center space-y-12 py-12">
+                    <div className="relative">
                       <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-px h-16 bg-gradient-to-b from-transparent to-[var(--color-accent)] opacity-50" />
-                      <div className="space-y-4">
-                        <div className="flex justify-center mb-8">
-                          <div className="relative flex items-center justify-center w-24 h-24">
-                            <div className="absolute inset-0 border border-[var(--color-accent)]/20 animate-[spin_4s_linear_infinite]" style={{ clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)' }} />
-                            <div className="absolute inset-2 border border-[var(--color-accent)]/40 animate-[spin_3s_linear_infinite_reverse]" style={{ clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)' }} />
-                            <Activity className="w-8 h-8 text-[var(--color-accent)] animate-pulse" />
-                          </div>
+                      <div className="relative w-32 h-32 mx-auto">
+                        <div className="absolute inset-0 border-2 border-[var(--color-accent)]/20 rounded-full animate-ping opacity-20" />
+                        <div className="absolute inset-0 border border-[var(--color-accent)]/40 rounded-full animate-pulse" />
+                        <div className="absolute inset-4 border border-[var(--color-accent)]/60 rounded-full" />
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <Activity className="w-8 h-8 text-[var(--color-accent)] animate-pulse" />
                         </div>
-                        <h2 className="text-3xl md:text-5xl font-black tracking-[0.3em] text-[var(--color-accent)] uppercase" style={{ textShadow: '0 0 30px rgba(217,31,64,0.4)' }}>
-                          Awaiting Operative
-                        </h2>
-                        <div className="flex items-center justify-center gap-3 text-white/40">
-                          <span className="w-8 h-px bg-white/20" />
-                          <p className="text-[10px] font-mono tracking-widest uppercase">Synchronizing with Node 0{gameState.round + 1}</p>
-                          <span className="w-8 h-px bg-white/20" />
-                        </div>
-                      </div>
-                    </>
-                  )}
-                  {/* Solver Map — replaces the spinner when runner is active */}
-                  {role === 'solver' && ['runner_travel', 'runner_entry', 'runner_game', 'runner_done'].includes(gameState.stage) && (
-                    <div className="w-full text-left space-y-2">
-                      <p className="text-[10px] font-mono uppercase tracking-widest text-white/30">Runner Position Feed</p>
-                      <div className="min-h-[500px] relative rounded overflow-hidden border border-white/10">
-                        <SectorMap rounds={rounds} currentRound={gameState.round} activeQuestion={currentRound} roundsDone={gameState.roundsDone} stage={gameState.stage} visible={true} role="solver" runnerName={session?.team?.runnerName} />
                       </div>
                     </div>
-                  )}
-                </div>
-              )}
+
+                    <div className="space-y-4">
+                      <h2 className="text-3xl md:text-5xl font-black tracking-[0.3em] text-[var(--color-accent)] uppercase" style={{ textShadow: '0 0 30px rgba(217,31,64,0.4)' }}>
+                        {role === 'solver' ? 'Awaiting Operative' : 'Awaiting Intelligence'}
+                      </h2>
+                      <div className="flex items-center justify-center gap-3 text-white/40">
+                        <span className="w-8 h-px bg-white/20" />
+                        <p className="text-[10px] font-mono tracking-widest uppercase">
+                          {role === 'solver' ? `Synchronizing with Node 0${gameState.round + 1}` : 'Awaiting Terminal Uplink'}
+                        </p>
+                        <span className="w-8 h-px bg-white/20" />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
             </motion.div>
           ) : (
             <div className="flex-1">
@@ -933,8 +912,12 @@ export default function App() {
                         />
                       </div>
 
-                      <div className="flex flex-col flex-1 min-w-0 lg:min-w-[250px] gap-3 relative" style={{ perspective: '1000px' }}>
-                        <div className="flex-1 relative">
+                      <div className="flex flex-col flex-1 min-w-0 lg:min-w-[320px] gap-3 relative">
+
+
+
+
+                        <div className="flex-1 relative" style={{ perspective: '1000px' }}>
                           <AnimatePresence mode="wait">
                             {isObjectiveOpen ? (
                               <motion.div
@@ -1046,32 +1029,39 @@ export default function App() {
 
                 {gameState.stage === 'p1_solved' && (
                   <motion.div key="p1_solved" variants={glitchVariants} initial="initial" animate="animate" exit="exit" className="flex flex-col items-center justify-center h-full">
-                    <div className="max-w-md w-full text-center space-y-8 pt-12">
-                      <CheckCircle2 className="w-16 h-16 text-[var(--color-accent)] mx-auto" />
-                      <h2 className="text-2xl font-bold uppercase tracking-widest">Puzzle Solved</h2>
-                      <div className="corner-card glass-morphism p-6 space-y-4">
-                        <div className="grid grid-cols-2 gap-4 text-left">
-                          <div><span className="text-[10px] uppercase text-white/40 block">Lat</span><span className="font-mono">{currentRound.coord.lat}</span></div>
-                          <div><span className="text-[10px] uppercase text-white/40 block">Lng</span><span className="font-mono">{currentRound.coord.lng}</span></div>
+                    <div className="max-w-md w-full pt-12 px-4 mx-auto">
+                      <div className="space-y-8 text-center">
+                        <div className="flex flex-col items-center gap-4">
+                          <CheckCircle2 className="w-16 h-16 text-[var(--color-accent)]" />
+                          <h2 className="text-3xl font-bold uppercase tracking-widest">Protocol Verified</h2>
                         </div>
-                        <div className="text-left pt-4 border-t border-white/10 flex items-start gap-3">
-                          <MapPin className="text-[var(--color-accent)] shrink-0" />
-                          <div><p className="font-bold uppercase text-sm">{currentRound.coord.place}</p><p className="text-xs text-white/40">Volunteer: {currentRound.volunteer.name}</p></div>
+
+                        <div className="corner-card glass-morphism p-6 space-y-4">
+                          <div className="grid grid-cols-2 gap-4 text-left">
+                            <div><span className="text-[10px] uppercase text-white/40 block">Lat</span><span className="font-mono">{currentRound?.coord?.lat}</span></div>
+                            <div><span className="text-[10px] uppercase text-white/40 block">Lng</span><span className="font-mono">{currentRound?.coord?.lng}</span></div>
+                          </div>
+                          <div className="text-left pt-4 border-t border-white/10 flex items-start gap-3">
+                            <MapPin className="text-[var(--color-accent)] shrink-0" />
+                            <div><p className="font-bold uppercase text-sm">{currentRound?.coord?.place}</p><p className="text-xs text-white/40">Volunteer: {currentRound?.volunteer?.name}</p></div>
+                          </div>
+                          <div className="p-4 bg-white/5 border border-[var(--color-accent)]/20 rounded">
+                            <span className="text-[10px] uppercase text-white/40 block mb-1">Target Passkey</span>
+                            <span className="text-2xl font-bold tracking-[0.4em] text-[var(--color-accent)]">{currentRound?.qrPasskey}</span>
+                          </div>
                         </div>
+
+                        <Button className="w-full h-14 btn-primary glass-morphism font-bold uppercase tracking-[0.2em]" onClick={handleSyncRunnerNode} disabled={isSyncingRunner}>
+                          {isSyncingRunner ? 'SYNCHRONIZING...' : 'Synchronize Runner'}
+                        </Button>
                       </div>
-                      <Button className="w-full h-14 btn-primary glass-morphism font-bold uppercase tracking-[0.2em]" onClick={handleSyncRunnerNode} disabled={isSyncingRunner}>
-                        {isSyncingRunner ? 'SYNCHRONIZING...' : 'Synchronize Runner'}
-                      </Button>
                     </div>
                   </motion.div>
                 )}
 
                 {['runner_travel', 'runner_entry', 'runner_game', 'runner_done'].includes(gameState.stage) && (
                   <motion.div key="runner_phase" variants={glitchVariants} initial="initial" animate="animate" exit="exit" className="flex-1 flex flex-col">
-                    {/* Runner map tab: handled by the fixed overlay above — render nothing here */}
-                    {role === 'runner' && runnerTab === 'map' ? (
-                      null
-                    ) : role === 'solver' ? (
+                    {role === 'solver' ? (
                       <div className="max-w-md mx-auto space-y-6 w-full pt-12">
                         <div className="text-center space-y-2">
                           <h2 className="text-2xl font-bold uppercase tracking-widest">Sector Ingress</h2>
@@ -1094,9 +1084,23 @@ export default function App() {
                         <div className="min-h-[420px] relative rounded overflow-hidden border border-white/10">
                           <SectorMap rounds={rounds} currentRound={gameState.round} activeQuestion={currentRound} roundsDone={gameState.roundsDone} stage={gameState.stage} visible={true} role="solver" runnerName={session?.team?.runnerName} />
                         </div>
+
+
                       </div>
                     ) : (
                       <div className="flex-1 flex flex-col">
+                        {/* Distance HUD for Runner during Travel */}
+                        {distanceToTarget !== null && gameState?.stage === 'runner_travel' && (
+                          <div className="mb-4 p-4 glass-morphism rounded border border-[var(--color-accent)]/20 animate-pulse text-center">
+                            <div className="text-[10px] font-mono uppercase text-white/40 mb-1">Target_Proximity</div>
+                            <div className="text-3xl font-heading text-[var(--color-accent)] tracking-tighter">
+                              {distanceToTarget < 1000
+                                ? `${Math.round(distanceToTarget)}M`
+                                : `${(distanceToTarget / 1000).toFixed(2)}KM`}
+                            </div>
+                          </div>
+                        )}
+
                         <RunnerGame
                           token={session!.token}
                           currentRoundIndex={gameState.round}
@@ -1104,9 +1108,10 @@ export default function App() {
                           onRoundComplete={sync}
                           stage={gameState.stage}
                           currentRound={currentRound}
-                          onSwitchToMap={() => setRunnerTab('map')}
                           difficulty={gameState.difficulty as 'normal' | 'hard'}
                         />
+
+
                       </div>
                     )}
                   </motion.div>
@@ -1119,7 +1124,7 @@ export default function App() {
                       {role === 'solver' ? (
                         <div className="corner-card glass-morphism p-8 space-y-6 text-center flex flex-col items-center">
                           <p className="text-sm text-white/60">The runner must scan your unique terminal key to complete the extraction.</p>
-                          <div className="bg-white p-4 inline-block rounded-lg">
+                          <div className="bg-white p-4 inline-block rounded-lg mt-4">
                             <QRCodeSVG value={finalQrPayload} size={200} level="H" includeMargin />
                           </div>
                         </div>
@@ -1181,7 +1186,7 @@ export default function App() {
 
       {/* Persistent Tactical Footer Bar */}
       {session && role && (
-        <div className="fixed bottom-0 left-0 w-full px-6 py-4 flex justify-between items-center z-[200000] bg-black/95  border-t border-white/10 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
+        <div className="fixed bottom-0 left-0 w-full px-6 py-4 flex justify-between items-center z-[200000] bg-black/95 border-t border-white/10 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
           <div className="relative">
             <AnimatePresence>
               {isTacticalMenuOpen && (
@@ -1229,7 +1234,6 @@ export default function App() {
               )}
             >
               <Zap className={cn("w-4 h-4", isTacticalMenuOpen ? "fill-current" : "text-[var(--color-accent)] animate-pulse")} />
-              Tactical Ops
             </button>
           </div>
 
@@ -1242,6 +1246,16 @@ export default function App() {
             >
               <MessageSquare className="w-5 h-5 text-white" />
             </button>
+          </div>
+
+          {/* Center: Walkie-Talkie PTT mic — floats between Tactical Ops and Comms */}
+          <div className="absolute left-1/2 -translate-x-1/2">
+            <WalkieTalkie
+              role={role as 'runner' | 'solver'}
+              socket={socket}
+              teamId={session?.team?.id || ''}
+              compact
+            />
           </div>
         </div>
       )}

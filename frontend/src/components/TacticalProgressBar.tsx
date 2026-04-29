@@ -50,12 +50,12 @@ export const TacticalProgressBar = ({ stage }: { stage: string }) => {
   };
 
   return (
-    <div className="w-full bg-black/40 border border-white/5  relative overflow-hidden my-4">
+    <div className="w-full bg-black/40 border border-white/5 relative overflow-hidden my-2">
       <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-[var(--color-accent)] to-transparent opacity-30" />
       
-      <div className="py-8 px-6 md:px-12 flex justify-between items-start relative max-w-4xl mx-auto">
+      <div className="py-4 px-6 md:px-12 flex justify-between items-start relative max-w-4xl mx-auto">
         {/* Connecting Line */}
-        <div className="absolute top-[52px] left-16 right-16 h-[1px] bg-white/10 -z-0" />
+        <div className="absolute top-[36px] left-16 right-16 h-[1px] bg-white/10 -z-0" />
         
         {steps.map((step, idx) => {
           const status = getStatus(step.id);

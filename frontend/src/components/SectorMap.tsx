@@ -440,8 +440,8 @@ export function SectorMap({ rounds, currentRound, activeQuestion, roundsDone, st
           : 'w-full glass-morphism shadow-black-lg'
       )}
       style={isFullScreen
-        ? { position: 'fixed', top: getNavBottom(), left: 0, right: 0, bottom: 0, zIndex: 9000 }
-        : { height: '100%', minHeight: 'clamp(300px, 50dvh, 500px)' }}
+        ? { position: 'fixed', top: getNavBottom(), left: 0, right: 0, bottom: 0, zIndex: 5000 }
+        : { height: '500px', minHeight: '500px' }}
     >
       {/* leafletDivRef is appended here imperatively by useEffect */}
 
