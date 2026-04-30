@@ -121,7 +121,7 @@ export function AdminPanel({ onBack }: { onBack: () => void }) {
           <span className="text-[40vw] font-black leading-none">00</span>
         </div>
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md z-10">
-          <div className="corner-card glass-morphism p-8">
+          <div className="corner-card glass-morphism p-6 sm:p-8">
             <div className="text-center space-y-6">
               <div className="w-16 h-16 bg-[var(--color-accent)]/5 border border-[var(--color-accent)]/20 flex items-center justify-center mx-auto mb-2 relative group">
                 <div className="absolute -inset-2 bg-[var(--color-accent)]/10 blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -144,7 +144,7 @@ export function AdminPanel({ onBack }: { onBack: () => void }) {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   disabled={isAdminLoggingIn}
-                  className="bg-black/50 border-white/10 text-[10px] uppercase tracking-widest h-12"
+                  className="bg-black/50 border-white/10 text-[10px] placeholder:text-[8px] uppercase tracking-widest h-12"
                 />
                 <Input
                   placeholder="Security Key"
@@ -153,7 +153,7 @@ export function AdminPanel({ onBack }: { onBack: () => void }) {
                   onChange={(e) => setPassword(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && !isAdminLoggingIn && handleAdminLogin()}
                   disabled={isAdminLoggingIn}
-                  className="bg-black/50 border-white/10 text-[10px] uppercase tracking-widest h-12"
+                  className="bg-black/50 border-white/10 text-[10px] placeholder:text-[8px] uppercase tracking-widest h-12"
                 />
               </div>
               {error && (

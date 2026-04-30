@@ -61,7 +61,7 @@ export function TacticalComms({ token, role, isOpen, onClose, lastMessage, teamN
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-white/[0.04] glass-morphism  z-[10002]"
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[200005]"
           />
 
           {/* Dialog */}
@@ -69,9 +69,9 @@ export function TacticalComms({ token, role, isOpen, onClose, lastMessage, teamN
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="fixed left-4 right-4 bottom-4 md:left-auto md:right-8 md:bottom-8 md:w-[400px] z-[10003]"
+            className="fixed left-4 right-4 bottom-4 md:left-auto md:right-8 md:bottom-8 md:w-[400px] z-[200006]"
           >
-            <Card className="glass-morphism shadow-accent-md">
+            <Card className="bg-[#080808]/95 backdrop-blur-2xl border border-[var(--color-accent)]/20 shadow-[0_0_30px_rgba(0,0,0,0.8)] shadow-[var(--color-accent)]/10">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-full bg-[var(--color-accent)]/20 flex items-center justify-center">
@@ -90,7 +90,7 @@ export function TacticalComms({ token, role, isOpen, onClose, lastMessage, teamN
                   variant="ghost"
                   size="sm"
                   onClick={onClose}
-                  className="h-8 w-8 text-[var(--color-accent)]/50 hover:text-[var(--color-accent)] hover:bg-[var(--color-accent)]/10"
+                  className="h-8 w-8 rounded-full bg-white/5 border border-white/10 text-white hover:text-white hover:bg-[var(--color-accent)] hover:border-[var(--color-accent)] transition-all flex items-center justify-center shadow-lg"
                 >
                   <X className="w-4 h-4" />
                 </Button>

@@ -30,13 +30,13 @@ export const WalkieTalkie: React.FC<WalkieTalkieProps> = ({ socket, teamId, role
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.code === 'Space' && !isTransmitting && !isIncoming) {
         const active = document.activeElement as HTMLElement | null;
-        const isTyping = active?.tagName === 'INPUT' || 
-                         active?.tagName === 'TEXTAREA' || 
-                         active?.isContentEditable ||
-                         active?.closest('.monaco-editor') !== null;
-        
+        const isTyping = active?.tagName === 'INPUT' ||
+          active?.tagName === 'TEXTAREA' ||
+          active?.isContentEditable ||
+          active?.closest('.monaco-editor') !== null;
+
         if (isTyping) return;
-        
+
         e.preventDefault();
         startTransmit();
       }
@@ -45,13 +45,13 @@ export const WalkieTalkie: React.FC<WalkieTalkieProps> = ({ socket, teamId, role
     const handleKeyUp = (e: KeyboardEvent) => {
       if (e.code === 'Space') {
         const active = document.activeElement as HTMLElement | null;
-        const isTyping = active?.tagName === 'INPUT' || 
-                         active?.tagName === 'TEXTAREA' || 
-                         active?.isContentEditable ||
-                         active?.closest('.monaco-editor') !== null;
-        
+        const isTyping = active?.tagName === 'INPUT' ||
+          active?.tagName === 'TEXTAREA' ||
+          active?.isContentEditable ||
+          active?.closest('.monaco-editor') !== null;
+
         if (isTyping) return;
-        
+
         e.preventDefault();
         stopTransmit();
       }
@@ -91,17 +91,17 @@ export const WalkieTalkie: React.FC<WalkieTalkieProps> = ({ socket, teamId, role
           </AnimatePresence>
           <motion.button
             whileTap={{ scale: 0.9 }}
-            onMouseDown={role === 'runner' ? startTransmit : undefined}
-            onMouseUp={role === 'runner' ? stopTransmit : undefined}
-            onTouchStart={role === 'runner' ? startTransmit : undefined}
-            onTouchEnd={role === 'runner' ? stopTransmit : undefined}
+            onMouseDown={startTransmit}
+            onMouseUp={stopTransmit}
+            onTouchStart={startTransmit}
+            onTouchEnd={stopTransmit}
             disabled={isIncoming || !peerConnected}
             className={cn(
               "relative z-10 w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 shadow-lg",
               !peerConnected ? "bg-gray-800 text-gray-500 border border-gray-700" :
-              isTransmitting 
-                ? "bg-[var(--color-accent)] text-white shadow-[0_0_20px_rgba(217,31,64,0.5)] border-transparent" 
-                : "bg-blue-600 text-white shadow-[0_0_20px_rgba(37,99,235,0.4)] border-blue-400"
+                isTransmitting
+                  ? "bg-[var(--color-accent)] text-white shadow-[0_0_20px_rgba(217,31,64,0.5)] border-transparent"
+                  : "bg-blue-600 text-white shadow-[0_0_20px_rgba(37,99,235,0.4)] border-blue-400"
             )}
           >
             {isIncoming ? <Volume2 className="w-6 h-6 animate-pulse" /> : <Mic className="w-6 h-6" />}
@@ -162,22 +162,22 @@ export const WalkieTalkie: React.FC<WalkieTalkieProps> = ({ socket, teamId, role
         {/* The Button */}
         <motion.button
           whileTap={{ scale: 0.95 }}
-          onMouseDown={role === 'runner' ? startTransmit : undefined}
-          onMouseUp={role === 'runner' ? stopTransmit : undefined}
-          onTouchStart={role === 'runner' ? startTransmit : undefined}
-          onTouchEnd={role === 'runner' ? stopTransmit : undefined}
+          onMouseDown={startTransmit}
+          onMouseUp={stopTransmit}
+          onTouchStart={startTransmit}
+          onTouchEnd={stopTransmit}
           disabled={isIncoming || !peerConnected}
           className={cn(
             "relative z-10 w-32 h-32 rounded-full flex flex-col items-center justify-center transition-all duration-300 border-4 shadow-2xl",
             !peerConnected ? "bg-gray-800 border-gray-700 shadow-none text-gray-500" :
-            isTransmitting 
-              ? "bg-[var(--color-accent)] border-transparent shadow-[0_0_50px_rgba(217,31,64,0.6)] text-white" 
-              : "bg-blue-600 border-blue-400 shadow-[0_0_50px_rgba(37,99,235,0.5)] text-white"
+              isTransmitting
+                ? "bg-[var(--color-accent)] border-transparent shadow-[0_0_50px_rgba(217,31,64,0.6)] text-white"
+                : "bg-blue-600 border-blue-400 shadow-[0_0_50px_rgba(37,99,235,0.5)] text-white"
           )}
         >
           {isIncoming ? <Volume2 className="w-12 h-12 animate-pulse" /> : <Mic className="w-12 h-12" />}
         </motion.button>
-        
+
         {/* Visualizer bars when active */}
         {(isTransmitting || isIncoming) && (
           <div className="absolute -bottom-8 flex gap-1 h-8 items-end">

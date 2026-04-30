@@ -48,8 +48,8 @@ interface SocketContextValue {
 const SocketContext = createContext<SocketContextValue>({
   socket: null,
   status: 'disconnected',
-  connect: () => {},
-  disconnect: () => {},
+  connect: () => { },
+  disconnect: () => { },
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

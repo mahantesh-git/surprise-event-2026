@@ -64,6 +64,17 @@ export function initSocketServer(httpServer: HttpServer): SocketServer {
           transmitting: data.transmitting
         });
       });
+
+      // Burn Swap Permission Flow
+      socket.on('swap:request', () => {
+        socket.to(`team_${auth.teamId}`).emit('swap:requested', { from: auth.role });
+      });
+      socket.on('swap:accept', () => {
+        socket.to(`team_${auth.teamId}`).emit('swap:accepted', { from: auth.role });
+      });
+      socket.on('swap:decline', () => {
+        socket.to(`team_${auth.teamId}`).emit('swap:declined', { from: auth.role });
+      });
     } else if (auth.kind === 'admin') {
       socket.join('admin');
     }

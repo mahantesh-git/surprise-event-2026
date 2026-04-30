@@ -32,7 +32,7 @@ export function LoginScreen({
     <div className="relative min-h-screen overflow-hidden select-none font-sans text-white flex flex-col justify-between">
 
       {/* TOP BAR */}
-      <div className="relative z-10 p-8 flex items-center justify-between">
+      <div className="relative z-10 p-4 md:p-8 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <QuestLogo className="w-10 h-10" />
           <div className="flex items-center gap-3">
@@ -49,7 +49,7 @@ export function LoginScreen({
       </div>
 
       {/* MAIN CONTENT AREA */}
-      <div className="relative z-10 flex-1 flex flex-col md:flex-row items-center justify-between px-8 md:px-20 py-12">
+      <div className="relative z-10 flex-1 flex flex-col md:flex-row items-center justify-between px-4 sm:px-10 lg:px-20 py-8 md:py-12">
         {/* LEFT SECTION: TITLES */}
         <div className="w-full md:w-auto mb-12 md:mb-0">
           <motion.div
@@ -57,10 +57,10 @@ export function LoginScreen({
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8, ease:"easeOut" }}
           >
-            <h1 className="font-orbitron text-[80px] md:text-[120px] font-black uppercase leading-[0.8] tracking-tighter mb-2 opacity-95">
+            <h1 className="font-orbitron text-[clamp(2.5rem,15vw,120px)] font-black uppercase leading-[0.8] tracking-tighter mb-2 opacity-95 break-all">
               {role.toUpperCase()}
             </h1>
-            <h2 className="font-orbitron text-[60px] md:text-[80px] font-black uppercase leading-[0.8] tracking-tighter opacity-[0.15]">
+            <h2 className="font-orbitron text-[clamp(2rem,10vw,80px)] font-black uppercase leading-[0.8] tracking-tighter opacity-[0.15] break-all">
               PROTOCOL
             </h2>
           </motion.div>
@@ -73,7 +73,7 @@ export function LoginScreen({
           transition={{ duration: 0.6, delay: 0.2 }}
           className="w-full max-w-[460px] relative"
         >
-          <div className="glass-morphism px-11 py-10 rounded-none [clip-path:var(--clip-edges)] shadow-2xl border-l border-[var(--color-accent)]/30">
+          <div className="glass-morphism px-6 py-8 sm:px-11 sm:py-10 rounded-none [clip-path:var(--clip-edges)] shadow-2xl border-l border-[var(--color-accent)]/30">
             <div className="space-y-8">
               {/* Team Name Input */}
               <div className="space-y-2.5">
@@ -142,7 +142,7 @@ export function LoginScreen({
       </div>
 
       {/* BOTTOM STATUS BAR */}
-      <div className="relative z-10 p-6 flex items-center justify-between">
+      <div className="relative z-10 p-4 md:p-6 flex flex-col md:flex-row items-center justify-between gap-4">
         <div className="font-mono text-[11px] text-[var(--color-accent)] opacity-80 tracking-widest flex items-center gap-2">
           NODE: TERMINAL_001 / LATENCY: 24MS
         </div>

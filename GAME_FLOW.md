@@ -163,7 +163,7 @@ The leaderboard is visible to everyone throughout the event. Rankings are determ
   - Under 25 minutes: **+100 points**
 
 ### 🔥 Adaptive Difficulty (Hard Mode)
-The system monitors your efficiency. If a team clears a round in **under 3 minutes**, the next round automatically scales to **Hard Mode**.
+The system monitors your efficiency. If a team clears a round in **under 5 minutes**, the next round automatically scales to **Hard Mode**.
 - **Increased Complexity**: Mini-games become more difficult (e.g., faster targets, larger grids).
 - **Decaying Jackpot**: Hard Mode rounds feature a **1,000-point jackpot** that decays by 50 points every 30 seconds. Move fast to claim the maximum reward!
 

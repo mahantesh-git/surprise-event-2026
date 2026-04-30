@@ -346,7 +346,7 @@ export function RunnerGame({
       {/* ── LOCATION VERIFICATION ── */}
       {screen === 'location' && (
         <motion.div key="location" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
-          <div className="corner-card glass-morphism relative p-8 max-w-md mx-auto">
+          <div className="corner-card glass-morphism relative p-5 md:p-8 max-w-md mx-auto">
 
             <div className="space-y-6">
               <div className="text-center space-y-3">
@@ -429,7 +429,7 @@ export function RunnerGame({
       {/* ── PASSKEY ENTRY ── */}
       {screen === 'passkey' && (
         <motion.div key="passkey" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
-          <div className="corner-card glass-morphism relative p-8 max-w-md mx-auto">
+          <div className="corner-card glass-morphism relative p-4 sm:p-6 md:p-8 max-w-md mx-auto">
 
             <div className="space-y-6">
               <div className="text-center space-y-3">
@@ -528,7 +528,7 @@ export function RunnerGame({
           <div className="corner-card glass-morphism relative">
             <div className="corner-tr" />
             {/* Game Header */}
-            <div className="flex items-center justify-between p-6 border-b border-white/5">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 sm:p-5 md:p-6 border-b border-white/5 gap-3">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-zinc-900 border border-white/10 flex items-center justify-center">
                   {info.icon}
@@ -544,7 +544,7 @@ export function RunnerGame({
             </div>
 
             {/* Game Canvas */}
-            <div className="p-6">
+            <div className="p-4 md:p-6">
               {gameType === 'tap' && <TapGame onComplete={handleGameComplete} difficulty={difficulty} />}
               {gameType === 'memory' && <MemoryGame onComplete={handleGameComplete} difficulty={difficulty} />}
               {gameType === 'pattern' && <PatternGame onComplete={handleGameComplete} difficulty={difficulty} />}
@@ -559,7 +559,7 @@ export function RunnerGame({
       {/* ── VICTORY ── */}
       {screen === 'victory' && (
         <motion.div key="victory" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5 }}>
-          <div className="corner-card glass-morphism p-8 relative text-center overflow-hidden">
+          <div className="corner-card glass-morphism p-4 sm:p-6 md:p-8 relative text-center overflow-hidden">
 
             <div className="absolute inset-0 bg-[var(--color-accent)]/5 pointer-events-none" />
             <div className="relative z-10 space-y-8">

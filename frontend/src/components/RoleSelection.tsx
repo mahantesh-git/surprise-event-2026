@@ -25,16 +25,16 @@ export function RoleSelection({ onSelect }: RoleSelectionProps) {
   ];
 
   return (
-    <div className="relative min-h-screen text-white overflow-hidden flex flex-col justify-center px-4 md:px-12 pt-20 pb-12">
+    <div className="relative min-h-screen text-white overflow-x-hidden overflow-y-auto flex flex-col justify-center px-4 md:px-12 pt-24 pb-12">
       {/* TOP BAR INDICATOR */}
-      <div className="fixed top-8 left-8 z-[100] flex items-center gap-3">
+      <div className="fixed top-4 left-4 md:top-8 md:left-8 z-[100] flex items-center gap-3">
         <div className="w-2.5 h-2.5 bg-[var(--color-accent)] animate-pulse shadow-[0_0_10px_var(--color-accent)]" />
         <span className="font-mono text-[11px] uppercase tracking-[0.3em] text-[var(--color-accent)] font-bold">
           PROTOCOL: INITIALIZATION_REQUIRED
         </span>
       </div>
 
-      <div className="max-w-[1400px] mx-auto w-full relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center px-3 md:px-6">
+      <div className="max-w-[1400px] mx-auto w-full relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16 items-center px-3 md:px-6">
 
         {/* Left Col - Hero Title */}
         <div className="lg:col-span-7 pr-0 lg:pr-8">
@@ -44,10 +44,10 @@ export function RoleSelection({ onSelect }: RoleSelectionProps) {
             transition={{ duration: 0.7, ease:"easeOut" }}
           >
             {/* Headline */}
-            <h1 className="text-[clamp(3.5rem,8vw,7rem)] font-bold uppercase tracking-tighter leading-none mb-8 font-orbitron text-white">
+            <h1 className="text-[clamp(1.8rem,10vw,7rem)] font-bold uppercase tracking-tighter leading-none mb-8 font-orbitron text-white">
               QUEST <br />
-              <span className="text-white/20 text-[clamp(2rem,5vw,4rem)]">THE CODE</span><br />
-              <span className="text-[var(--color-accent)]" style={{ textShadow: '0 0 50px rgba(217, 31, 64, 0.3)' }}>SCAVENGER</span>
+              <span className="text-white/20 text-[clamp(1.2rem,6vw,4rem)]">THE CODE</span><br />
+              <span className="text-[var(--color-accent)] text-[clamp(1.8rem,9vw,7rem)]" style={{ textShadow: '0 0 50px rgba(217, 31, 64, 0.3)' }}>SCAVENGER</span>
             </h1>
 
             {/* Subtext */}
@@ -67,7 +67,7 @@ export function RoleSelection({ onSelect }: RoleSelectionProps) {
               transition={{ delay: role.delay + 0.3, duration: 0.6, ease:"easeOut" }}
               whileHover={{ x: 10 }}
               onClick={() => onSelect(role.key)}
-              className="corner-card group relative text-left glass-morphism hover:border-[var(--color-accent)]/50 transition-all duration-500 cursor-crosshair overflow-hidden p-8 !rounded-none"
+              className="corner-card group relative text-left glass-morphism hover:border-[var(--color-accent)]/50 transition-all duration-500 cursor-crosshair overflow-hidden p-5 sm:p-6 md:p-8 !rounded-none"
             >
               {/* Aura Forming Effect */}
               <motion.div
@@ -118,7 +118,7 @@ export function RoleSelection({ onSelect }: RoleSelectionProps) {
                   <div className="w-14 h-14 rounded-none [clip-path:var(--clip-oct)] bg-white/[0.04] glass-morphism  border border-white/10 flex items-center justify-center text-white/40 group-hover:text-[var(--color-accent)] group-hover:border-[var(--color-accent)]/50 transition-all duration-500 group-hover:shadow-[0_0_20px_rgba(217,31,64,0.2)]">
                     {role.icon}
                   </div>
-                  <h3 className="text-4xl font-bold uppercase tracking-tight text-white group-hover:text-[var(--color-accent)] transition-colors duration-500 font-orbitron">
+                  <h3 className="text-2xl sm:text-4xl font-bold uppercase tracking-tight text-white group-hover:text-[var(--color-accent)] transition-colors duration-500 font-orbitron">
                     {role.label}
                   </h3>
                 </div>
@@ -127,18 +127,18 @@ export function RoleSelection({ onSelect }: RoleSelectionProps) {
                   {role.sub}
                 </p>
 
-                <div className="mt-8 flex items-center justify-between">
+                <div className="mt-6 md:mt-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-0">
                   <div className="flex flex-col">
-                    <span className="font-mono text-[9px] uppercase tracking-[0.3em] text-[var(--color-accent)] opacity-0 group-hover:opacity-100 transition-all duration-500 translate-y-2 group-hover:translate-y-0">
+                    <span className="font-mono text-[9px] uppercase tracking-[0.2em] sm:tracking-[0.3em] text-[var(--color-accent)] opacity-0 group-hover:opacity-100 transition-all duration-500 translate-y-2 group-hover:translate-y-0">
                       ACCESS_NODE_0{idx + 1}
                     </span>
-                    <span className="font-mono text-[8px] uppercase tracking-[0.2em] text-white/20">
+                    <span className="font-mono text-[8px] uppercase tracking-[0.1em] sm:tracking-[0.2em] text-white/20">
                       READY_FOR_INIT
                     </span>
                   </div>
-                  <div className="h-[1px] flex-1 mx-4 bg-[var(--color-accent)]/10 scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-700" />
-                  <div className="flex items-center gap-2 group-hover:translate-x-2 transition-transform duration-500">
-                    <span className="font-mono text-sm text-[var(--color-accent)] font-bold tracking-widest">
+                  <div className="hidden sm:block h-[1px] flex-1 mx-4 bg-[var(--color-accent)]/10 scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-700" />
+                  <div className="flex items-center gap-2 group-hover:translate-x-2 transition-transform duration-500 self-start sm:self-auto">
+                    <span className="font-mono text-xs sm:text-sm text-[var(--color-accent)] font-bold tracking-widest">
                       [ INITIALIZE ]
                     </span>
                     <Zap size={14} className="text-[var(--color-accent)] animate-pulse" />

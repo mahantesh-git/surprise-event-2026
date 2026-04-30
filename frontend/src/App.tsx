@@ -47,6 +47,7 @@ import { TacticalStatus } from '@/components/TacticalStatus';
 import { QRCodeSVG } from 'qrcode.react';
 import { HardModeHUD } from '@/components/HardModeHUD';
 import { SwapConfirmModal } from '@/components/SwapConfirmModal';
+import { SwapApprovalModal } from '@/components/SwapApprovalModal';
 import { WalkieTalkie } from '@/components/WalkieTalkie';
 import { getDistance } from '@/lib/geofence';
 const SOLVER_FULLSCREEN_EXIT_KEY = import.meta.env.VITE_SOLVER_EXIT_KEY || 'quest-exit';
@@ -264,6 +265,7 @@ export default function App() {
   const [fullscreenExitError, setFullscreenExitError] = useState<string | null>(null);
   const [reenteringFullscreen, setReenteringFullscreen] = useState(false);
   const [swapConfirmOpen, setSwapConfirmOpen] = useState(false);
+  const [incomingSwapRequest, setIncomingSwapRequest] = useState<string | null>(null);
   const [devMode, setDevMode] = useState(false);
   const [notifications, setNotifications] = useState<Array<{ id: string; message: string; tone: 'info' | 'success' | 'error' | 'warning'; label: string }>>([]);
   const [isObjectiveOpen, setIsObjectiveOpen] = useState(true);
@@ -276,6 +278,11 @@ export default function App() {
   const wasFullscreenRef = useRef(false);
   const lastMessageNoticeRef = useRef<number>(0);
   const solverExitAuthorizedRef = useRef(false);
+  const isSwappingRef = useRef(false);
+
+  useEffect(() => {
+    isSwappingRef.current = isSwapping;
+  }, [isSwapping]);
 
   const requestAppFullscreen = async () => {
     const root = document.documentElement as HTMLElement & {
@@ -379,6 +386,37 @@ export default function App() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
+  useEffect(() => {
+    if (!socket || !session) return;
+
+    const onSwapRequested = (data: { from: string }) => {
+      setIncomingSwapRequest(data.from);
+    };
+
+    const onSwapAccepted = async (data: { from: string }) => {
+      if (isSwappingRef.current) {
+        await executeSwap();
+      }
+    };
+
+    const onSwapDeclined = (data: { from: string }) => {
+      if (isSwappingRef.current) {
+        setIsSwapping(false);
+        notify('Teammate declined the Burn Swap.', 'error');
+      }
+    };
+
+    socket.on('swap:requested', onSwapRequested);
+    socket.on('swap:accepted', onSwapAccepted);
+    socket.on('swap:declined', onSwapDeclined);
+
+    return () => {
+      socket.off('swap:requested', onSwapRequested);
+      socket.off('swap:accepted', onSwapAccepted);
+      socket.off('swap:declined', onSwapDeclined);
+    };
+  }, [socket, session]);
+
   const [helpCooldown, setHelpCooldown] = useState(0);
   const helpCooldownTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -398,6 +436,15 @@ export default function App() {
   const handleBurnSwap = () => {
     if (!session || isSwapping) return;
     setSwapConfirmOpen(true);
+  };
+
+  const initiateSwapRequest = () => {
+    if (!session || isSwapping || !socket) return;
+    setSwapConfirmOpen(false);
+    setIsSwapping(true);
+    setIsTacticalMenuOpen(false);
+    socket.emit('swap:request');
+    notify('Burn Swap requested. Awaiting teammate authorization...', 'info');
   };
 
   const executeSwap = async () => {
@@ -1186,7 +1233,7 @@ export default function App() {
 
       {/* Persistent Tactical Footer Bar */}
       {session && role && (
-        <div className="fixed bottom-0 left-0 w-full px-6 py-4 flex justify-between items-center z-[200000] bg-black/95 border-t border-white/10 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
+        <div className="fixed bottom-0 left-0 w-full px-3 sm:px-6 py-4 flex justify-between items-center z-[200000] bg-black/95 border-t border-white/10 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
           <div className="relative">
             <AnimatePresence>
               {isTacticalMenuOpen && (
@@ -1275,8 +1322,20 @@ export default function App() {
           <SwapConfirmModal
             isOpen={swapConfirmOpen}
             onClose={() => setSwapConfirmOpen(false)}
-            onConfirm={executeSwap}
+            onConfirm={initiateSwapRequest}
             isLoading={isSwapping}
+          />
+          <SwapApprovalModal
+            isOpen={!!incomingSwapRequest}
+            requesterRole={incomingSwapRequest}
+            onAccept={() => {
+              if (socket) socket.emit('swap:accept');
+              setIncomingSwapRequest(null);
+            }}
+            onDecline={() => {
+              if (socket) socket.emit('swap:decline');
+              setIncomingSwapRequest(null);
+            }}
           />
         </>
       )}

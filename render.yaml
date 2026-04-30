@@ -15,4 +15,12 @@ services:
     envVars:
       - key: VITE_API_HOST
         value: https://quest-backend-production-7b82.up.railway.app
+      - key: VITE_TURN_SERVER_URL
+        value: turn:openrelay.metered.ca:443
+      - key: VITE_TURN_SERVER_URL_ALT
+        value: turn:openrelay.metered.ca:80
+      - key: VITE_TURN_SERVER_USERNAME
+        value: openrelayproject
+      - key: VITE_TURN_SERVER_CREDENTIAL
+        value: openrelayproject
 
