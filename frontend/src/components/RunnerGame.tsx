@@ -281,6 +281,36 @@ export function RunnerGame({
     else if (stage === 'runner_done') setScreen('victory');
     else if (stage === 'runner_travel') setScreen('location');
   }, [stage]);
+
+  const [distance, setDistance] = useState<number | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (screen !== 'location' || !currentRound?.coord) return;
+
+    const targetLat = parseFloat(currentRound.coord.lat);
+    const targetLng = parseFloat(currentRound.coord.lng);
+
+    if (isNaN(targetLat) || isNaN(targetLng)) return;
+
+    import('@/lib/geofence').then(({ getDistance }) => {
+      const watchId = navigator.geolocation.watchPosition(
+        (pos) => {
+          const { latitude, longitude } = pos.coords;
+          const d = getDistance(latitude, longitude, targetLat, targetLng);
+          setDistance(d);
+          setLocationError(null);
+        },
+        (err) => {
+          setLocationError('Enable location services to scan');
+          setDistance(null);
+        },
+        { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
+      );
+
+      return () => navigator.geolocation.clearWatch(watchId);
+    });
+  }, [screen, currentRound]);
   const [passkey, setPasskey] = useState('');
   const [gameType, setGameType] = useState<GameType>('tap');
   const [error, setError] = useState<string | null>(null);
@@ -371,6 +401,19 @@ export function RunnerGame({
                       {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
                     </button>
                   </div>
+                  {distance !== null && (
+                    <div className="text-center text-xs font-mono">
+                      <span className="text-white/40">DISTANCE TO TARGET: </span>
+                      <span className={distance <= 25 ? 'text-green-400 font-bold' : 'text-yellow-400 font-bold'}>
+                        {Math.round(distance)}m
+                      </span>
+                    </div>
+                  )}
+                  {locationError && (
+                    <div className="text-center text-xs font-mono text-[var(--color-accent)]">
+                      {locationError}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -387,15 +430,12 @@ export function RunnerGame({
 
               <div className="space-y-3">
                 <Button
-                  className="w-full font-bold uppercase tracking-[0.2em] h-14 btn-primary !bg-[var(--color-accent)] !text-white hover:brightness-125 transition-all" size="md"
+                  className={cn("w-full font-bold uppercase tracking-[0.2em] h-14 btn-primary transition-all", (distance === null || distance > 25 || locationError) ? "opacity-50 cursor-not-allowed bg-zinc-800 text-white/50" : "!bg-[var(--color-accent)] !text-white hover:brightness-125")} size="md"
+                  disabled={distance === null || distance > 25 || !!locationError}
                   onClick={() => { setError(null); setScreen('qr_scanner'); }}
                 >
                   <QrCode className="mr-2 h-5 w-5" /> SCAN LOCATION QR
                 </Button>
-
-
-                
-
               </div>
             </div>
           </div>
@@ -411,7 +451,25 @@ export function RunnerGame({
 
               setVerifyingLocationQr(true);
               try {
-                await verifyRunnerLocationQr(token, text.trim());
+                let lat: number | undefined;
+                let lng: number | undefined;
+
+                try {
+                  const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+                    navigator.geolocation.getCurrentPosition(resolve, reject, {
+                      enableHighAccuracy: true,
+                      timeout: 10000,
+                      maximumAge: 0
+                    });
+                  });
+                  lat = position.coords.latitude;
+                  lng = position.coords.longitude;
+                } catch (geoErr) {
+                  console.warn('Geolocation failed', geoErr);
+                  // We continue, but the backend will reject if lat/lng are strictly required
+                }
+
+                await verifyRunnerLocationQr(token, text.trim(), lat, lng);
                 setError(null);
                 setScreen('passkey');
               } catch (err) {

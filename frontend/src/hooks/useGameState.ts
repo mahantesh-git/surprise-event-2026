@@ -199,9 +199,9 @@ export function useGameState(role: Role) {
 
   }, [socket, session]);
 
-  const login = async (teamName: string, password: string) => {
+  const login = async (teamName: string, password: string, deviceBypassKey?: string) => {
     setError(null);
-    const response = await loginTeam(teamName, password, role);
+    const response = await loginTeam(teamName, password, role, deviceBypassKey);
     const nextSession: TeamSession = {
       token: response.token,
       role: response.role,

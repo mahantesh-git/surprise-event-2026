@@ -16,7 +16,7 @@ import { createInitialGameState, normalizeGameState, sanitizeGameStateUpdate, ca
 import { DEFAULT_QUESTIONS } from './defaultQuestions';
 import { asyncHandler, createApiErrorHandler, HttpError } from './errors';
 import type { ChatMessage } from './types';
-import { initDiscordBridge, sendAdminAlert } from './discord-bridge';
+import { initDiscordBridge, sendAdminAlert, sendQRToDiscord } from './discord-bridge';
 import { initSocketServer, broadcastLeaderboard } from './socket';
 
 // Load environment variables. In production (Render), these are provided by the system.
@@ -55,7 +55,7 @@ async function generateQuestionQrAsset(question: Pick<QuestionDocument, 'round' 
     : `Location ${question.round}`;
   const payload = resolveQuestionLocationQrCode(question);
 
-  await new Promise<string>((resolve, reject) => {
+  return await new Promise<string>((resolve, reject) => {
     const child = spawn('python', [
       questionQrScriptPath,
       eventQrCodesDir,
@@ -302,6 +302,7 @@ app.post('/api/auth/login', route(async (request, response) => {
   const teamName = body.teamName?.trim();
   const password = body.password;
   const role = normalizeRole(body.role);
+  const deviceBypassKey = (body.deviceBypassKey ?? '').trim();
 
   if (!teamName || !password || !role) {
     response.status(400).json({ error: 'teamName, password, and role are required' });
@@ -327,12 +328,77 @@ app.post('/api/auth/login', route(async (request, response) => {
     return;
   }
 
+  // ── DEVICE LOCK ──────────────────────────────────────────────────────────
+  // Block a second device logging in as the same team AND same role.
+  // Different role = allowed (e.g., same team has one solver + one runner).
+  // If a bypass key is provided and matches the admin-set key, allow it.
+  const activeDevices: Record<string, string> = (team as any).activeDevices ?? {};
+  const existingFingerprint = activeDevices[role];
+
+  if (existingFingerprint) {
+    // Get IP and Location
+    const clientIp = (request.headers['x-forwarded-for'] as string || request.socket.remoteAddress || '').split(',')[0].trim();
+    let geoString = `\n**IP:** ${clientIp || 'Unknown'}`;
+    if (clientIp && clientIp !== '::1' && clientIp !== '127.0.0.1') {
+      try {
+        const geoRes = await fetch(`http://ip-api.com/json/${clientIp}?fields=status,country,regionName,city,lat,lon,isp`);
+        const geoData = await geoRes.json();
+        if (geoData.status === 'success') {
+          geoString = `\n**IP:** ${clientIp}\n**Location:** ${geoData.city}, ${geoData.regionName}, ${geoData.country}\n**ISP:** ${geoData.isp}\n**Map:** <https://www.google.com/maps?q=${geoData.lat},${geoData.lon}>`;
+        }
+      } catch { /* ignore fetch failure */ }
+    }
+
+    // There is already a device registered for this team+role.
+    // Allow only if a correct bypass key is supplied.
+    const bypassConfig = await configCollection.findOne({ key: 'deviceBypassKey' });
+    const serverBypassKey: string = bypassConfig?.value ?? '';
+
+    if (!deviceBypassKey || !serverBypassKey || deviceBypassKey !== serverBypassKey) {
+      // 🔴 Discord alert: blocked login attempt
+      void sendAdminAlert(
+        `🔴 **DEVICE CONFLICT BLOCKED**\n` +
+        `━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+        `**Team:** ${team.name}\n` +
+        `**Role:** ${role.toUpperCase()}\n` +
+        `**Time:** ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}${geoString}\n` +
+        `A second device attempted to login as **${team.name} [${role.toUpperCase()}]** but was blocked.\n` +
+        `Provide a bypass key from Admin → Config → Device Lock if this is authorized.`,
+        undefined,
+        'auth'
+      );
+      response.status(409).json({
+        error: 'DEVICE_CONFLICT',
+        message: 'This account is already active on another device for this role. Request a bypass key from the event admin to override.',
+      });
+      return;
+    }
+    // Bypass key is correct — the new device takes over, old session is invalidated implicitly.
+    // 🟡 Discord alert: override succeeded
+    void sendAdminAlert(
+      `🟡 **DEVICE OVERRIDE AUTHORIZED**\n` +
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+      `**Team:** ${team.name}\n` +
+      `**Role:** ${role.toUpperCase()}\n` +
+      `**Time:** ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}${geoString}\n` +
+      `A bypass key was used to override the device lock for **${team.name} [${role.toUpperCase()}]**.\n` +
+      `The previous session has been invalidated. If this was unauthorized, rotate the bypass key immediately.`,
+      undefined,
+      'auth'
+    );
+  }
+  // ─────────────────────────────────────────────────────────────────────────
+
   const token = signToken({
     kind: 'team',
     teamId: team._id.toString(),
     teamName: team.name,
     role,
   });
+
+  // Store a short fingerprint of this token so we can detect a second login later.
+  // We use the last 16 chars of the JWT signature segment (unique per token).
+  const tokenFingerprint = token.split('.').pop()?.slice(-16) ?? token.slice(-16);
 
   const teams = await getTeamsCollection();
 
@@ -341,7 +407,17 @@ app.post('/api/auth/login', route(async (request, response) => {
     gameState = { ...gameState, startTime: new Date().toISOString() };
   }
 
-  await teams.updateOne({ _id: team._id }, { $set: { lastLoginAt: new Date(), updatedAt: new Date(), gameState } });
+  await teams.updateOne(
+    { _id: team._id },
+    {
+      $set: {
+        lastLoginAt: new Date(),
+        updatedAt: new Date(),
+        gameState,
+        [`activeDevices.${role}`]: tokenFingerprint,
+      },
+    }
+  );
 
   const augmentedState = await augmentGameState(team._id.toString(), gameState);
 
@@ -729,6 +805,20 @@ app.post('/api/team/request-help', requireAuth, route(async (request: AuthedRequ
 
   response.json({ ok: true });
 }));
+function getDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371e3; // Earth radius in meters
+  const p1 = lat1 * Math.PI / 180;
+  const p2 = lat2 * Math.PI / 180;
+  const dp = (lat2 - lat1) * Math.PI / 180;
+  const dl = (lon2 - lon1) * Math.PI / 180;
+
+  const a = Math.sin(dp / 2) * Math.sin(dp / 2) +
+            Math.cos(p1) * Math.cos(p2) *
+            Math.sin(dl / 2) * Math.sin(dl / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return R * c;
+}
 
 app.post('/api/runner/verify-location-qr', requireAuth, route(async (request: AuthedRequest, response) => {
   const auth = request.auth;
@@ -737,7 +827,7 @@ app.post('/api/runner/verify-location-qr', requireAuth, route(async (request: Au
     return;
   }
 
-  const { qrCode } = request.body as { qrCode?: string };
+  const { qrCode, lat, lng } = request.body as { qrCode?: string; lat?: number; lng?: number };
   if (!qrCode?.trim()) {
     response.status(400).json({ error: 'qrCode is required' });
     return;
@@ -758,6 +848,23 @@ app.post('/api/runner/verify-location-qr', requireAuth, route(async (request: Au
   const expectedQrCode = resolveQuestionLocationQrCode(question);
   if (expectedQrCode.trim().toUpperCase() !== qrCode.trim().toUpperCase()) {
     response.status(401).json({ error: 'Invalid location QR' });
+    return;
+  }
+
+  // Geofence enforcement
+  if (lat !== undefined && lng !== undefined) {
+    const targetLat = parseFloat(question.coord.lat);
+    const targetLng = parseFloat(question.coord.lng);
+    
+    if (!isNaN(targetLat) && !isNaN(targetLng)) {
+      const dist = getDistance(lat, lng, targetLat, targetLng);
+      if (dist > 25) {
+        response.status(403).json({ error: `Area Restricted: You are ${Math.round(dist)}m away from the target location.` });
+        return;
+      }
+    }
+  } else {
+    response.status(403).json({ error: 'Location required to scan QR. Please enable location services.' });
     return;
   }
 
@@ -1214,6 +1321,63 @@ app.post('/api/admin/chat/send', requireAdmin, route(async (request: AdminAuthed
   response.json({ ok: true });
 }));
 
+// ── DEVICE LOCK ADMIN ROUTES ─────────────────────────────────────────────────
+
+/** GET /api/admin/device-bypass-key — returns the current bypass key (or empty string) */
+app.get('/api/admin/device-bypass-key', requireAdmin, route(async (_request: AdminAuthedRequest, response) => {
+  const configCollection = await getConfigCollection();
+  const cfg = await configCollection.findOne({ key: 'deviceBypassKey' });
+  response.json({ bypassKey: cfg?.value ?? '' });
+}));
+
+/** POST /api/admin/device-bypass-key — set or regenerate the bypass key */
+app.post('/api/admin/device-bypass-key', requireAdmin, route(async (request: AdminAuthedRequest, response) => {
+  const { bypassKey } = request.body as { bypassKey?: string };
+  // If no key supplied, auto-generate a random 8-char uppercase key
+  const key = (bypassKey ?? '').trim() || Math.random().toString(36).slice(2, 10).toUpperCase();
+  const configCollection = await getConfigCollection();
+  await configCollection.updateOne(
+    { key: 'deviceBypassKey' },
+    { $set: { key: 'deviceBypassKey', value: key, updatedAt: new Date() } },
+    { upsert: true }
+  );
+  response.json({ ok: true, bypassKey: key });
+}));
+
+/** DELETE /api/admin/device-bypass-key — clear the bypass key (disable bypass entirely) */
+app.delete('/api/admin/device-bypass-key', requireAdmin, route(async (_request: AdminAuthedRequest, response) => {
+  const configCollection = await getConfigCollection();
+  await configCollection.updateOne(
+    { key: 'deviceBypassKey' },
+    { $set: { key: 'deviceBypassKey', value: '', updatedAt: new Date() } },
+    { upsert: true }
+  );
+  response.json({ ok: true });
+}));
+
+/** POST /api/admin/clear-device-lock — clear device lock for a specific team+role or all teams */
+app.post('/api/admin/clear-device-lock', requireAdmin, route(async (request: AdminAuthedRequest, response) => {
+  const { teamId, role } = request.body as { teamId?: string; role?: string };
+  const teams = await getTeamsCollection();
+
+  if (teamId && teamId !== 'all') {
+    // Clear specific team's lock
+    const oid = toObjectId(teamId, 'team id');
+    if (role && (role === 'solver' || role === 'runner')) {
+      await teams.updateOne({ _id: oid }, { $unset: { [`activeDevices.${role}`]: '' } });
+    } else {
+      await teams.updateOne({ _id: oid }, { $unset: { activeDevices: '' } });
+    }
+  } else {
+    // Clear all teams
+    await teams.updateMany({}, { $unset: { activeDevices: '' } });
+  }
+
+  response.json({ ok: true });
+}));
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 // --- Admin Phrases CRUD ---
 app.get('/api/admin/phrases', requireAdmin, route(async (request: AdminAuthedRequest, response) => {
   const collection = await getAdminPhrasesCollection();
@@ -1307,8 +1471,16 @@ app.post('/api/admin/questions', requireAdmin, route(async (request: AdminAuthed
   const now = new Date();
   const questions = await getQuestionsCollection();
   try {
-    await generateQuestionQrAsset(payload);
+    const qrPath = await generateQuestionQrAsset(payload);
     const result = await questions.insertOne({ ...payload, createdAt: now, updatedAt: now });
+    
+    if (payload.coord) {
+      // Background task: send to Discord
+      sendQRToDiscord(qrPath, payload.round, payload.coord.lat, payload.coord.lng, payload.coord.place || `Location ${payload.round}`).catch(err => {
+        console.error('Failed to send QR to Discord on question creation:', err);
+      });
+    }
+
     response.status(201).json({ id: result.insertedId.toString(), locationQrCode: payload.locationQrCode });
   } catch (error) {
     throw new HttpError(400, 'Invalid question payload or duplicate round number');
@@ -1328,8 +1500,16 @@ app.put('/api/admin/questions/:id', requireAdmin, route(async (request: AdminAut
     }
 
     const payload = createQuestionPayload(request.body, existing);
-    await generateQuestionQrAsset(payload);
+    const qrPath = await generateQuestionQrAsset(payload);
     await questions.updateOne({ _id: objectId }, { $set: { ...payload, updatedAt: new Date() } });
+
+    if (payload.coord) {
+      // Background task: send to Discord
+      sendQRToDiscord(qrPath, payload.round, payload.coord.lat, payload.coord.lng, payload.coord.place || `Location ${payload.round}`).catch(err => {
+        console.error('Failed to send QR to Discord on question update:', err);
+      });
+    }
+
     response.json({ ok: true });
   } catch {
     throw new HttpError(400, 'Invalid question payload or duplicate round number');

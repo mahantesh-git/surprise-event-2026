@@ -1,9 +1,10 @@
-import { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, ChatInputCommandInteraction, PermissionsBitField, Events } from 'discord.js';
+import { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, ChatInputCommandInteraction, PermissionsBitField, Events, AttachmentBuilder } from 'discord.js';
 import { getTeamsCollection } from './db';
 import { ChatMessage } from './types';
 
 let discordClient: Client | null = null;
 let adminChannelId: string | null = null;
+let authChannelId: string | null = null;
 
 /**
  * Initializes the Discord bridge with failsafe error handling.
@@ -11,12 +12,14 @@ let adminChannelId: string | null = null;
 export async function initDiscordBridge() {
   const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
   const ADMIN_CHANNEL_ID = process.env.ADMIN_CHANNEL_ID;
+  const ADMIN_CHANNEL_ID_AUTH = process.env.ADMIN_CHANNEL_ID_AUTH || process.env.ADMIN_CHANNEL_ID;
   const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID;
   const ADMIN_DISCORD_USER_ID = process.env.ADMIN_DISCORD_USER_ID;
 
   console.log('Discord Bridge init check:', {
     hasToken: !!DISCORD_BOT_TOKEN,
     hasChannelId: !!ADMIN_CHANNEL_ID,
+    hasAuthChannelId: !!ADMIN_CHANNEL_ID_AUTH,
     hasClientId: !!DISCORD_CLIENT_ID,
     tokenLength: DISCORD_BOT_TOKEN?.length ?? 0,
   });
@@ -27,6 +30,7 @@ export async function initDiscordBridge() {
   }
 
   adminChannelId = ADMIN_CHANNEL_ID;
+  authChannelId = ADMIN_CHANNEL_ID_AUTH || null;
 
   const pendingClient = new Client({
     intents: [
@@ -126,9 +130,11 @@ export async function initDiscordBridge() {
 /**
  * Sends an alert to the admin channel.
  */
-export async function sendAdminAlert(text: string, location?: { lat: number; lng: number }): Promise<string | null> {
-  if (!discordClient || !adminChannelId) {
-    console.warn('Discord Bridge: Cannot send alert. Bridge not initialized.');
+export async function sendAdminAlert(text: string, location?: { lat: number; lng: number }, category: 'help' | 'auth' = 'help'): Promise<string | null> {
+  const targetChannelId = category === 'auth' && authChannelId ? authChannelId : adminChannelId;
+
+  if (!discordClient || !targetChannelId) {
+    console.warn('Discord Bridge: Cannot send alert. Bridge not initialized or channel not configured.');
     return null;
   }
   try {
@@ -138,14 +144,14 @@ export async function sendAdminAlert(text: string, location?: { lat: number; lng
     }
 
     // force: false uses cache if available, avoids extra API calls
-    const channel = await discordClient.channels.fetch(adminChannelId, { force: false });
+    const channel = await discordClient.channels.fetch(targetChannelId, { force: false });
 
     if (!channel) {
-      console.error(`Discord Bridge: Channel ${adminChannelId} not found.`);
+      console.error(`Discord Bridge: Channel ${targetChannelId} not found.`);
       return null;
     }
     if (!channel.isTextBased()) {
-      console.error(`Discord Bridge: Channel ${adminChannelId} is not a text channel (type: ${channel.type}).`);
+      console.error(`Discord Bridge: Channel ${targetChannelId} is not a text channel (type: ${channel.type}).`);
       return null;
     }
     if (!('send' in channel)) {
@@ -200,5 +206,37 @@ async function handleSlashCommand(interaction: ChatInputCommandInteraction) {
     try {
       await interaction.reply({ content: 'CRITICAL: Failed to transmit message.', ephemeral: true });
     } catch { /* ignore */ }
+  }
+}
+
+export async function sendQRToDiscord(
+  qrCodePath: string,
+  sequence: number,
+  lat: string | number,
+  lng: string | number,
+  place: string,
+) {
+  if (!discordClient) return;
+  const channelId = process.env.ADMIN_CHANNEL_ID_QR || process.env.ADMIN_CHANNEL_ID;
+  if (!channelId) {
+    console.warn('Discord Bridge: ADMIN_CHANNEL_ID_QR not set, cannot send QR code.');
+    return;
+  }
+
+  try {
+    const channel = await discordClient.channels.fetch(channelId, { force: false });
+    if (!channel || !channel.isTextBased() || !('send' in channel)) {
+      console.error(`Discord Bridge: Channel ${channelId} not found or not text-based.`);
+      return;
+    }
+
+    const attachment = new AttachmentBuilder(qrCodePath, { name: `qr_seq_${sequence}.png` });
+    
+    await channel.send({
+      content: `**NEW QR CODE GENERATED**\n**Sequence**: ${sequence}\n**Location**: ${place}\n**Coordinates**: ${lat}, ${lng}\n**Map**: <https://www.google.com/maps?q=${lat},${lng}>`,
+      files: [attachment]
+    });
+  } catch (error) {
+    console.error('Discord Bridge: Failed to send QR code to Discord', error);
   }
 }

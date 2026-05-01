@@ -50,6 +50,10 @@ Two teammates. One goal. Ten rounds.
 - **🎙️ Integrated Walkie-Talkie**: Built-in Push-To-Talk (PTT) voice link between teammates, eliminating the need for external calls.
 - **Tactical Support Channel**: Integrated "Request Help" mechanism with two-way alerts and smart notification persistence.
 
+#### 🛡️ Anti-Spoof Security & Logistics
+- **Strict Geofence Enforcement**: Runner QR scanners are physically locked. The scanner only activates when the operative's live GPS falls within a **25-meter radius** of the target location, backed by server-side distance validation.
+- **Automated Asset Dispatch**: Unique Location QR codes are dynamically generated and instantly dispatched to a secure Discord channel for on-site printing when admins configure new waypoints.
+
 ---
 
 ## 🛠️ Tech Stack
@@ -108,6 +112,7 @@ PISTON_API_URL=http://localhost:2000/api/v2/execute
 DISCORD_BOT_TOKEN=your_bot_token
 DISCORD_CLIENT_ID=your_client_id
 ADMIN_CHANNEL_ID=your_channel_id
+ADMIN_CHANNEL_ID_QR=your_qr_assets_channel_id
 ADMIN_DISCORD_USER_ID=your_discord_id
 ```
 
@@ -161,6 +166,8 @@ quest_-the-code-scavenger/
 
 - JWT-based session auth with role separation (solver / runner / admin)
 - Admin Discord commands restricted to specific channel + user ID
+- **Hardware/Location Lock**: Runners cannot scan QR codes unless physically verified via GPS within a 25-meter radius of the target coordinates.
+- Unique QR payloads per location to prevent unauthorized remote scans.
 - `VITE_DEV_MODE=false` enforced in production (disables answer autofill)
 - All secrets in environment variables — never committed to git
 

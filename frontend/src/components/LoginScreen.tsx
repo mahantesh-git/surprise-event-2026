@@ -1,7 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { cn } from '@/lib/utils';
-import { Shield, Activity, ChevronRight, Lock, Command, AlertCircle } from 'lucide-react';
+import { Shield, AlertCircle, Smartphone, Key } from 'lucide-react';
 import { TacticalStatus } from './TacticalStatus';
 import { QuestLogo } from './QuestLogo';
 
@@ -15,6 +14,10 @@ interface LoginScreenProps {
   onLogin: () => void;
   onAdminClick: () => void;
   isLoggingIn?: boolean;
+  // Device conflict state
+  deviceConflict?: boolean;
+  deviceBypassKey?: string;
+  onDeviceBypassKeyChange?: (v: string) => void;
 }
 
 export function LoginScreen({
@@ -27,6 +30,9 @@ export function LoginScreen({
   onLogin,
   onAdminClick,
   isLoggingIn = false,
+  deviceConflict = false,
+  deviceBypassKey = '',
+  onDeviceBypassKeyChange,
 }: LoginScreenProps) {
   return (
     <div className="relative min-h-screen overflow-hidden select-none font-sans text-white flex flex-col justify-between">
@@ -74,7 +80,52 @@ export function LoginScreen({
           className="w-full max-w-[460px] relative"
         >
           <div className="glass-morphism px-6 py-8 sm:px-11 sm:py-10 rounded-none [clip-path:var(--clip-edges)] shadow-2xl border-l border-[var(--color-accent)]/30">
-            <div className="space-y-8">
+            <div className="space-y-6">
+
+              {/* ── DEVICE CONFLICT BANNER ── */}
+              <AnimatePresence>
+                {deviceConflict && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    className="border border-amber-500/40 bg-amber-500/5 p-4 space-y-3"
+                  >
+                    <div className="flex items-start gap-3">
+                      <Smartphone className="w-4 h-4 text-amber-400 mt-0.5 shrink-0" />
+                      <div>
+                        <p className="font-mono text-[11px] uppercase tracking-widest text-amber-400 font-bold mb-1">
+                          DEVICE_CONFLICT
+                        </p>
+                        <p className="font-mono text-[10px] text-amber-400/70 leading-relaxed">
+                          This account is already active on another device for the <span className="uppercase font-bold">{role}</span> role.
+                          Enter the admin-issued bypass key to override.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Bypass Key Input */}
+                    <div className="space-y-1.5">
+                      <label className="block font-mono text-[10px] uppercase tracking-[0.2em] text-amber-400/60">
+                        OVERRIDE_KEY
+                      </label>
+                      <div className="relative">
+                        <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-amber-400/50" />
+                        <input
+                          type="text"
+                          value={deviceBypassKey}
+                          onChange={(e) => onDeviceBypassKeyChange?.(e.target.value.toUpperCase())}
+                          onKeyDown={(e) => e.key === 'Enter' && onLogin()}
+                          placeholder="ADMIN_KEY"
+                          className="w-full bg-amber-500/5 border border-amber-500/30 focus:border-amber-400/60 outline-none pl-9 pr-4 py-2.5 font-mono text-xs tracking-[0.2em] uppercase text-amber-300 placeholder:text-amber-500/30 transition-all"
+                          autoFocus
+                        />
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
               {/* Team Name Input */}
               <div className="space-y-2.5">
                 <label className="block font-mono text-[11px] uppercase tracking-[0.2em] text-white/60">
@@ -104,7 +155,7 @@ export function LoginScreen({
                 />
               </div>
 
-              {loginError && (
+              {loginError && !deviceConflict && (
                 <motion.div
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
@@ -123,11 +174,15 @@ export function LoginScreen({
               {/* Login Button */}
               <button
                 onClick={onLogin}
-                disabled={isLoggingIn}
-                className="group relative w-full py-4 border-y border-[var(--color-accent)]/50 hover:bg-[var(--color-accent)]/5 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={isLoggingIn || (deviceConflict && !deviceBypassKey.trim())}
+                className="group relative w-full py-4 border-y border-[var(--color-accent)]/50 hover:bg-[var(--color-accent)]/5 transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <span className="relative z-10 font-mono text-[13px] uppercase tracking-[0.3em] text-[var(--color-accent)] group-hover:text-white">
-                  {isLoggingIn ? 'AUTHORIZING...' : 'AUTHORIZE ACCESS'}
+                  {isLoggingIn
+                    ? 'AUTHORIZING...'
+                    : deviceConflict
+                    ? 'OVERRIDE & AUTHORIZE'
+                    : 'AUTHORIZE ACCESS'}
                 </span>
                 <div className="absolute inset-0 bg-[var(--color-accent)]/0 group-hover:bg-[var(--color-accent)]/5 transition-colors" />
               </button>

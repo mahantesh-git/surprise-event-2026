@@ -79,7 +79,9 @@ The Runner can now see:
 They can walk/run to the spot or tap **"Open Sector Map"** to see the full tactical overlay.
 
 ### Step 4 — Scan the QR Code
-At the location, the Runner scans the physical **QR code**. The system verifies their physical presence via GPS and the scan data.
+At the location, the Runner must physically approach the designated coordinates. 
+- The QR scanner is **hardware-locked** and will remain disabled until the Runner is within **25 meters** of the exact target location.
+- Once within range, the scanner unlocks, and the Runner scans the unique, location-specific physical **QR code**. The system securely verifies their physical presence via server-side GPS validation and cryptographic checks.
 
 ### Step 5 — Enter the Passkey & Complete Challenge
 The Runner enters the secret passkey from the Solver. This unlocks the **Mini-Challenge** (Target Lock, Neural Decode, or Cipher Crack).

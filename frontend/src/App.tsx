@@ -33,6 +33,7 @@ import { useGameState, Role } from '@/hooks/useGameState';
 import { useRunnerGps } from '@/hooks/useRunnerGps';
 import { useSocket } from '@/contexts/SocketContext';
 import { getQuestions, compileCode, getFinalRoundQrCode, verifyRunnerFinalQr, RoundQuestion, requestTacticalSupport, claimTeamRoundSwap } from '@/lib/api';
+import { DeviceConflictError } from '@/lib/api';
 import type { SupportedLanguage } from '@/components/CodeEditor';
 import { CodeEditor, LANGUAGE_TEMPLATES } from '@/components/CodeEditor';
 import { PersistentProgress } from '@/components/PersistentProgress';
@@ -222,6 +223,8 @@ export default function App() {
   const [teamName, setTeamName] = useState('');
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState<string | null>(null);
+  const [deviceConflict, setDeviceConflict] = useState(false);
+  const [deviceBypassKey, setDeviceBypassKey] = useState('');
   const normalizedPathname = pathname.replace(/\/$/, '');
   const role = normalizedPathname === '/solver' || normalizedPathname === '/runner' ? (normalizedPathname.slice(1) as Role) : null;
   const { session, gameState, score, loading, login, logout, resetGame, updateState, sync } = useGameState((role ?? 'solver') as Role);
@@ -312,13 +315,22 @@ export default function App() {
         }
       }
 
-      await login(teamName, password);
+      await login(teamName, password, deviceConflict ? deviceBypassKey : undefined);
+      // Successful login — clear conflict state
+      setDeviceConflict(false);
+      setDeviceBypassKey('');
       if (role === 'solver' || role === 'runner') {
         await requestAppFullscreen();
         wasFullscreenRef.current = !!document.fullscreenElement;
       }
     } catch (error) {
-      setLoginError(error instanceof Error ? error.message : 'Login failed');
+      if (error instanceof DeviceConflictError) {
+        // Show the bypass key prompt instead of a generic error
+        setDeviceConflict(true);
+        setLoginError(null);
+      } else {
+        setLoginError(error instanceof Error ? error.message : 'Login failed');
+      }
     } finally {
       setIsLoggingIn(false);
     }
@@ -328,6 +340,8 @@ export default function App() {
     logout();
     setPassword('');
     setLoginError(null);
+    setDeviceConflict(false);
+    setDeviceBypassKey('');
   };
 
   const baseRound = (rounds && rounds.length > 0 && gameState) ? rounds[Math.min(gameState.round, rounds.length - 1)] : null;
@@ -777,6 +791,9 @@ export default function App() {
                   isLoggingIn={isLoggingIn}
                   loginError={loginError}
                   onAdminClick={() => { window.history.pushState({}, '', '/admin'); setPathname('/admin'); }}
+                  deviceConflict={deviceConflict}
+                  deviceBypassKey={deviceBypassKey}
+                  onDeviceBypassKeyChange={setDeviceBypassKey}
                 />
               </motion.div>
             )}

@@ -55,13 +55,18 @@ export interface TeamDocument {
   createdAt: Date;
   updatedAt: Date;
   lastLoginAt?: Date;
-  swappedRounds?: Record<string, string>; // Maps round index string to reserve_pool question _id
+  swappedRounds?: Record<string, string>;
+  // Device lock: tracks which session fingerprint is active per role
+  // key = role ('solver'|'runner'), value = session token fingerprint (first 16 chars of JWT)
+  activeDevices?: Record<string, string>;
 }
 
 export interface LoginPayload {
   teamName?: string;
   password?: string;
   role?: Role;
+  // Optional bypass key for second-device login on same team+role
+  deviceBypassKey?: string;
 }
 
 export interface TeamTokenPayload {

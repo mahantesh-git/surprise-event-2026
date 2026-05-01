@@ -49,8 +49,9 @@ Before the mission begins, the Runner's device is in **Lockdown Mode**.
 
 ### Phase B: Location Verification (QR scanning)
 Upon arrival, the Runner must prove their physical presence.
-- **Scanning:** The Runner must find and scan a physical QR code labeled "QUEST-AUTHORIZED-LOCATION" at the site.
-- **Validation:** The scanner validates the QR data. If it doesn't match the authorized string, access remains "Restricted."
+- **Strict Geofence Enforcement:** The physical location is constantly tracked via GPS. The scanner UI is hardware-locked and the scan button remains disabled until the Runner reaches a **25-meter proximity** of the target's precise coordinates. A visual "DISTANCE TO TARGET" indicator provides proximity feedback.
+- **Scanning:** Once within the 25-meter radius, the scanner activates. The Runner must find and scan a physically printed, **unique, location-specific** QR code at the site (assets are dynamically generated and dispatched via a secure Discord channel during admin configuration).
+- **Server Validation:** The backend simultaneously calculates the Haversine distance to prevent client-side spoofing and cryptographically verifies the unique QR payload. If the distance exceeds 25 meters or the QR data doesn't match the specific node, access remains "Restricted."
 
 ### Phase C: Biometric/Passkey Handoff
 Once the location is verified, the system requires secret data from the **Solver**.

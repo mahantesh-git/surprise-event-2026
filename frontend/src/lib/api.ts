@@ -62,6 +62,14 @@ export class ApiError extends Error {
   }
 }
 
+// Special error thrown when backend returns DEVICE_CONFLICT (409)
+export class DeviceConflictError extends Error {
+  constructor() {
+    super('DEVICE_CONFLICT');
+    this.name = 'DeviceConflictError';
+  }
+}
+
 export interface TeamSession {
   token: string;
   role: Role;
@@ -114,16 +122,20 @@ async function requestJson<T>(path: string, init: RequestInit = {}, token?: stri
 
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
+    // Surface device conflicts as a distinct error type
+    if (response.status === 409 && payload?.error === 'DEVICE_CONFLICT') {
+      throw new DeviceConflictError();
+    }
     throw new ApiError(payload?.error || 'Request failed', response.status);
   }
 
   return payload as T;
 }
 
-export async function loginTeam(teamName: string, password: string, role: Role) {
+export async function loginTeam(teamName: string, password: string, role: Role, deviceBypassKey?: string) {
   return requestJson<TeamSession>('/auth/login', {
     method: 'POST',
-    body: JSON.stringify({ teamName, password, role }),
+    body: JSON.stringify({ teamName, password, role, ...(deviceBypassKey ? { deviceBypassKey } : {}) }),
   });
 }
 
@@ -146,10 +158,10 @@ export function isAuthError(error: unknown) {
   return error instanceof ApiError && (error.status === 401 || error.status === 403 || error.status === 404);
 }
 
-export async function verifyRunnerLocationQr(token: string, qrCode: string) {
+export async function verifyRunnerLocationQr(token: string, qrCode: string, lat?: number, lng?: number) {
   return requestJson<{ ok: boolean }>('/runner/verify-location-qr', {
     method: 'POST',
-    body: JSON.stringify({ qrCode }),
+    body: JSON.stringify({ qrCode, lat, lng }),
   }, token);
 }
 

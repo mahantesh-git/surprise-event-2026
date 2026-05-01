@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { 
   Settings, 
   MessageSquare, 
@@ -10,7 +10,12 @@ import {
   Power,
   Zap,
   Target,
-  Cpu
+  Cpu,
+  Smartphone,
+  KeyRound,
+  Trash2,
+  Copy,
+  Check
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -84,6 +89,74 @@ export function ConfigManagement({ token, config, onRefresh, onError }: ConfigMa
       onError(err instanceof Error ? err.message : 'Failed to wipe database');
     }
   };
+
+  // ── DEVICE LOCK STATE ────────────────────────────────────────────────────
+  const [bypassKey, setBypassKey] = useState('');
+  const [bypassKeyLoading, setBypassKeyLoading] = useState(false);
+  const [bypassKeyCopied, setBypassKeyCopied] = useState(false);
+
+  const fetchBypassKey = useCallback(async () => {
+    if (!token) return;
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_HOST || import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000'}/api/admin/device-bypass-key`, {
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      });
+      const data = await res.json();
+      setBypassKey(data.bypassKey || '');
+    } catch { /* silent */ }
+  }, [token]);
+
+  useEffect(() => { void fetchBypassKey(); }, [fetchBypassKey]);
+
+  const handleGenerateBypassKey = async () => {
+    if (!token) return;
+    setBypassKeyLoading(true);
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_HOST || import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000'}/api/admin/device-bypass-key`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json();
+      setBypassKey(data.bypassKey || '');
+    } catch (err) {
+      onError('Failed to generate bypass key');
+    } finally {
+      setBypassKeyLoading(false);
+    }
+  };
+
+  const handleClearBypassKey = async () => {
+    if (!token) return;
+    try {
+      await fetch(`${import.meta.env.VITE_API_HOST || import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000'}/api/admin/device-bypass-key`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setBypassKey('');
+    } catch { onError('Failed to clear bypass key'); }
+  };
+
+  const handleClearAllDeviceLocks = async () => {
+    if (!token || !window.confirm('Clear device locks for ALL teams? They will need to log in again.')) return;
+    try {
+      await fetch(`${import.meta.env.VITE_API_HOST || import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000'}/api/admin/clear-device-lock`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ teamId: 'all' }),
+      });
+      onRefresh();
+    } catch { onError('Failed to clear device locks'); }
+  };
+
+  const handleCopyKey = () => {
+    if (!bypassKey) return;
+    navigator.clipboard.writeText(bypassKey).then(() => {
+      setBypassKeyCopied(true);
+      setTimeout(() => setBypassKeyCopied(false), 2000);
+    });
+  };
+  // ─────────────────────────────────────────────────────────────────────────
 
   return (
     <div className="space-y-12">
@@ -182,6 +255,73 @@ export function ConfigManagement({ token, config, onRefresh, onError }: ConfigMa
                  >
                    EXECUTE_WIPE
                  </Button>
+              </div>
+           </section>
+
+           {/* ── DEVICE LOCK MANAGEMENT ── */}
+           <section className="space-y-4">
+              <div className="flex items-center gap-4">
+                <Smartphone className="text-[var(--color-accent)] w-4 h-4" />
+                <h3 className="text-[10px] font-mono uppercase tracking-[0.4em] text-[var(--color-accent)]/80">Device_Lock_Management</h3>
+              </div>
+              <div className="corner-card glass-morphism border-[var(--color-accent)]/20 p-8 space-y-6">
+                <div className="space-y-1">
+                  <h4 className="font-black uppercase tracking-widest text-sm text-[var(--color-accent)]">First-Device Lock</h4>
+                  <p className="text-[10px] font-mono text-white/50 uppercase tracking-tight max-w-[340px]">
+                    The first device to log into a team+role is locked in. A second device needs the bypass key below.
+                    Different roles on the same team are always allowed.
+                  </p>
+                </div>
+
+                {/* Current Bypass Key */}
+                <div className="space-y-2">
+                  <label className="font-mono text-[9px] uppercase tracking-[0.3em] text-[var(--color-accent)]/60">Current Override Key</label>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 bg-[var(--color-accent)]/5 border border-[var(--color-accent)]/20 px-4 py-3 font-mono text-sm tracking-[0.3em] uppercase text-[var(--color-accent)]">
+                      {bypassKey || <span className="text-white/20 text-xs tracking-widest">NOT SET — bypass disabled</span>}
+                    </div>
+                    {bypassKey && (
+                      <button
+                        onClick={handleCopyKey}
+                        className="p-3 border border-[var(--color-accent)]/20 hover:border-[var(--color-accent)]/50 text-[var(--color-accent)]/60 hover:text-[var(--color-accent)] transition-all"
+                        title="Copy key"
+                      >
+                        {bypassKeyCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex flex-wrap gap-3">
+                  <Button
+                    variant="ghost"
+                    onClick={handleGenerateBypassKey}
+                    disabled={bypassKeyLoading}
+                    className="h-10 px-5 font-mono text-[10px] tracking-widest uppercase text-[var(--color-accent)] border border-[var(--color-accent)]/30 hover:bg-[var(--color-accent)]/10"
+                  >
+                    <KeyRound className="w-3.5 h-3.5 mr-2" />
+                    {bypassKeyLoading ? 'Generating...' : 'Generate Key'}
+                  </Button>
+                  {bypassKey && (
+                    <Button
+                      variant="ghost"
+                      onClick={handleClearBypassKey}
+                      className="h-10 px-5 font-mono text-[10px] tracking-widest uppercase text-white/40 border border-white/10 hover:border-white/20 hover:text-white/60"
+                    >
+                      <X className="w-3.5 h-3.5 mr-2" />
+                      Clear Key
+                    </Button>
+                  )}
+                  <Button
+                    variant="ghost"
+                    onClick={handleClearAllDeviceLocks}
+                    className="h-10 px-5 font-mono text-[10px] tracking-widest uppercase text-[var(--color-accent)]/70 border border-[var(--color-accent)]/20 hover:bg-[var(--color-accent)]/10 hover:text-[var(--color-accent)]"
+                  >
+                    <Trash2 className="w-3.5 h-3.5 mr-2" />
+                    Clear All Locks
+                  </Button>
+                </div>
               </div>
            </section>
         </div>
