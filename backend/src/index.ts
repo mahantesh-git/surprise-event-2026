@@ -253,7 +253,23 @@ function buildFinalRoundQrCode(teamId: string) {
   return `QUEST-FINISH-${teamId.slice(-6).toUpperCase()}`;
 }
 
-app.use(cors());
+// CORS Configuration - Hardened for production
+app.use(cors({
+  origin: '*', // In production, you might want to restrict this to your frontend domain
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'ngrok-skip-browser-warning'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range'],
+  credentials: false
+}));
+
+// Manual OPTIONS pre-flight handler
+app.options('*', (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin, ngrok-skip-browser-warning');
+  res.sendStatus(200);
+});
+
 app.use(express.json());
 
 app.get('/api/health', (_request, response) => {
