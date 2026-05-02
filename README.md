@@ -15,14 +15,37 @@
 
 ---
 
-## 🎮 How It Works
+## 🎮 Game Modes
 
-Two teammates. One goal. Ten rounds.
+### 💻 ARENA 1: Spec-Checker 
+A high-intensity, synchronized frontend coding challenge to weed out the weak.
+- **The Objective**: Teams must precisely recreate target web layouts using HTML, CSS, and JS across **4 consecutive rounds (slots)**.
+- **The Solver**: Writes code in a built-in tactical Tri-Panel Editor (HTML/CSS/JS).
+- **The Runner**: Has no editor. Instead, their device displays a real-time, live-updating visual preview of what the Solver is coding. They act as the "Quality Assurance," directing the Solver on visual accuracy and layout.
+- **Mechanics**:
+  - **15-Minute Timer**: Each slot has a strict 15-minute server-authoritative time limit.
+  - **Admin Verification**: Solvers submit their code. Admins review the live preview and source code to manually approve or reject the submission.
+  - **Tactical Options**: Teams can use a "Burn Swap" (0 points, swaps the question) or "Skip" entirely if stuck.
+  - **Scoring**: 300 points awarded for every approved slot.
 
-- **Solver** — Stays at base, solves coding puzzles in a browser terminal. Each solved puzzle generates a passkey and unlocks tactical data for the field.
-- **Runner** — Deploys to the field. Their map and mission data are locked until the Solver clears the encryption. Once synced, they navigate, scan QR codes, and complete physical challenges.
+### 🏃 ARENA 2: The Scavenger Hunt
+Two teammates. One goal. Ten rounds. Each round follows a strict, synchronized operational sequence:
 
-→ See [`GAME_FLOW.md`](./GAME_FLOW.md) for the full player experience (no tech details).
+1. **Solver Decrypts**: The Solver receives a coding challenge (logic, debugging, algorithm) in their browser terminal. Solving it generates a **secret passkey** (e.g., `QUEST-R3-7842`).
+2. **Runner Navigation**: Once the Solver provides the passkey and authorizes ingress, the Runner's **Sector Map** unlocks, displaying the target coordinates and a live walking route.
+3. **Location Verification**: The Runner physically approaches the target. The hardware-locked QR scanner activates only when GPS confirms they are within a **25-meter radius**. The Runner scans the unique physical QR code to prove their presence.
+4. **Mini-Challenge**: The Runner enters the passkey to unlock the final clearance step—a fast-paced mini-game. 
+5. **Round Cleared**: Completing the game syncs the progress to the backend, updates the global leaderboard, and unlocks the next round for the Solver.
+
+#### 🏃 Implemented Runner Mini-Games
+The Runner faces three distinct mini-games distributed across the 10 rounds:
+- 🎯 **Target Lock (Tap Game)**: A test of reflexes where the Runner must tap a fast-moving, evasive crosshair target 10 times within 15 seconds. [Triggered: Rounds 1, 4, 7, 10]
+- 🃏 **Neural Decode (Memory Match)**: A cognitive recall challenge requiring the Runner to match 6 pairs of cyber-themed symbols in a 12-card grid. [Triggered: Rounds 2, 5, 8]
+- 🔴 **Cipher Crack (Sequence Pattern)**: A "Simon Says" style memory sequence challenge where the Runner must replicate a randomly generated pattern of flashing color blocks. [Triggered: Rounds 3, 6, 9]
+
+*Note: All mini-games feature a **Hard Mode** that scales difficulty (more taps, larger grids, longer sequences) based on the team's completion speed.*
+
+→ See [`GAME_FLOW.md`](./GAME_FLOW.md) for the full Arena 2 player experience and [`runner_games_details.md`](./runner_games_details.md) for in-depth mini-game mechanics.
 
 ---
 

@@ -33,12 +33,24 @@ import { ConfigManagement } from '@/components/admin/ConfigManagement';
 import { LeaderboardView } from '@/components/admin/LeaderboardView';
 import { CommsManagement } from '@/components/admin/CommsManagement';
 import { TacticalStatus } from '@/components/TacticalStatus';
+import { AdminArena1Panel } from '@/components/AdminArena1Panel';
+import { Code2 } from 'lucide-react';
 
 const ADMIN_SESSION_KEY = 'quest-admin-session';
 
-type AdminPage = 'teams' | 'questions' | 'leaderboard' | 'config' | 'comms';
+type AdminPage = 'teams' | 'questions' | 'leaderboard' | 'config' | 'comms' | 'arena1';
+
+import { AdminToastProvider } from '@/contexts/AdminToastContext';
 
 export function AdminPanel({ onBack }: { onBack: () => void }) {
+  return (
+    <AdminToastProvider>
+      <AdminPanelContent onBack={onBack} />
+    </AdminToastProvider>
+  );
+}
+
+function AdminPanelContent({ onBack }: { onBack: () => void }) {
   const [token, setToken] = useState<string | null>(() => window.localStorage.getItem(ADMIN_SESSION_KEY));
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -191,6 +203,7 @@ export function AdminPanel({ onBack }: { onBack: () => void }) {
     { id: 'teams', label: 'Operatives', icon: Users },
     { id: 'questions', label: 'Sequences', icon: Terminal },
     { id: 'comms', label: 'Comms', icon: MessageSquare },
+    { id: 'arena1', label: 'Arena 1', icon: Code2 },
     { id: 'config', label: 'Systems', icon: Settings },
   ] as const;
 
@@ -323,6 +336,9 @@ export function AdminPanel({ onBack }: { onBack: () => void }) {
                   onRefresh={() => refreshData(token!)}
                   onError={setError}
                 />
+              )}
+              {activePage === 'arena1' && (
+                <AdminArena1Panel token={token!} />
               )}
               {activePage === 'comms' && (
                 <CommsManagement

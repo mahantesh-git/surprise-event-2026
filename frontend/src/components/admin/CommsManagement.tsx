@@ -3,7 +3,7 @@ import { Send, ShieldAlert, CheckCircle2, MessageSquare, Settings, Plus, Trash2 
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { sendAdminChatMessage, getAdminPhrases, createAdminPhrase, deleteAdminPhrase } from '@/lib/api';
-import { TacticalStatus } from '@/components/TacticalStatus';
+import { useAdminToast } from '@/contexts/AdminToastContext';
 
 interface CommsManagementProps {
   token: string;
@@ -11,11 +11,11 @@ interface CommsManagementProps {
 }
 
 export function CommsManagement({ token, teams }: CommsManagementProps) {
+  const { showToast } = useAdminToast();
   const [targetTeamId, setTargetTeamId] = useState<string>('all');
   const [targetRole, setTargetRole] = useState<'runner' | 'solver' | 'all'>('all');
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
-  const [status, setStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
   const [phrases, setPhrases] = useState<{ _id?: string, id?: string, text: string }[]>([]);
   const [isManaging, setIsManaging] = useState(false);
   const [newPhrase, setNewPhrase] = useState('');
@@ -56,14 +56,12 @@ export function CommsManagement({ token, teams }: CommsManagementProps) {
   const handleSend = async () => {
     if (!text.trim()) return;
     setSending(true);
-    setStatus(null);
     try {
       await sendAdminChatMessage(token, { text: text.trim(), targetTeamId, targetRole });
-      setStatus({ type: 'success', message: 'Command transmitted successfully.' });
+      showToast('Command transmitted successfully');
       setText('');
-      setTimeout(() => setStatus(null), 3000);
     } catch (err) {
-      setStatus({ type: 'error', message: err instanceof Error ? err.message : 'Transmission failed' });
+      showToast(err instanceof Error ? err.message : 'Transmission failed', 'error');
     } finally {
       setSending(false);
     }
@@ -200,15 +198,6 @@ export function CommsManagement({ token, teams }: CommsManagementProps) {
             {sending ? 'Transmitting...' : 'Initiate Broadcast'}
             {!sending && <Send className="ml-2 w-4 h-4" />}
           </Button>
-
-          {status && (
-            <TacticalStatus
-              tone={status.type}
-              label={status.type === 'success' ? 'Transmission Success' : 'Transmission Error'}
-              message={status.message}
-              icon={status.type === 'success' ? CheckCircle2 : ShieldAlert}
-            />
-          )}
         </CardContent>
       </Card>
     </div>

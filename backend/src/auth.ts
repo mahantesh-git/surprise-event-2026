@@ -52,7 +52,11 @@ export function requireAuth(request: AuthedRequest, response: Response, next: Ne
 
 export function requireAdmin(request: AdminAuthedRequest, response: Response, next: NextFunction) {
   const header = request.headers.authorization;
-  const token = header?.startsWith('Bearer ') ? header.slice('Bearer '.length) : null;
+  let token = header?.startsWith('Bearer ') ? header.slice('Bearer '.length) : null;
+  
+  if (!token && request.query.token) {
+    token = request.query.token as string;
+  }
 
   if (!token) {
     response.status(401).json({ error: 'Missing authorization token' });
@@ -78,4 +82,32 @@ export function normalizeTeamName(value: string) {
 
 export function normalizeRole(value: unknown): Role | null {
   return value === 'solver' || value === 'runner' ? value : null;
+}
+
+// ── Arena 1 auth ────────────────────────────────────────────────────────────
+
+export interface Arena1AuthedRequest extends Request {
+  a1Auth?: { teamId: string; teamName: string; role: Role; arena: 'arena1' };
+}
+
+export function requireArena1Auth(request: Arena1AuthedRequest, response: Response, next: NextFunction) {
+  const header = request.headers.authorization;
+  const token = header?.startsWith('Bearer ') ? header.slice('Bearer '.length) : null;
+
+  if (!token) {
+    response.status(401).json({ error: 'Missing authorization token' });
+    return;
+  }
+
+  try {
+    const payload = verifyToken(token) as any;
+    if (payload.kind !== 'team' || payload.arena !== 'arena1') {
+      response.status(403).json({ error: 'Arena 1 token required' });
+      return;
+    }
+    request.a1Auth = { teamId: payload.teamId, teamName: payload.teamName, role: payload.role, arena: 'arena1' };
+    next();
+  } catch {
+    response.status(401).json({ error: 'Invalid or expired session' });
+  }
 }

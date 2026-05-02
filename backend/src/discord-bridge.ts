@@ -5,6 +5,7 @@ import { ChatMessage } from './types';
 let discordClient: Client | null = null;
 let adminChannelId: string | null = null;
 let authChannelId: string | null = null;
+let arena1ResultChannelId: string | null = null;
 
 /**
  * Initializes the Discord bridge with failsafe error handling.
@@ -13,6 +14,7 @@ export async function initDiscordBridge() {
   const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
   const ADMIN_CHANNEL_ID = process.env.ADMIN_CHANNEL_ID;
   const ADMIN_CHANNEL_ID_AUTH = process.env.ADMIN_CHANNEL_ID_AUTH || process.env.ADMIN_CHANNEL_ID;
+  const ARENA1_RESULT_CHANNEL_ID = process.env.ARENA1_RESULT_CHANNEL_ID || process.env.ADMIN_CHANNEL_ID;
   const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID;
   const ADMIN_DISCORD_USER_ID = process.env.ADMIN_DISCORD_USER_ID;
 
@@ -31,6 +33,7 @@ export async function initDiscordBridge() {
 
   adminChannelId = ADMIN_CHANNEL_ID;
   authChannelId = ADMIN_CHANNEL_ID_AUTH || null;
+  arena1ResultChannelId = ARENA1_RESULT_CHANNEL_ID || null;
 
   const pendingClient = new Client({
     intents: [
@@ -130,8 +133,11 @@ export async function initDiscordBridge() {
 /**
  * Sends an alert to the admin channel.
  */
-export async function sendAdminAlert(text: string, location?: { lat: number; lng: number }, category: 'help' | 'auth' = 'help'): Promise<string | null> {
-  const targetChannelId = category === 'auth' && authChannelId ? authChannelId : adminChannelId;
+export async function sendAdminAlert(text: string, location?: { lat: number; lng: number }, category: 'help' | 'auth' | 'a1_result' = 'help'): Promise<string | null> {
+  const targetChannelId = 
+    category === 'auth' ? authChannelId : 
+    category === 'a1_result' ? arena1ResultChannelId : 
+    adminChannelId;
 
   if (!discordClient || !targetChannelId) {
     console.warn('Discord Bridge: Cannot send alert. Bridge not initialized or channel not configured.');

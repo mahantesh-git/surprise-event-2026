@@ -10,11 +10,15 @@ import {
   Code,
   User,
   ExternalLink,
-  ShieldCheck
+  ShieldCheck,
+  Settings,
+  CheckCircle2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
+import { useAdminToast } from '@/contexts/AdminToastContext';
 import {
   createAdminQuestion,
   updateAdminQuestion,
@@ -40,6 +44,7 @@ function createEmptyQuestion(nextRound: number): RoundQuestion {
   return {
     id: '',
     round: nextRound,
+    isReserve: false,
     p1: { title: '', code: '', hint: '', ans: '', output: '', language: 'python', testCases: [] },
     coord: { lat: '', lng: '', place: '' },
     volunteer: { name: '', initials: '', bg: 'bg-[var(--color-accent)]/10', color: 'text-[var(--color-accent)]' },
@@ -51,6 +56,7 @@ function createEmptyQuestion(nextRound: number): RoundQuestion {
 }
 
 export function QuestionManagement({ token, questions, onRefresh, onError }: QuestionManagementProps) {
+  const { showToast, confirm } = useAdminToast();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<RoundQuestion>(createEmptyQuestion(questions.length + 1));
   const [isSaving, setIsSaving] = useState(false);
@@ -71,23 +77,31 @@ export function QuestionManagement({ token, questions, onRefresh, onError }: Que
       } else {
         await createAdminQuestion(token, draft);
       }
+      showToast(`Question ${editingId ? 'updated' : 'created'} successfully`);
       setEditingId(null);
       setDraft(createEmptyQuestion(questions.length + 1));
       onRefresh();
     } catch (err) {
-      onError(err instanceof Error ? err.message : 'Failed to save question');
+      showToast(err instanceof Error ? err.message : 'Failed to save question', 'error');
     } finally {
       setIsSaving(false);
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!token || !window.confirm('Delete sequence?')) return;
+    if (!token) return;
+    const ok = await confirm({
+      title: 'Delete Question',
+      message: 'Are you sure you want to delete this sequence node?',
+      confirmText: 'Delete'
+    });
+    if (!ok) return;
     try {
       await deleteAdminQuestion(token, id);
+      showToast('Question deleted');
       onRefresh();
     } catch (err) {
-      onError(err instanceof Error ? err.message : 'Failed to delete question');
+      showToast(err instanceof Error ? err.message : 'Failed to delete question', 'error');
     }
   };
 
@@ -106,8 +120,21 @@ export function QuestionManagement({ token, questions, onRefresh, onError }: Que
         </div>
         <Button
           variant="ghost"
-          onClick={() => {
-            if (window.confirm('PURGE ALL SEQUENCES?')) deleteAllAdminQuestions(token).then(onRefresh);
+          onClick={async () => {
+            const ok = await confirm({
+              title: 'PURGE ALL SEQUENCES',
+              message: 'Are you sure you want to delete EVERY mission node? This action is IRREVERSIBLE.',
+              confirmText: 'PURGE ALL'
+            });
+            if (ok) {
+              try {
+                await deleteAllAdminQuestions(token);
+                showToast('All sequences purged');
+                onRefresh();
+              } catch (err) {
+                showToast('Failed to purge sequences', 'error');
+              }
+            }
           }}
           className="text-[10px] uppercase tracking-widest text-[var(--color-accent)] hover:bg-[var(--color-accent)]/10"
         >
@@ -136,7 +163,25 @@ export function QuestionManagement({ token, questions, onRefresh, onError }: Que
                     <label className="text-[8px] uppercase tracking-[0.3em] text-white/70 ml-1">Stage_Sequence</label>
                     <Input type="number" value={draft.round} onChange={e => setDraft({ ...draft, round: Number(e.target.value) })} className="bg-white/[0.03] border-white/5 h-11 font-mono text-xs" />
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-2 flex flex-col justify-end pb-1">
+                    <label className="flex items-center gap-2 cursor-pointer group">
+                      <div className="relative flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={draft.isReserve || false}
+                          onChange={e => setDraft({ ...draft, isReserve: e.target.checked })}
+                          className="peer sr-only"
+                        />
+                        <div className="w-4 h-4 border border-white/20 bg-white/5 group-hover:border-[var(--color-accent)]/50 peer-checked:bg-[var(--color-accent)] peer-checked:border-[var(--color-accent)] transition-all flex items-center justify-center">
+                          <CheckCircle2 className="w-3 h-3 text-black opacity-0 peer-checked:opacity-100" />
+                        </div>
+                      </div>
+                      <span className="text-[8px] uppercase tracking-[0.3em] text-white/70 group-hover:text-white transition-colors">
+                        Reserve Node
+                      </span>
+                    </label>
+                  </div>
+                  <div className="space-y-2 sm:col-span-2">
                     <label className="text-[8px] uppercase tracking-[0.3em] text-white/70 ml-1">Validation_Key</label>
                     <Input placeholder="PASSKEY_01" value={draft.qrPasskey} onChange={e => setDraft({ ...draft, qrPasskey: e.target.value })} className="bg-white/[0.03] border-white/5 h-11 font-mono text-xs uppercase" />
                   </div>
@@ -262,40 +307,42 @@ export function QuestionManagement({ token, questions, onRefresh, onError }: Que
           </div>
         </div>
 
-        {/* Question List */}
-        <div className="xl:col-span-2 space-y-4">
-          <div className="flex items-center gap-4 mb-6">
-            <Terminal className="text-[var(--color-accent)] w-4 h-4" />
-            <h3 className="text-[10px] font-mono uppercase tracking-[0.4em] text-white/60">Active_Mission_Stack</h3>
-          </div>
+        {/* Question Lists */}
+        <div className="xl:col-span-2 space-y-12">
+          {/* Active Stack */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-4 mb-6">
+              <Terminal className="text-[var(--color-accent)] w-4 h-4" />
+              <h3 className="text-[10px] font-mono uppercase tracking-[0.4em] text-white/60">Active_Mission_Stack</h3>
+            </div>
 
-          <div className="space-y-4 max-h-[1000px] overflow-y-auto pr-2 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-            {questions.map((q) => (
-              <motion.div
-                layout
-                key={q.id}
-                className="corner-card p-6 glass-morphism hover:border-[var(--color-accent)]/20 transition-all group"
-              >
-                <div className="flex justify-between items-start mb-4">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-white/5 border border-white/10 flex items-center justify-center font-black text-xl">
-                      {q.round}
+            <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+              {questions.filter(q => !q.isReserve).map((q) => (
+                <motion.div
+                  layout
+                  key={q.id}
+                  className="corner-card p-6 glass-morphism hover:border-[var(--color-accent)]/20 transition-all group"
+                >
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 bg-white/5 border border-white/10 flex items-center justify-center font-black text-xl">
+                        {q.round}
+                      </div>
+                      <div>
+                        <div className="font-black uppercase tracking-widest text-sm">{q.p1.title}</div>
+                        <div className="text-[8px] font-mono text-white/60 uppercase tracking-widest mb-1">Sequence_Round</div>
+                        <div className="text-[8px] font-mono text-white/40 uppercase tracking-widest">{q.id.slice(-8).toUpperCase()}</div>
+                      </div>
                     </div>
-                    <div>
-                      <div className="font-black uppercase tracking-widest text-sm">{q.p1.title}</div>
-                      <div className="text-[8px] font-mono text-white/60 uppercase tracking-widest mb-1">Sequence_Round</div>
-                      <div className="text-[8px] font-mono text-white/40 uppercase tracking-widest">{q.id.slice(-8).toUpperCase()}</div>
+                    <div className="flex gap-2">
+                      <button onClick={() => handleEdit(q)} className="p-2 text-white/30 hover:text-white transition-colors">
+                        <Edit3 className="w-4 h-4" />
+                      </button>
+                      <button onClick={() => handleDelete(q.id!)} className="p-2 text-white/10 hover:text-[var(--color-accent)] transition-colors">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
-                  <div className="flex gap-2">
-                    <button onClick={() => handleEdit(q)} className="p-2 text-white/30 hover:text-white transition-colors">
-                      <Edit3 className="w-4 h-4" />
-                    </button>
-                    <button onClick={() => handleDelete(q.id!)} className="p-2 text-white/10 hover:text-[var(--color-accent)] transition-colors">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
 
                 <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/5">
                   <div className="space-y-1">
@@ -310,12 +357,75 @@ export function QuestionManagement({ token, questions, onRefresh, onError }: Que
               </motion.div>
             ))}
 
-            {!questions.length && (
-              <div className="text-center py-20 border border-dashed border-white/10 glass-morphism">
-                <Terminal className="w-12 h-12 text-white/5 mx-auto mb-4" />
-                <div className="text-[10px] uppercase tracking-[0.5em] text-white/20">Mission stack is empty</div>
-              </div>
-            )}
+              {!questions.filter(q => !q.isReserve).length && (
+                <div className="text-center py-10 border border-dashed border-white/10 glass-morphism">
+                  <Terminal className="w-8 h-8 text-white/5 mx-auto mb-2" />
+                  <div className="text-[10px] uppercase tracking-[0.5em] text-white/20">Mission stack is empty</div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Reserve Pool */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-4 mb-6 pt-6 border-t border-white/5">
+              <Settings className="text-amber-500 w-4 h-4" />
+              <h3 className="text-[10px] font-mono uppercase tracking-[0.4em] text-white/60">Reserve_Mission_Pool</h3>
+            </div>
+
+            <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+              {questions.filter(q => q.isReserve).map((q) => (
+                <motion.div
+                  layout
+                  key={q.id}
+                  className="corner-card p-6 glass-morphism border-amber-500/30 hover:border-amber-500/50 bg-amber-500/[0.02] transition-all group"
+                >
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 bg-amber-500/10 border border-amber-500/30 text-amber-500 flex items-center justify-center font-black text-xl relative">
+                        {q.round}
+                        <div className="absolute -top-1 -right-1 w-3 h-3 bg-amber-500 rounded-full flex items-center justify-center text-[8px] text-black font-black">
+                          R
+                        </div>
+                      </div>
+                      <div>
+                        <div className="font-black uppercase tracking-widest text-sm flex items-center gap-2">
+                          {q.p1.title}
+                        </div>
+                        <div className="text-[8px] font-mono text-white/60 uppercase tracking-widest mb-1">Sequence_Round</div>
+                        <div className="text-[8px] font-mono text-white/40 uppercase tracking-widest">{q.id.slice(-8).toUpperCase()}</div>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => handleEdit(q)} className="p-2 text-amber-500/50 hover:text-amber-400 transition-colors">
+                        <Edit3 className="w-4 h-4" />
+                      </button>
+                      <button onClick={() => handleDelete(q.id!)} className="p-2 text-amber-500/30 hover:text-amber-500 transition-colors">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 pt-4 border-t border-amber-500/20">
+                    <div className="space-y-1">
+                      <div className="text-[8px] uppercase text-amber-500/60 tracking-widest font-mono">Target_Node</div>
+                      <div className="text-[10px] font-bold text-amber-500/80 truncate">{q.coord.place}</div>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="text-[8px] uppercase text-amber-500/60 tracking-widest font-mono">Secure_Passkey</div>
+                      <div className="text-[10px] font-mono text-amber-400">{q.qrPasskey}</div>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+
+              {!questions.filter(q => q.isReserve).length && (
+                <div className="text-center py-10 border border-dashed border-amber-500/10 glass-morphism bg-amber-500/[0.01]">
+                  <Settings className="w-8 h-8 text-amber-500/20 mx-auto mb-2" />
+                  <div className="text-[10px] uppercase tracking-[0.5em] text-amber-500/40">Reserve pool is empty</div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Submission – Slot 3</title>
+  <style>body { display:flex; align-items:center; justify-content:center; height:100vh; margin:0; font-family:monospace; }\n.stopwatch { text-align:center; }\n#display { font-size:60px; margin-bottom:20px; }\n.controls { display:flex; gap:12px; justify-content:center; }\nbutton { padding:10px 24px; font-size:16px; border:2px solid #333; background:transparent; cursor:pointer; border-radius:4px; }</style>
+</head>
+<body>
+<div class="stopwatch">
+    <div id="display">00:00:00</div>
+    <div class="controls">
+        <button id="start">Start</button>
+        <button id="stop">Stop</button>
+        <button id="reset">Reset</button>
+    </div>
+</div>
+<script>// Write your stopwatch logic here
+const display = document.getElementById('display');
+const startBtn = document.getElementById('start');
+const stopBtn = document.getElementById('stop');
+const resetBtn = document.getElementById('reset');
+
+let timer = null;
+let seconds = 0;
+
+// Format time as HH:MM:SS
+function formatTime(sec) {
+    const hrs = String(Math.floor(sec / 3600)).padStart(2, '0');
+    const mins = String(Math.floor((sec % 3600) / 60)).padStart(2, '0');
+    const secs = String(sec % 60).padStart(2, '0');
+    return `${hrs}:${mins}:${secs}`;
+}
+
+// Update display
+function updateDisplay() {
+    display.textContent = formatTime(seconds);
+}
+
+// Start button
+startBtn.addEventListener('click', () => {
+    if (!timer) {
+        timer = setInterval(() => {
+            seconds++;
+            updateDisplay();
+        }, 1000);
+    }
+});
+
+// Stop button
+stopBtn.addEventListener('click', () => {
+    clearInterval(timer);
+    timer = null;
+});
+
+// Reset button
+resetBtn.addEventListener('click', () => {
+    clearInterval(timer);
+    timer = null;
+    seconds = 0;
+    updateDisplay();
+});
+
+// Initialize display
+updateDisplay();
+</script>
+</body>
+</html>

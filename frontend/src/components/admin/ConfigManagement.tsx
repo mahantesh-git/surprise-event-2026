@@ -21,6 +21,7 @@ import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { updateAdminConfig, wipeAdminDatabase } from '@/lib/api';
+import { useAdminToast } from '@/contexts/AdminToastContext';
 
 interface ConfigManagementProps {
   token: string;
@@ -30,6 +31,7 @@ interface ConfigManagementProps {
 }
 
 export function ConfigManagement({ token, config, onRefresh, onError }: ConfigManagementProps) {
+  const { showToast, confirm } = useAdminToast();
   const [newPhrase, setNewPhrase] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
 
@@ -38,9 +40,10 @@ export function ConfigManagement({ token, config, onRefresh, onError }: ConfigMa
     try {
       const newVal = !config?.loginEnabled;
       await updateAdminConfig(token, 'loginEnabled', newVal);
+      showToast(`Login ${newVal ? 'ENABLED' : 'DISABLED'}`);
       onRefresh();
     } catch (err) {
-      onError(err instanceof Error ? err.message : 'Failed to update config');
+      showToast(err instanceof Error ? err.message : 'Failed to update config', 'error');
     }
   };
 
@@ -48,9 +51,10 @@ export function ConfigManagement({ token, config, onRefresh, onError }: ConfigMa
     if (!token) return;
     try {
       await updateAdminConfig(token, 'difficultyProtocol', val);
+      showToast(`Protocol updated to: ${val.toUpperCase()}`);
       onRefresh();
     } catch (err) {
-      onError(err instanceof Error ? err.message : 'Failed to update protocol');
+      showToast(err instanceof Error ? err.message : 'Failed to update protocol', 'error');
     }
   };
 
@@ -61,9 +65,10 @@ export function ConfigManagement({ token, config, onRefresh, onError }: ConfigMa
       const updatedPhrases = [...(config?.tacticalPhrases || []), newPhrase.trim()];
       await updateAdminConfig(token, 'tacticalPhrases', updatedPhrases);
       setNewPhrase('');
+      showToast('Tactical phrase added');
       onRefresh();
     } catch (err) {
-      onError(err instanceof Error ? err.message : 'Failed to add phrase');
+      showToast(err instanceof Error ? err.message : 'Failed to add phrase', 'error');
     } finally {
       setIsUpdating(false);
     }
@@ -74,19 +79,27 @@ export function ConfigManagement({ token, config, onRefresh, onError }: ConfigMa
     try {
       const updatedPhrases = config.tacticalPhrases.filter((_: any, i: number) => i !== idx);
       await updateAdminConfig(token, 'tacticalPhrases', updatedPhrases);
+      showToast('Tactical phrase removed');
       onRefresh();
     } catch (err) {
-      onError(err instanceof Error ? err.message : 'Failed to delete phrase');
+      showToast(err instanceof Error ? err.message : 'Failed to delete phrase', 'error');
     }
   };
 
   const handleWipeDatabase = async () => {
-    if (!token || !window.confirm('WIPE ENTIRE DATABASE? This will delete all teams and questions. IRREVERSIBLE.')) return;
+    if (!token) return;
+    const ok = await confirm({
+      title: 'IRREVERSIBLE PURGE',
+      message: 'WIPE ENTIRE DATABASE? This will delete all teams, questions, and configs. This cannot be undone.',
+      confirmText: 'Execute Purge'
+    });
+    if (!ok) return;
     try {
       await wipeAdminDatabase(token);
+      showToast('DATABASE PURGED');
       onRefresh();
     } catch (err) {
-      onError(err instanceof Error ? err.message : 'Failed to wipe database');
+      showToast(err instanceof Error ? err.message : 'Failed to wipe database', 'error');
     }
   };
 
@@ -138,15 +151,22 @@ export function ConfigManagement({ token, config, onRefresh, onError }: ConfigMa
   };
 
   const handleClearAllDeviceLocks = async () => {
-    if (!token || !window.confirm('Clear device locks for ALL teams? They will need to log in again.')) return;
+    if (!token) return;
+    const ok = await confirm({
+      title: 'Device Security',
+      message: 'Clear device locks for ALL teams? They will need to log in again.',
+      confirmText: 'Clear All'
+    });
+    if (!ok) return;
     try {
       await fetch(`${import.meta.env.VITE_API_HOST || import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000'}/api/admin/clear-device-lock`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ teamId: 'all' }),
       });
+      showToast('All device locks cleared');
       onRefresh();
-    } catch { onError('Failed to clear device locks'); }
+    } catch { showToast('Failed to clear device locks', 'error'); }
   };
 
   const handleCopyKey = () => {

@@ -2,14 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Crosshair, Brain, LayoutGrid, CheckCircle2, RefreshCcw, Trophy,
-  Star, Fingerprint, QrCode, Shield, ChevronRight, AlertCircle, Activity, ClipboardPaste, Copy, Check,
-  Zap, MessageSquare, MapPin, Navigation
+  Star, Fingerprint, Shield, ChevronRight, AlertCircle, Activity, ClipboardPaste, Copy, Check,
+  MapPin, Camera, AlertTriangle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TacticalStatus } from './TacticalStatus';
 import { Button } from '@/components/ui/button';
-import { verifyRunnerLocationQr, verifyRunnerPasskey, completeRunnerGame, updateGameState } from '@/lib/api';
-import { QRScanner } from '@/components/QRScanner';
+import { verifyRunnerPasskey, completeRunnerGame, updateGameState } from '@/lib/api';
+import { RunnerGyroScanner } from './RunnerGyroScanner';
 
 // ─── HAPTIC UTILITY ───────────────────────────────────────────
 function haptic(pattern: number | number[] = 50) {
@@ -30,6 +30,7 @@ const TapGame = ({ onComplete, difficulty = 'normal' }: { onComplete: () => void
     }
     if (taps >= required) onComplete();
   }, [timeLeft, taps, onComplete]);
+
 
   const handleTap = () => {
     haptic(25);
@@ -244,7 +245,7 @@ const PatternGame = ({ onComplete, difficulty = 'normal' }: { onComplete: () => 
 
 // ─── TYPES ────────────────────────────────────────────────────
 type GameType = 'tap' | 'memory' | 'pattern';
-type RunnerScreen = 'location' | 'qr_scanner' | 'passkey' | 'game' | 'victory';
+type RunnerScreen = 'location' | 'ar_scanner' | 'manual_fallback' | 'passkey' | 'game' | 'victory';
 
 interface RunnerGameProps {
   token: string;
@@ -258,14 +259,14 @@ interface RunnerGameProps {
 }
 
 // ─── MAIN COMPONENT ───────────────────────────────────────────
-export function RunnerGame({ 
-  token, 
-  currentRoundIndex, 
-  totalRounds, 
-  onRoundComplete, 
-  stage, 
-  currentRound, 
-  onSwitchToMap, 
+export function RunnerGame({
+  token,
+  currentRoundIndex,
+  totalRounds,
+  onRoundComplete,
+  stage,
+  currentRound,
+  onSwitchToMap,
   difficulty = 'normal'
 }: RunnerGameProps) {
   const [screen, setScreen] = useState<RunnerScreen>(() => {
@@ -325,7 +326,6 @@ export function RunnerGame({
       setTimeout(() => setCopied(false), 2000);
     }
   };
-  const [verifyingLocationQr, setVerifyingLocationQr] = useState(false);
   const [completing, setCompleting] = useState(false);
 
   const gameInfo: Record<GameType, { title: string; icon: React.ReactNode; color: string }> = {
@@ -391,21 +391,17 @@ export function RunnerGame({
                   <div className="flex justify-between items-center"><span className="text-[10px] uppercase font-bold text-[var(--color-accent)]">Target</span><span className="font-mono text-xs text-right max-w-[150px]">{currentRound.coord.place}</span></div>
                   <div className="flex justify-between items-center"><span className="text-[10px] uppercase font-bold text-[var(--color-accent)]">Volunteer</span><span className="font-mono text-xs">{currentRound.volunteer.name}</span></div>
                   <div className="p-4 bg-white/5 border border-white/10 rounded text-center relative group">
-                    <span className="text-[10px] uppercase text-white/40 block mb-1">Passkey</span>
-                    <span className="text-xl font-bold tracking-[0.3em] break-all">{currentRound.qrPasskey}</span>
-                    <button 
-                      onClick={handleCopyPasskey}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-white/20 hover:text-[var(--color-accent)] transition-colors"
-                      title="Copy Passkey"
-                    >
-                      {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
-                    </button>
+                    <span className="text-[10px] uppercase text-white/40 block mb-1">Passkey Status</span>
+                    <span className="text-sm font-bold tracking-[0.2em] text-[var(--color-accent)] uppercase">
+                      [ ACCESS ENCRYPTED ]
+                    </span>
+                    <div className="text-[9px] font-mono text-white/20 mt-1 uppercase">Scan holographic node to decrypt</div>
                   </div>
                   {distance !== null && (
                     <div className="text-center text-xs font-mono">
                       <span className="text-white/40">DISTANCE TO TARGET: </span>
-                      <span className={distance <= 25 ? 'text-green-400 font-bold' : 'text-yellow-400 font-bold'}>
-                        {Math.round(distance)}m
+                      <span className={distance <= 25 ? "text-green-400 font-bold" : "text-red-400 font-bold"}>
+                        {Math.round(distance)}m {distance <= 25 ? "(SIGNAL ACQUIRED)" : "(OUT OF RANGE)"}
                       </span>
                     </div>
                   )}
@@ -430,57 +426,144 @@ export function RunnerGame({
 
               <div className="space-y-3">
                 <Button
-                  className={cn("w-full font-bold uppercase tracking-[0.2em] h-14 btn-primary transition-all", (distance === null || distance > 25 || locationError) ? "opacity-50 cursor-not-allowed bg-zinc-800 text-white/50" : "!bg-[var(--color-accent)] !text-white hover:brightness-125")} size="md"
-                  disabled={distance === null || distance > 25 || !!locationError}
-                  onClick={() => { setError(null); setScreen('qr_scanner'); }}
+                  className={cn(
+                    "w-full font-bold uppercase tracking-[0.2em] h-14 transition-all",
+                    distance !== null && distance <= 25
+                      ? "btn-primary !bg-[var(--color-accent)] !text-white hover:brightness-125"
+                      : "bg-zinc-800 text-white/20 border-white/5 cursor-not-allowed"
+                  )}
+                  size="md"
+                  disabled={distance === null || distance > 25}
+                  onClick={() => { setError(null); setScreen('ar_scanner'); }}
                 >
-                  <QrCode className="mr-2 h-5 w-5" /> SCAN LOCATION QR
+                  <Camera className="mr-2 h-5 w-5" />
+                  {distance !== null && distance > 25
+                    ? `OUT OF RANGE (${Math.round(distance)}m)`
+                    : "OPEN GYRO-AR LINK"}
                 </Button>
+                {/* Manual fallback — always available if AR camera issues */}
+                <button
+                  className="w-full text-white/60 text-xs font-mono uppercase tracking-widest py-2 hover:text-white/90 transition-colors"
+                  onClick={() => setScreen('manual_fallback')}
+                >
+                  <AlertTriangle className="inline w-3 h-3 mr-1" />
+                  AR not working? Use manual entry
+                </button>
               </div>
             </div>
           </div>
         </motion.div>
       )}
 
-      {/* ── QR SCANNER ── */}
-      {screen === 'qr_scanner' && (
-        <motion.div key="qr_scanner" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="max-w-md mx-auto">
-          <QRScanner
-            onScan={async (text) => {
-              if (verifyingLocationQr) return;
-
-              setVerifyingLocationQr(true);
-              try {
-                let lat: number | undefined;
-                let lng: number | undefined;
-
+      {/* ── AR SCANNER ── */}
+      {screen === 'ar_scanner' && (
+        <motion.div key="ar_scanner" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ position: 'fixed', inset: 0, zIndex: 1000 }}>
+          <RunnerGyroScanner
+            round={currentRoundIndex + 1}
+            targetData={currentRound?.qrPasskey || `round_${currentRoundIndex + 1}`}
+            distance={distance}
+            onCapture={async (scannedData) => {
+              setError(null);
+              setPasskey(scannedData);
+              // Auto-verify if we got data
+              if (scannedData) {
+                setVerifyingPasskey(true);
                 try {
-                  const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-                    navigator.geolocation.getCurrentPosition(resolve, reject, {
-                      enableHighAccuracy: true,
-                      timeout: 10000,
-                      maximumAge: 0
-                    });
-                  });
-                  lat = position.coords.latitude;
-                  lng = position.coords.longitude;
-                } catch (geoErr) {
-                  console.warn('Geolocation failed', geoErr);
-                  // We continue, but the backend will reject if lat/lng are strictly required
+                  const data = await verifyRunnerPasskey(token, scannedData);
+                  setGameType(data.gameType as GameType);
+                  setScreen('game');
+                } catch (err) {
+                  console.error('Auto-verify fail:', err);
+                  setScreen('passkey'); // Fallback to manual if auto-verify fails
+                  setError(err instanceof Error ? err.message : 'Verification failed');
+                } finally {
+                  setVerifyingPasskey(false);
                 }
-
-                await verifyRunnerLocationQr(token, text.trim(), lat, lng);
-                setError(null);
+              } else {
                 setScreen('passkey');
-              } catch (err) {
-                setError(err instanceof Error ? err.message : 'Invalid Location QR. Area Restricted.');
-                setScreen('location');
-              } finally {
-                setVerifyingLocationQr(false);
               }
             }}
-            onClose={() => setScreen('location')}
+            onFail={(err) => {
+              console.error('AR Fail:', err);
+              setScreen('manual_fallback');
+            }}
           />
+        </motion.div>
+      )}
+
+      {/* ── MANUAL FALLBACK ── */}
+      {screen === 'manual_fallback' && (
+        <motion.div key="manual_fallback" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+          <div className="corner-card glass-morphism p-6 max-w-md mx-auto space-y-6">
+            <div className="text-center space-y-2">
+              <AlertTriangle className="w-12 h-12 text-yellow-400 mx-auto" />
+              <h2 className="text-lg font-bold tracking-widest uppercase">AR Unavailable</h2>
+              <p className="text-xs text-white/40 font-mono uppercase tracking-widest leading-relaxed">
+                AR camera failed or was denied. Admin has been notified.
+                Ask the volunteer at this location to confirm your arrival.
+              </p>
+            </div>
+
+            <div className="corner-card glass-morphism p-4 space-y-3">
+              <p className="text-[10px] uppercase font-bold text-[var(--color-accent)]">Location Verification</p>
+              {currentRound && (
+                <>
+                  <div className="flex justify-between text-xs font-mono">
+                    <span className="text-white/40">Target</span>
+                    <span>{currentRound.coord.place}</span>
+                  </div>
+                  {distance !== null && (
+                    <div className="flex justify-between text-xs font-mono">
+                      <span className="text-white/40">Distance</span>
+                      <span className={distance <= 25 ? "text-green-400 font-bold" : "text-red-400 font-bold"}>
+                        {Math.round(distance)}m {distance <= 25 ? "(OK)" : "(TOO FAR)"}
+                      </span>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
+            <div className="space-y-3">
+              <Button
+                className={cn(
+                  "w-full font-bold uppercase tracking-[0.2em] h-14 transition-all",
+                  distance !== null && distance <= 25
+                    ? "!bg-yellow-500/20 border border-yellow-500/40 hover:!bg-yellow-500/30 text-yellow-300"
+                    : "bg-zinc-800 text-white/20 border-white/5 cursor-not-allowed"
+                )}
+                size="md"
+                disabled={distance === null || distance > 25}
+                onClick={() => {
+                  // Volunteer-confirmed manual capture — go directly to passkey
+                  setError(null);
+                  setScreen('passkey');
+                }}
+              >
+                <MapPin className="mr-2 h-5 w-5" />
+                {distance !== null && distance > 25 ? "OUT OF RANGE" : "CONFIRM MANUAL ARRIVAL"}
+              </Button>
+              <Button
+                className={cn(
+                  "w-full font-bold uppercase tracking-[0.2em] h-12 transition-all",
+                  distance !== null && distance <= 25
+                    ? "bg-zinc-900 hover:bg-zinc-800 text-white/60"
+                    : "bg-zinc-950 text-white/10 border-white/5 cursor-not-allowed"
+                )}
+                size="md"
+                disabled={distance === null || distance > 25}
+                onClick={() => setScreen('ar_scanner')}
+              >
+                <Camera className="mr-2 h-4 w-4" /> RETRY AR CAMERA
+              </Button>
+              <button
+                className="w-full text-white/60 text-xs font-mono uppercase tracking-widest py-2 hover:text-white/90 transition-colors mt-2"
+                onClick={() => setScreen('location')}
+              >
+                ← Back to map
+              </button>
+            </div>
+          </div>
         </motion.div>
       )}
 
@@ -506,15 +589,11 @@ export function RunnerGame({
                   <div className="flex justify-between items-center"><span className="text-[10px] uppercase font-bold text-[var(--color-accent)]">Target</span><span className="font-mono text-xs text-right max-w-[150px]">{currentRound.coord.place}</span></div>
                   <div className="flex justify-between items-center"><span className="text-[10px] uppercase font-bold text-[var(--color-accent)]">Volunteer</span><span className="font-mono text-xs">{currentRound.volunteer.name}</span></div>
                   <div className="p-4 bg-white/5 border border-white/10 rounded text-center relative group">
-                    <span className="text-[10px] uppercase text-white/40 block mb-1">Passkey</span>
-                    <span className="text-xl font-bold tracking-[0.3em] break-all">{currentRound.qrPasskey}</span>
-                    <button 
-                      onClick={handleCopyPasskey}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-white/20 hover:text-[var(--color-accent)] transition-colors"
-                      title="Copy Passkey"
-                    >
-                      {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
-                    </button>
+                    <span className="text-[10px] uppercase text-white/40 block mb-1">Encrypted Access</span>
+                    <span className="text-sm font-bold tracking-[0.2em] text-[var(--color-accent)] uppercase">
+                      [ NODE LOCKED ]
+                    </span>
+                    <div className="text-[9px] font-mono text-white/20 mt-1 uppercase">Enter bypass code from volunteer</div>
                   </div>
                 </div>
               )}
@@ -563,16 +642,24 @@ export function RunnerGame({
                 )}
 
                 <Button
-                  className="w-full font-bold uppercase tracking-[0.2em] h-14 btn-primary" size="md"
+                  className={cn(
+                    "w-full font-bold uppercase tracking-[0.2em] h-14 transition-all",
+                    distance !== null && distance <= 25
+                      ? "btn-primary"
+                      : "bg-zinc-800 text-white/20 border-white/5 cursor-not-allowed"
+                  )}
+                  size="md"
                   onClick={handleVerifyPasskey}
-                  disabled={isVerifyingPasskey || !passkey.trim()}
+                  disabled={isVerifyingPasskey || !passkey.trim() || (distance !== null && distance > 25)}
                 >
-                  {isVerifyingPasskey ? (
-                    <span className="flex items-center gap-2">
-                      <span className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
-                      Verifying...
-                    </span>
-                  ) : (<><QrCode className="mr-2 h-5 w-5" />UNLOCK_GAME</>)}
+                  {distance !== null && distance > 25
+                    ? `OUT OF RANGE (${Math.round(distance)}m)`
+                    : isVerifyingPasskey ? (
+                      <span className="flex items-center gap-2">
+                        <span className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                        Verifying...
+                      </span>
+                    ) : (<><Shield className="mr-2 h-5 w-5" />UNLOCK_GAME</>)}
                 </Button>
               </div>
             </div>

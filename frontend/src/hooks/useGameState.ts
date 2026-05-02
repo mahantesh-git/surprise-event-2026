@@ -41,6 +41,7 @@ export interface TeamProfile {
   name: string;
   solverName?: string;
   runnerName?: string;
+  isArena1?: boolean;
 }
 
 export interface TeamSession {
@@ -49,6 +50,7 @@ export interface TeamSession {
   team: TeamProfile;
   gameState: GameState;
   lastMessage?: ChatMessage | null;
+  arena?: string;
 }
 
 function parseStoredSession(role: Role): TeamSession | null {
@@ -110,7 +112,25 @@ export function useGameState(role: Role) {
 
     const bootstrap = async () => {
       try {
-        await getSession(storedSession.token);
+        // Verify token is still valid (works for both arena1 and arena2)
+        const freshSession = await getSession(storedSession.token);
+
+        if (!active) return;
+
+        // Arena 1: getSession already returned the full session — no Arena2 game state sync needed
+        if (storedSession.arena === 'arena1' || (freshSession as any).arena === 'arena1') {
+          const restoredSession = {
+            ...storedSession,
+            arena: 'arena1' as const,
+            team: (freshSession as any).team ?? storedSession.team,
+            role: (freshSession as any).role ?? storedSession.role,
+          };
+          setSession(restoredSession);
+          window.localStorage.setItem(storageKey, JSON.stringify(restoredSession));
+          return;
+        }
+
+        // Arena 2: sync game state as before
         const freshState = await syncGameState(storedSession.token);
         if (!active) return;
         setSession({ ...storedSession, gameState: freshState });
@@ -154,6 +174,7 @@ export function useGameState(role: Role) {
 
   useEffect(() => {
     if (!session) return;
+    if (session.arena === 'arena1' || session.team?.isArena1) return;
 
     const interval = window.setInterval(() => {
       syncGameState(session.token).catch((err) => {
@@ -176,6 +197,7 @@ export function useGameState(role: Role) {
 
   useEffect(() => {
     if (!socket || !session) return;
+    if (session.arena === 'arena1' || session.team?.isArena1) return;
 
     const handleChatMessage = (msg: ChatMessage) => {
       setGameState(prev => {
@@ -208,6 +230,7 @@ export function useGameState(role: Role) {
       team: response.team,
       gameState: response.gameState,
       lastMessage: null,
+      arena: response.arena,
     };
     setSession(nextSession);
     setGameState({ ...response.gameState, lastMessage: null });
@@ -257,7 +280,7 @@ export function useGameState(role: Role) {
   };
 
   const sync = async () => {
-    if (session) {
+    if (session && session.arena !== 'arena1' && !session.team?.isArena1) {
       await syncGameState(session.token);
     }
   };

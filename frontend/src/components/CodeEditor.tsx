@@ -271,7 +271,7 @@ export function CodeEditor({
 
       {/* Monaco Editor Wrapper */}
       <div 
-        className="glass-morphism-editor border-t-0 pointer-events-auto cursor-text min-h-[100px] flex-1"
+        className="glass-morphism-editor border-t-0 pointer-events-auto cursor-text min-h-0 flex-1"
         onClick={() => editorRef.current?.focus()}
       >
         <MonacoEditor

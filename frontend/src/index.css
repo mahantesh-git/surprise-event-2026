@@ -409,3 +409,21 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* AR Scanner Fixes */
+.ar-active .tactical-background {
+  opacity: 0 !important;
+  visibility: hidden !important;
+}
+
+.ar-active, 
+.ar-active #root,
+.ar-active #root > div.bg-background {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+.ar-active .glass-morphism {
+  background: rgba(0, 0, 0, 0.4) !important;
+  backdrop-filter: blur(10px) !important;
+}

@@ -39,8 +39,18 @@ export function initSocketServer(httpServer: HttpServer): SocketServer {
     const auth = (socket as any).auth;
 
     if (auth.kind === 'team') {
-      // Every team member joins their private room for targeted alerts
+      // Join private room regardless of arena
       socket.join(`team_${auth.teamId}`);
+
+      // Arena 1 — join A1-specific room
+      if ((auth as any).arena === 'arena1') {
+        socket.join(`a1:${auth.teamId}`);
+        // Arena 1 code-update relay: Solver → Runner (same team)
+        socket.on('a1:code-update', (data: { html: string; css: string; js: string }) => {
+          socket.to(`a1:${auth.teamId}`).emit('a1:code-update', data);
+        });
+        return; // Arena 1 teams don't need runner/solver sub-handlers below
+      }
 
       if (auth.role === 'runner') {
         socket.join('runners');
@@ -50,6 +60,7 @@ export function initSocketServer(httpServer: HttpServer): SocketServer {
       }
 
       // WebRTC Signaling relay (Team-internal only)
+
       socket.on('webrtc:signal', (data: { signal: any }) => {
         // Broadcast to the team room, excluding the sender
         socket.to(`team_${auth.teamId}`).emit('webrtc:signal', {

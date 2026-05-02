@@ -1,5 +1,6 @@
 import { MongoClient, type Collection } from 'mongodb';
 import type { TeamDocument, QuestionDocument, ConfigDocument } from './types';
+import type { Arena1TeamDocument, Arena1QuestionDocument } from './arena1-types';
 
 let client: MongoClient | null = null;
 let connectingPromise: Promise<MongoClient> | null = null;
@@ -66,15 +67,29 @@ export async function getReservePoolCollection(): Promise<Collection<QuestionDoc
   return dbClient.db(getDatabaseName()).collection<QuestionDocument>('reserve_pool');
 }
 
+export async function getArena1TeamsCollection(): Promise<Collection<Arena1TeamDocument>> {
+  const dbClient = await getClient();
+  return dbClient.db(getDatabaseName()).collection<Arena1TeamDocument>('arena1_teams');
+}
+
+export async function getArena1QuestionsCollection(): Promise<Collection<Arena1QuestionDocument>> {
+  const dbClient = await getClient();
+  return dbClient.db(getDatabaseName()).collection<Arena1QuestionDocument>('arena1_questions');
+}
+
 export async function ensureIndexes() {
   const teams = await getTeamsCollection();
   const questions = await getQuestionsCollection();
   const config = await getConfigCollection();
   const reservePool = await getReservePoolCollection();
+  const a1Teams = await getArena1TeamsCollection();
+  const a1Questions = await getArena1QuestionsCollection();
   await teams.createIndex({ nameNormalized: 1 }, { unique: true });
   await questions.createIndex({ round: 1 }, { unique: true });
   await reservePool.createIndex({ round: 1 }, { unique: true });
   await config.createIndex({ key: 1 }, { unique: true });
+  await a1Teams.createIndex({ nameNormalized: 1 }, { unique: true });
+  await a1Questions.createIndex({ slot: 1 }, { sparse: true });
 }
 
 export async function closeClient() {

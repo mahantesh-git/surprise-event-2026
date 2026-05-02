@@ -81,6 +81,7 @@ export interface TeamSession {
   };
   gameState: GameState;
   lastMessage?: ChatMessage | null;
+  arena?: string;
 }
 
 export interface AdminSession {
@@ -214,6 +215,7 @@ export interface PuzzlePart {
 export interface RoundQuestion {
   id: string;
   round: number;
+  isReserve?: boolean;
   p1: PuzzlePart;
   coord: {
     lat: string;
@@ -296,6 +298,11 @@ export async function deleteAllAdminTeams(token: string) {
 export async function getAdminQuestions(token: string) {
   return requestJson<{ questions: RoundQuestion[] }>('/admin/questions', { method: 'GET' }, token);
 }
+
+export async function deleteAdminArena1Team(token: string, teamId: string) {
+  return requestJson<{ ok: boolean }>(`/admin/a1/teams/${teamId}`, { method: 'DELETE' }, token);
+}
+
 
 export async function createAdminQuestion(token: string, payload: RoundQuestion) {
   return requestJson<{ id: string }>('/admin/questions', {
@@ -430,4 +437,132 @@ export async function swapAdminTeamRound(token: string, teamId: string) {
   return requestJson<{ ok: boolean; error?: string }>(`/admin/teams/${teamId}/swap`, {
     method: 'POST'
   }, token);
+}
+
+// ── Arena 1 Types & Endpoints ──────────────────────────────────────────────────
+
+export type Arena1SlotType = 'html' | 'css' | 'js' | 'combined';
+
+export interface Arena1Question {
+  id?: string;
+  _id?: string;
+  slot?: number;
+  type: Arena1SlotType;
+  title: string;
+  description: string;
+  starterHtml?: string;
+  starterCss?: string;
+  starterJs?: string;
+  /** legacy/admin field */
+  defaultCode?: string;
+  points?: number;
+  isReserve?: boolean;
+}
+
+export interface Arena1SlotResult {
+  slot: number;
+  questionId: string;
+  submittedAt: string | null;
+  submittedFilePath: string | null;
+  approved: boolean | null;
+  points: number;
+  swapped: boolean;
+  skipped: boolean;
+  timeMs: number | null;
+}
+
+export interface Arena1GameState {
+  status: 'waiting' | 'active' | 'done';
+  currentSlot: number;
+  slotStartedAt: string | null;
+  swapsLeft: number;
+  slotResults: Arena1SlotResult[];
+  startedAt: string | null;
+  finishedAt: string | null;
+}
+
+export async function getArena1State(token: string) {
+  return requestJson<{
+    gameState: Arena1GameState;
+    currentQuestion: Arena1Question | null;
+    msLeft: number;
+  }>('/a1/game/state', { method: 'GET' }, token);
+}
+
+export async function submitArena1Code(token: string, slot: number, payload: { html: string; css: string; js: string }) {
+  return requestJson<{ ok: boolean }>('/a1/game/submit', {
+    method: 'POST',
+    body: JSON.stringify({ ...payload, slot })
+  }, token);
+}
+
+export async function skipArena1Slot(token: string) {
+  return requestJson<{ ok: boolean; gameState: Arena1GameState }>('/a1/game/skip', {
+    method: 'POST'
+  }, token);
+}
+
+export async function useArena1Swap(token: string) {
+  return requestJson<{ ok: boolean; gameState: Arena1GameState }>('/a1/game/swap', {
+    method: 'POST'
+  }, token);
+}
+
+export async function shareArena1Result(token: string) {
+  return requestJson<{ ok: boolean }>('/a1/game/share', { method: 'POST' }, token);
+}
+
+// Admin Arena 1
+
+export async function getAdminArena1Teams(token: string) {
+  return requestJson<{ teams: any[] }>('/admin/a1/teams', { method: 'GET' }, token);
+}
+
+export async function createAdminArena1Team(token: string, payload: { name: string; password: string; solverName?: string; runnerName?: string }) {
+  return requestJson<{ ok: true }>('/admin/a1/teams', { method: 'POST', body: JSON.stringify(payload) }, token);
+}
+
+export async function getAdminArena1Questions(token: string) {
+  return requestJson<{ questions: Arena1Question[] }>('/admin/a1/questions', { method: 'GET' }, token);
+}
+
+export async function createAdminArena1Question(token: string, payload: Partial<Arena1Question>) {
+  return requestJson<{ ok: boolean; insertedId: string }>('/admin/a1/questions', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  }, token);
+}
+
+export async function updateAdminArena1Question(token: string, id: string, payload: Partial<Arena1Question>) {
+  return requestJson<{ ok: boolean }>(`/admin/a1/questions/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload)
+  }, token);
+}
+
+export async function deleteAdminArena1Question(token: string, id: string) {
+  return requestJson<{ ok: boolean }>(`/admin/a1/questions/${id}`, { method: 'DELETE' }, token);
+}
+
+export async function adminGradeArena1Submission(token: string, teamId: string, slot: number, approved: boolean, points: number) {
+  return requestJson<{ ok: boolean }>(`/admin/a1/review/${teamId}/${slot}`, {
+    method: 'POST',
+    body: JSON.stringify({ approved, points })
+  }, token);
+}
+
+export async function adminStartArena1(token: string) {
+  return requestJson<{ ok: boolean }>('/admin/a1/game/start', { method: 'POST' }, token);
+}
+
+export async function adminEndArena1(token: string) {
+  return requestJson<{ ok: boolean }>('/admin/a1/game/end', { method: 'POST' }, token);
+}
+
+export async function adminPostArena1DiscordReport(token: string) {
+  return requestJson<{ ok: boolean }>('/admin/a1/report/discord', { method: 'POST' }, token);
+}
+
+export async function adminUnlockArena1Team(token: string, teamId: string) {
+  return requestJson<{ ok: boolean; message: string }>(`/admin/a1/teams/${teamId}/unlock`, { method: 'POST' }, token);
 }

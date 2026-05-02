@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { createAdminTeam, deleteAdminTeam, deleteAllAdminTeams, swapAdminTeamRound } from '@/lib/api';
 import { cn } from '@/lib/utils';
+import { useAdminToast } from '@/contexts/AdminToastContext';
 
 interface TeamManagementProps {
   token: string;
@@ -14,6 +15,7 @@ interface TeamManagementProps {
 }
 
 export function TeamManagement({ token, teams, onRefresh, onError }: TeamManagementProps) {
+  const { showToast, confirm } = useAdminToast();
   const [teamName, setTeamName] = useState('');
   const [teamEmail, setTeamEmail] = useState('');
   const [teamSolverName, setTeamSolverName] = useState('');
@@ -34,44 +36,66 @@ export function TeamManagement({ token, teams, onRefresh, onError }: TeamManagem
       setTeamSolverName('');
       setTeamRunnerName('');
       setTeamPassword('');
+      showToast('Team created successfully');
       onRefresh();
     } catch (err) {
-      onError(err instanceof Error ? err.message : 'Failed to create team');
+      showToast(err instanceof Error ? err.message : 'Failed to create team', 'error');
     } finally {
       setIsCreating(false);
     }
   };
 
   const handleDeleteTeam = async (id: string) => {
-    if (!token || !window.confirm('Confirm operative removal?')) return;
+    if (!token) return;
+    const ok = await confirm({
+      title: 'Remove Team',
+      message: 'Confirm operative removal? All data for this team will be permanently deleted.',
+      confirmText: 'Remove'
+    });
+    if (!ok) return;
     try {
       await deleteAdminTeam(token, id);
+      showToast('Team removed');
       onRefresh();
     } catch (err) {
-      onError(err instanceof Error ? err.message : 'Failed to delete team');
+      showToast(err instanceof Error ? err.message : 'Failed to delete team', 'error');
     }
   };
 
   const handleSwapRound = async (id: string) => {
-    if (!token || !window.confirm('FORCE ROUND SWAP? This will replace the team\'s current challenge with one from the Reserve Pool. Points will NOT be deducted for Admin-forced swaps.')) return;
+    if (!token) return;
+    const ok = await confirm({
+      title: 'Emergency Swap',
+      message: "FORCE ROUND SWAP? This will replace the team's current challenge with one from the Reserve Pool. Points will NOT be deducted for Admin-forced swaps.",
+      confirmText: 'Force Swap'
+    });
+    if (!ok) return;
     setIsSwapping(id);
     try {
       await swapAdminTeamRound(token, id);
+      showToast('Round swapped via reserve pool');
       onRefresh();
     } catch (err) {
-      onError(err instanceof Error ? err.message : 'Failed to swap round');
+      showToast(err instanceof Error ? err.message : 'Failed to swap round', 'error');
     } finally {
       setIsSwapping(null);
     }
   };
 
   const handleDeleteAll = async () => {
-    if (!token || !window.confirm('WIPE ALL OPERATIVES? This will clear all progress.')) return;
+    if (!token) return;
+    const ok = await confirm({
+      title: 'CRITICAL WIPE',
+      message: 'WIPE ALL OPERATIVES? This will clear all progress and delete every team. This action is IRREVERSIBLE.',
+      confirmText: 'EXECUTE WIPE'
+    });
+    if (!ok) return;
     try {
       await deleteAllAdminTeams(token);
+      showToast('All operatives wiped');
       onRefresh();
     } catch (err) {
-      onError(err instanceof Error ? err.message : 'Failed to wipe teams');
+      showToast(err instanceof Error ? err.message : 'Failed to wipe teams', 'error');
     }
   };
 

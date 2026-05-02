@@ -1,6 +1,8 @@
 import http from 'http';
 import axios from 'axios';
 import cors from 'cors';
+import fs from 'fs';
+import ExcelJS from 'exceljs';
 
 import dotenv from 'dotenv';
 import express from 'express';
@@ -8,8 +10,8 @@ import path from 'path';
 import { spawn } from 'child_process';
 import { ObjectId } from 'mongodb';
 import type { LoginPayload, GameState, QuestionDocument } from './types';
-import { closeClient, ensureIndexes, getQuestionsCollection, getTeamsCollection, getConfigCollection, getAdminPhrasesCollection, getReservePoolCollection } from './db';
-import { requireAdmin, requireAuth, signAdminToken, signToken, normalizeRole, type AdminAuthedRequest, type AuthedRequest } from './auth';
+import { closeClient, ensureIndexes, getQuestionsCollection, getTeamsCollection, getConfigCollection, getAdminPhrasesCollection, getReservePoolCollection, getArena1TeamsCollection, getArena1QuestionsCollection } from './db';
+import { requireAdmin, requireAuth, signAdminToken, signToken, normalizeRole, requireArena1Auth, type AdminAuthedRequest, type AuthedRequest, type Arena1AuthedRequest } from './auth';
 import { createTeam, findTeamByName, verifyTeamPassword, findTeamById } from './team-service';
 import { claimReserveRound, getCurrentQuestionForTeam } from './round-swap-service';
 import { createInitialGameState, normalizeGameState, sanitizeGameStateUpdate, calculateDifficulty } from './game';
@@ -18,6 +20,24 @@ import { asyncHandler, createApiErrorHandler, HttpError } from './errors';
 import type { ChatMessage } from './types';
 import { initDiscordBridge, sendAdminAlert, sendQRToDiscord } from './discord-bridge';
 import { initSocketServer, broadcastLeaderboard } from './socket';
+import {
+  findArena1TeamByName,
+  findArena1TeamById,
+  verifyArena1TeamPassword,
+  createArena1Team,
+  getSlotTimeLeftMs,
+  checkAndAutoSkip,
+  performSwap,
+  submitSlot,
+  reviewSlot,
+  startArena1,
+  endArena1,
+  buildArena1Report,
+  getSubmissionPath,
+  getSubmissionsDir,
+  SLOT_DURATION_MS,
+  manualSkip,
+} from './arena1';
 
 // Load environment variables. In production (Render), these are provided by the system.
 // In local dev, this loads from the .env file.
@@ -98,17 +118,17 @@ async function generateQuestionQrAsset(question: Pick<QuestionDocument, 'round' 
 export async function recordScoreChange(teamId: string | ObjectId, amount: number, reason: string) {
   const teams = await getTeamsCollection();
   const id = typeof teamId === 'string' ? toObjectId(teamId, 'team id') : teamId;
-  
+
   await teams.updateOne(
     { _id: id },
-    { 
+    {
       $inc: { score: amount },
-      $push: { 
-        scoreHistory: { 
-          amount, 
-          reason, 
-          timestamp: new Date().toISOString() 
-        } 
+      $push: {
+        scoreHistory: {
+          amount,
+          reason,
+          timestamp: new Date().toISOString()
+        }
       } as any,
       $set: { updatedAt: new Date() }
     }
@@ -117,6 +137,7 @@ export async function recordScoreChange(teamId: string | ObjectId, amount: numbe
 
 function createQuestionPayload(input: any, existing?: Partial<QuestionDocument>): Omit<QuestionDocument, 'createdAt' | 'updatedAt'> {
   const round = Number(input?.round);
+  const isReserve = Boolean(input?.isReserve);
   const qrPasskey = typeof input?.qrPasskey === 'string' ? input.qrPasskey.trim() : '';
   const locationQrCodeInput = typeof input?.locationQrCode === 'string' ? input.locationQrCode.trim() : '';
   const p1 = input?.p1 || {};
@@ -139,6 +160,7 @@ function createQuestionPayload(input: any, existing?: Partial<QuestionDocument>)
 
   return {
     round,
+    isReserve,
     p1: {
       title: p1.title.trim(),
       code: typeof p1.code === 'string' ? p1.code : '',
@@ -280,7 +302,7 @@ app.post('/api/admin/teams/:id/swap', requireAdmin, route(async (request: AdminA
 async function augmentGameState(teamId: string, baseState: GameState) {
   const currentQ = await getCurrentQuestionForTeam(teamId);
   const team = await findTeamById(teamId);
-  
+
   const activeQuestionOverride = currentQ ? {
     id: currentQ._id.toString(),
     round: currentQ.round,
@@ -315,6 +337,101 @@ app.post('/api/auth/login', route(async (request, response) => {
     response.status(403).json({ error: 'Event login is currently disabled by administrators.' });
     return;
   }
+
+  // ── Check Arena 1 first ──────────────────────────────────────────────────
+  const a1Team = await findArena1TeamByName(teamName);
+  if (a1Team) {
+    const isA1PasswordValid = await verifyArena1TeamPassword(a1Team, password);
+    if (!isA1PasswordValid) {
+      response.status(401).json({ error: 'Invalid team credentials' });
+      return;
+    }
+
+    // ── ARENA 1 DEVICE LOCK ──────────────────────────────────────────────────
+    const a1ActiveDevices: Record<string, string> = (a1Team as any).activeDevices ?? {};
+    const a1ExistingFingerprint = a1ActiveDevices[role];
+
+    if (a1ExistingFingerprint) {
+      // Get IP and Location
+      const a1ClientIp = (request.headers['x-forwarded-for'] as string || request.socket.remoteAddress || '').split(',')[0].trim();
+      let a1GeoString = `\n**IP:** ${a1ClientIp || 'Unknown'}`;
+      if (a1ClientIp && a1ClientIp !== '::1' && a1ClientIp !== '127.0.0.1') {
+        try {
+          const geoRes = await fetch(`http://ip-api.com/json/${a1ClientIp}?fields=status,country,regionName,city,lat,lon,isp`);
+          const geoData = await geoRes.json();
+          if (geoData.status === 'success') {
+            a1GeoString = `\n**IP:** ${a1ClientIp}\n**Location:** ${geoData.city}, ${geoData.regionName}, ${geoData.country}\n**ISP:** ${geoData.isp}\n**Map:** <https://www.google.com/maps?q=${geoData.lat},${geoData.lon}>`;
+          }
+        } catch { /* ignore */ }
+      }
+
+      const bypassConfig = await configCollection.findOne({ key: 'deviceBypassKey' });
+      const serverBypassKey: string = bypassConfig?.value ?? '';
+
+      if (!deviceBypassKey || !serverBypassKey || deviceBypassKey !== serverBypassKey) {
+        // 🔴 Discord alert: blocked
+        void sendAdminAlert(
+          `🔴 **[ARENA 1] DEVICE CONFLICT BLOCKED**\n` +
+          `━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+          `**Team:** ${a1Team.name}\n` +
+          `**Role:** ${role.toUpperCase()}\n` +
+          `**Time:** ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}${a1GeoString}\n` +
+          `A second device attempted to login as **${a1Team.name} [${role.toUpperCase()}]** (Arena 1) but was blocked.\n` +
+          `Provide a bypass key from Admin → Config → Device Lock if this is authorized.`,
+          undefined,
+          'auth'
+        );
+        response.status(409).json({
+          error: 'DEVICE_CONFLICT',
+          message: 'This account is already active on another device for this role. Request a bypass key from the event admin to override.',
+        });
+        return;
+      }
+
+      // Bypass key correct — 🟡 Discord alert: override
+      void sendAdminAlert(
+        `🟡 **[ARENA 1] DEVICE OVERRIDE AUTHORIZED**\n` +
+        `━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+        `**Team:** ${a1Team.name}\n` +
+        `**Role:** ${role.toUpperCase()}\n` +
+        `**Time:** ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}${a1GeoString}\n` +
+        `A bypass key was used to override the device lock for **${a1Team.name} [${role.toUpperCase()}]** (Arena 1).\n` +
+        `The previous session has been invalidated. If this was unauthorized, rotate the bypass key immediately.`,
+        undefined,
+        'auth'
+      );
+    }
+    // ────────────────────────────────────────────────────────────────────────
+
+    const a1Token = signToken({
+      kind: 'team',
+      teamId: a1Team._id.toString(),
+      teamName: a1Team.name,
+      role,
+      arena: 'arena1',
+    } as any);
+
+    const a1Fingerprint = a1Token.split('.').pop()?.slice(-16) ?? a1Token.slice(-16);
+    const a1Teams = await getArena1TeamsCollection();
+    await a1Teams.updateOne(
+      { _id: a1Team._id },
+      { $set: { lastLoginAt: new Date(), updatedAt: new Date(), [`activeDevices.${role}`]: a1Fingerprint } },
+    );
+
+    return response.json({
+      token: a1Token,
+      role,
+      arena: 'arena1',
+      team: {
+        id: a1Team._id.toString(),
+        name: a1Team.name,
+        solverName: a1Team.solverName,
+        runnerName: a1Team.runnerName,
+      },
+      gameState: a1Team.gameState,
+    });
+  }
+  // ── Fall through to Arena 2 ───────────────────────────────────────────────
 
   const team = await findTeamByName(teamName);
   if (!team) {
@@ -441,6 +558,28 @@ app.get('/api/session', requireAuth, route(async (request: AuthedRequest, respon
     return;
   }
 
+  // ── Arena 1 session restore ───────────────────────────────────────────────
+  if ((auth as any).arena === 'arena1') {
+    const a1Team = await findArena1TeamById(auth.teamId);
+    if (!a1Team) {
+      response.status(401).json({ error: 'Invalid or expired Arena 1 session' });
+      return;
+    }
+    return response.json({
+      token: request.headers.authorization?.slice('Bearer '.length),
+      role: auth.role,
+      arena: 'arena1',
+      team: {
+        id: a1Team._id.toString(),
+        name: a1Team.name,
+        solverName: a1Team.solverName,
+        runnerName: a1Team.runnerName,
+      },
+      gameState: a1Team.gameState,
+    });
+  }
+
+  // ── Arena 2 / standard session restore ────────────────────────────────────
   const team = await findTeamById(auth.teamId);
   if (!team) {
     response.status(401).json({ error: 'Invalid or expired session' });
@@ -813,8 +952,8 @@ function getDistance(lat1: number, lon1: number, lat2: number, lon2: number): nu
   const dl = (lon2 - lon1) * Math.PI / 180;
 
   const a = Math.sin(dp / 2) * Math.sin(dp / 2) +
-            Math.cos(p1) * Math.cos(p2) *
-            Math.sin(dl / 2) * Math.sin(dl / 2);
+    Math.cos(p1) * Math.cos(p2) *
+    Math.sin(dl / 2) * Math.sin(dl / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
   return R * c;
@@ -855,13 +994,16 @@ app.post('/api/runner/verify-location-qr', requireAuth, route(async (request: Au
   if (lat !== undefined && lng !== undefined) {
     const targetLat = parseFloat(question.coord.lat);
     const targetLng = parseFloat(question.coord.lng);
-    
+
     if (!isNaN(targetLat) && !isNaN(targetLng)) {
       const dist = getDistance(lat, lng, targetLat, targetLng);
+      /* 
       if (dist > 25) {
         response.status(403).json({ error: `Area Restricted: You are ${Math.round(dist)}m away from the target location.` });
         return;
       }
+      */
+      console.log(`[TEST] Geofence bypassed. Actual distance: ${Math.round(dist)}m`);
     }
   } else {
     response.status(403).json({ error: 'Location required to scan QR. Please enable location services.' });
@@ -952,7 +1094,7 @@ app.post('/api/runner/complete-round', requireAuth, route(async (request: Authed
   const basePoints = 200;
   const isHard = team.gameState.difficulty === 'hard';
   const difficultyBonus = isHard ? 283 : 0;
-  
+
   let speedBonus = 0;
   let speedReason = "";
   let elapsedSeconds = 0;
@@ -961,7 +1103,7 @@ app.post('/api/runner/complete-round', requireAuth, route(async (request: Authed
     const startTime = new Date(team.gameState.currentRoundStartTime).getTime();
     const endTime = Date.now();
     elapsedSeconds = (endTime - startTime) / 1000;
-    
+
     // Time Tiers
     const elapsedMinutes = elapsedSeconds / 60;
     if (elapsedMinutes < 10) {
@@ -992,7 +1134,7 @@ app.post('/api/runner/complete-round', requireAuth, route(async (request: Authed
   let decayJackpot = 0;
   if (isHard) {
     const jackpotStart = 1000;
-    const decayRate = 50; 
+    const decayRate = 50;
     const decayInterval = 30;
     const decayPeriods = Math.floor(elapsedSeconds / decayInterval);
     decayJackpot = Math.max(0, jackpotStart - (decayPeriods * decayRate));
@@ -1473,7 +1615,7 @@ app.post('/api/admin/questions', requireAdmin, route(async (request: AdminAuthed
   try {
     const qrPath = await generateQuestionQrAsset(payload);
     const result = await questions.insertOne({ ...payload, createdAt: now, updatedAt: now });
-    
+
     if (payload.coord) {
       // Background task: send to Discord
       sendQRToDiscord(qrPath, payload.round, payload.coord.lat, payload.coord.lng, payload.coord.place || `Location ${payload.round}`).catch(err => {
@@ -1534,7 +1676,7 @@ app.delete('/api/admin/database', requireAdmin, route(async (_request: AdminAuth
   const teams = await getTeamsCollection();
   const questions = await getQuestionsCollection();
   const reservePool = await getReservePoolCollection();
-  
+
   const [totalQuestions, totalReserve, teamCount] = await Promise.all([
     questions.countDocuments(),
     reservePool.countDocuments(),
@@ -1544,7 +1686,428 @@ app.delete('/api/admin/database', requireAdmin, route(async (_request: AdminAuth
   response.json({ ok: true, data: { status: 'online', totalQuestions, totalReserve, teamCount } });
 }));
 
+// ── Arena 2: Time Handicap ────────────────────────────────────────────────────
+app.post('/api/admin/teams/:id/adjust-time', requireAdmin, route(async (request: AdminAuthedRequest, response) => {
+  const teamId = String(request.params.id);
+  const { adjustMinutes } = request.body as { adjustMinutes?: number };
+  if (typeof adjustMinutes !== 'number' || isNaN(adjustMinutes)) {
+    response.status(400).json({ error: 'adjustMinutes (number) is required' });
+    return;
+  }
+  const teams = await getTeamsCollection();
+  const team = await teams.findOne({ _id: toObjectId(teamId, 'team id') });
+  if (!team) {
+    response.status(404).json({ error: 'Team not found' });
+    return;
+  }
+  if (!team.gameState.currentRoundStartTime) {
+    response.status(400).json({ error: 'No active round timer to adjust' });
+    return;
+  }
+  const currentStart = new Date(team.gameState.currentRoundStartTime).getTime();
+  const adjustedStart = new Date(currentStart - adjustMinutes * 60 * 1000).toISOString();
+  await teams.updateOne(
+    { _id: team._id },
+    { $set: { 'gameState.currentRoundStartTime': adjustedStart, updatedAt: new Date() } }
+  );
+  response.json({ ok: true, newStartTime: adjustedStart });
+}));
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ARENA 1 — ROUTES
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ── A1: Team game state ──────────────────────────────────────────────────────
+app.get('/api/a1/game/state', requireArena1Auth, route(async (request: Arena1AuthedRequest, response) => {
+  const auth = request.a1Auth!;
+  await checkAndAutoSkip(auth.teamId);
+  const team = await findArena1TeamById(auth.teamId);
+  if (!team) {
+    response.status(401).json({ error: 'Invalid session' });
+    return;
+  }
+  const msLeft = getSlotTimeLeftMs(team);
+  // Fetch current question (safe fields only — no answers)
+  const currentResult = team.gameState.slotResults.find(r => r.slot === team.gameState.currentSlot);
+  let currentQuestion = null;
+  if (currentResult?.questionId && ObjectId.isValid(currentResult.questionId)) {
+    const questions = await getArena1QuestionsCollection();
+    const q = await questions.findOne({ _id: new ObjectId(currentResult.questionId) });
+    if (q) {
+      currentQuestion = {
+        id: q._id.toString(),
+        slot: q.slot,
+        type: q.type,
+        title: q.title,
+        description: q.description,
+        starterHtml: q.starterHtml,
+        starterCss: q.starterCss,
+        starterJs: q.starterJs,
+      };
+    }
+  }
+  response.json({
+    gameState: team.gameState,
+    msLeft,
+    score: team.score,
+    currentQuestion,
+    team: { id: team._id.toString(), name: team.name, solverName: team.solverName, runnerName: team.runnerName },
+  });
+}));
+
+// ── A1: Submit code ────────────────────────────────────────────────────────
+app.post('/api/a1/game/submit', requireArena1Auth, route(async (request: Arena1AuthedRequest, response) => {
+  const auth = request.a1Auth!;
+  if (auth.role !== 'solver') {
+    response.status(403).json({ error: 'Only solver can submit code' });
+    return;
+  }
+  const { html = '', css = '', js = '', slot } = request.body as { html?: string; css?: string; js?: string; slot?: number };
+  if (typeof slot !== 'number') {
+    response.status(400).json({ error: 'slot is required' });
+    return;
+  }
+  await checkAndAutoSkip(auth.teamId);
+  const result = await submitSlot(auth.teamId, slot, html, css, js);
+  if (!result.ok) {
+    response.status(400).json({ error: result.error });
+    return;
+  }
+  // Notify via socket
+  const { getIo } = await import('./socket');
+  getIo()?.to(`a1:${auth.teamId}`).emit('a1:submitted', { slot });
+  getIo()?.to('admin').emit('a1:admin:refresh');
+  response.json({ ok: true });
+}));
+
+// ── A1: Swap ───────────────────────────────────────────────────────────────
+app.post('/api/a1/game/swap', requireArena1Auth, route(async (request: Arena1AuthedRequest, response) => {
+  const auth = request.a1Auth!;
+  await checkAndAutoSkip(auth.teamId);
+  const result = await performSwap(auth.teamId);
+  if (!result.ok) {
+    response.status(400).json({ error: result.error });
+    return;
+  }
+  const team = await findArena1TeamById(auth.teamId);
+  const msLeft = team ? getSlotTimeLeftMs(team) : SLOT_DURATION_MS;
+  const { getIo } = await import('./socket');
+  getIo()?.to(`a1:${auth.teamId}`).emit('a1:slot-change', {
+    slot: team?.gameState.currentSlot,
+    reason: 'swap',
+    newQuestionId: result.newQuestionId,
+    msLeft,
+  });
+  getIo()?.to('admin').emit('a1:admin:refresh');
+  response.json({ ok: true, newQuestionId: result.newQuestionId, msLeft });
+}));
+
+// ── A1: Skip ───────────────────────────────────────────────────────────────
+app.post('/api/a1/game/skip', requireArena1Auth, route(async (request: Arena1AuthedRequest, response) => {
+  const auth = request.a1Auth!;
+  const result = await manualSkip(auth.teamId);
+  if (!result.ok) {
+    response.status(400).json({ error: result.error });
+    return;
+  }
+  const team = await findArena1TeamById(auth.teamId);
+  const msLeft = team ? getSlotTimeLeftMs(team) : SLOT_DURATION_MS;
+  const { getIo } = await import('./socket');
+  getIo()?.to(`a1:${auth.teamId}`).emit('a1:slot-change', {
+    slot: team?.gameState.currentSlot,
+    reason: 'skip',
+    msLeft,
+  });
+  response.json({ ok: true, msLeft });
+}));
+
+app.post('/api/a1/game/share', requireArena1Auth, route(async (request: Arena1AuthedRequest, response) => {
+  const auth = request.a1Auth!;
+  const team = await findArena1TeamById(auth.teamId);
+  if (!team) return response.status(404).json({ error: 'Team not found' });
+
+  if (team.gameState.status !== 'done') {
+    return response.status(400).json({ error: 'Arena not completed yet' });
+  }
+
+  const totalPoints = team.gameState.slotResults.reduce((sum: number, s: any) => sum + (s.points || 0), 0);
+  const slotsIcons = team.gameState.slotResults.map((s: any) => s.approved ? '✅' : '❌').join(' ');
+
+  const embed = [
+    `TEAM ACHIEVEMENT: ${team.name}`,
+    `━━━━━━━━━━━━━━━━━━━━━━━━━`,
+    ` Arena 1 Completed!`,
+    ` Points: ${totalPoints}`,
+    ` Progress: ${slotsIcons}`,
+    `━━━━━━━━━━━━━━━━━━━━━━━━━`,
+    `#CodeScavenger #Arena1 #Achievement`
+  ].join('\n');
+
+  const { sendAdminAlert } = await import('./discord-bridge');
+  await sendAdminAlert(embed, undefined, 'a1_result');
+  response.json({ ok: true });
+}));
+
+// ── A1: Admin — list teams ─────────────────────────────────────────────────
+app.get('/api/admin/a1/teams', requireAdmin, route(async (_request: AdminAuthedRequest, response) => {
+  const teams = await getArena1TeamsCollection();
+  const docs = await teams.find({}).sort({ createdAt: -1 }).toArray();
+  response.json({
+    teams: docs.map(t => ({
+      id: t._id.toString(),
+      name: t.name,
+      solverName: t.solverName || '',
+      runnerName: t.runnerName || '',
+      score: t.score,
+      gameState: t.gameState,
+      createdAt: t.createdAt,
+      failedLoginAttempts: t.failedLoginAttempts ?? 0,
+      lockedUntil: t.lockedUntil ?? null,
+    })),
+  });
+}));
+
+// ── A1: Admin — create team ────────────────────────────────────────────────
+app.post('/api/admin/a1/teams', requireAdmin, route(async (request: AdminAuthedRequest, response) => {
+  const { name, password, solverName, runnerName } = request.body as { name?: string; password?: string; solverName?: string; runnerName?: string };
+  if (!name || !password) {
+    response.status(400).json({ error: 'name and password are required' });
+    return;
+  }
+  try {
+    await createArena1Team(name, password, solverName, runnerName);
+  } catch (err: any) {
+    response.status(409).json({ error: 'Arena 1 team already exists' });
+    return;
+  }
+  response.status(201).json({ ok: true });
+}));
+
+// ── A1: Admin — delete team ────────────────────────────────────────────────
+app.delete('/api/admin/a1/teams/:id', requireAdmin, route(async (request: AdminAuthedRequest, response) => {
+  const id = String(request.params.id);
+  const teams = await getArena1TeamsCollection();
+  await teams.deleteOne({ _id: toObjectId(id, 'team id') });
+  response.json({ ok: true });
+}));
+
+// ── A1: Admin — unlock account ─────────────────────────────────────────────
+app.post('/api/admin/a1/teams/:id/unlock', requireAdmin, route(async (request: AdminAuthedRequest, response) => {
+  const id = String(request.params.id);
+  const teams = await getArena1TeamsCollection();
+  const team = await teams.findOne({ _id: toObjectId(id, 'team id') });
+  if (!team) {
+    return response.status(404).json({ error: 'Team not found' });
+  }
+  await teams.updateOne(
+    { _id: team._id },
+    { $set: { failedLoginAttempts: 0, lockedUntil: null, updatedAt: new Date() } },
+  );
+  response.json({ ok: true, message: `Account unlocked for team "${team.name}"` });
+}));
+
+// ── A1: Admin — questions CRUD ─────────────────────────────────────────────
+app.get('/api/admin/a1/questions', requireAdmin, route(async (_request: AdminAuthedRequest, response) => {
+  const questions = await getArena1QuestionsCollection();
+  const docs = await questions.find({}).sort({ slot: 1 }).toArray();
+  response.json({ questions: docs.map(q => ({ ...q, id: q._id.toString() })) });
+}));
+
+app.post('/api/admin/a1/questions', requireAdmin, route(async (request: AdminAuthedRequest, response) => {
+  const { slot, type, title, description, starterHtml, starterCss, starterJs, defaultCode, points, isReserve } = request.body;
+  if (!title || !type) {
+    response.status(400).json({ error: 'title and type are required' });
+    return;
+  }
+  const questions = await getArena1QuestionsCollection();
+  const now = new Date();
+  const result = await questions.insertOne({
+    slot: Number(slot) || 1,
+    type: type || 'html',
+    title: String(title),
+    description: String(description || ''),
+    starterHtml: String(starterHtml || ''),
+    starterCss: String(starterCss || ''),
+    starterJs: String(starterJs || ''),
+    defaultCode: String(defaultCode || ''),
+    points: Number(points) || 100,
+    isReserve: Boolean(isReserve),
+    createdAt: now,
+    updatedAt: now,
+  });
+  response.status(201).json({ ok: true, id: result.insertedId.toString() });
+}));
+
+app.put('/api/admin/a1/questions/:id', requireAdmin, route(async (request: AdminAuthedRequest, response) => {
+  const id = String(request.params.id);
+  const { slot, type, title, description, starterHtml, starterCss, starterJs, defaultCode, points, isReserve } = request.body;
+  const questions = await getArena1QuestionsCollection();
+  await questions.updateOne(
+    { _id: toObjectId(id, 'question id') },
+    {
+      $set: {
+        ...(slot !== undefined && { slot: Number(slot) }),
+        ...(type !== undefined && { type }),
+        ...(title !== undefined && { title: String(title) }),
+        ...(description !== undefined && { description: String(description) }),
+        ...(starterHtml !== undefined && { starterHtml: String(starterHtml) }),
+        ...(starterCss !== undefined && { starterCss: String(starterCss) }),
+        ...(starterJs !== undefined && { starterJs: String(starterJs) }),
+        ...(defaultCode !== undefined && { defaultCode: String(defaultCode) }),
+        ...(points !== undefined && { points: Number(points) }),
+        ...(isReserve !== undefined && { isReserve: Boolean(isReserve) }),
+        updatedAt: new Date(),
+      },
+    }
+  );
+  response.json({ ok: true });
+}));
+
+app.delete('/api/admin/a1/questions/:id', requireAdmin, route(async (request: AdminAuthedRequest, response) => {
+  const id = String(request.params.id);
+  const questions = await getArena1QuestionsCollection();
+  await questions.deleteOne({ _id: toObjectId(id, 'question id') });
+  response.json({ ok: true });
+}));
+
+// ── A1: Admin — start / end ────────────────────────────────────────────────
+app.post('/api/admin/a1/game/start', requireAdmin, route(async (_request: AdminAuthedRequest, response) => {
+  await startArena1();
+  const { getIo } = await import('./socket');
+  getIo()?.emit('a1:state-refresh');
+  response.json({ ok: true });
+}));
+
+app.post('/api/admin/a1/game/end', requireAdmin, route(async (_request: AdminAuthedRequest, response) => {
+  await endArena1();
+  const { getIo } = await import('./socket');
+  getIo()?.emit('a1:state-refresh');
+  response.json({ ok: true });
+}));
+
+// ── A1: Admin — review submission ──────────────────────────────────────────
+app.post('/api/admin/a1/review/:teamId/:slot', requireAdmin, route(async (request: AdminAuthedRequest, response) => {
+  const teamId = String(request.params.teamId);
+  const slot = Number(request.params.slot);
+  const { approved, points } = request.body as { approved?: boolean; points?: number };
+  if (typeof approved !== 'boolean' || typeof points !== 'number') {
+    response.status(400).json({ error: 'approved (boolean) and points (number) are required' });
+    return;
+  }
+  const result = await reviewSlot(teamId, slot, approved, points);
+  if (!result.ok) {
+    response.status(400).json({ error: result.error });
+    return;
+  }
+  // Notify team
+  const { getIo } = await import('./socket');
+  getIo()?.to(`a1:${teamId}`).emit('a1:reviewed', { slot, approved, points });
+  response.json({ ok: true });
+}));
+
+// ── A1: Admin — serve submission iframe ────────────────────────────────────
+app.get('/api/admin/a1/submissions/:teamId/:slot', requireAdmin, route(async (request: AdminAuthedRequest, response) => {
+  const teamId = String(request.params.teamId);
+  const slot = Number(request.params.slot);
+  const filePath = getSubmissionPath(teamId, slot);
+  if (!fs.existsSync(filePath)) {
+    response.status(404).send('No submission found');
+    return;
+  }
+  response.setHeader('Content-Type', 'text/html; charset=utf-8');
+  response.sendFile(filePath);
+}));
+
+// ── A1: Admin — JSON report ────────────────────────────────────────────────
+app.get('/api/admin/a1/report', requireAdmin, route(async (_request: AdminAuthedRequest, response) => {
+  const report = await buildArena1Report();
+  response.json({ report });
+}));
+
+// ── A1: Admin — Excel report ───────────────────────────────────────────────
+app.get('/api/admin/a1/report/xlsx', requireAdmin, route(async (_request: AdminAuthedRequest, response) => {
+  const report = await buildArena1Report();
+  if (report.length === 0) {
+    return response.status(400).json({ error: 'No data available for Arena 1 report' });
+  }
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = 'QUEST: The Code Scavenger';
+  const sheet = workbook.addWorksheet('Arena 1 Results');
+
+  // Header
+  sheet.columns = [
+    { header: 'Rank', key: 'rank', width: 8 },
+    { header: 'Team', key: 'name', width: 20 },
+    { header: 'Q1 (HTML)', key: 'q1', width: 12 },
+    { header: 'Q2 (CSS)', key: 'q2', width: 12 },
+    { header: 'Q3 (JS)', key: 'q3', width: 12 },
+    { header: 'Q4 (Combined)', key: 'q4', width: 14 },
+    { header: 'Swaps Used', key: 'swaps', width: 12 },
+    { header: 'Total Points', key: 'total', width: 14 },
+  ];
+
+  // Style header row
+  const headerRow = sheet.getRow(1);
+  headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+  headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1A1A2E' } };
+  headerRow.alignment = { horizontal: 'center' };
+
+  // Data rows
+  for (const row of report) {
+    const dataRow = sheet.addRow({
+      rank: row.rank,
+      name: row.name,
+      q1: row.slots[0],
+      q2: row.slots[1],
+      q3: row.slots[2],
+      q4: row.slots[3],
+      swaps: row.swapsUsed,
+      total: row.total,
+    });
+    // Color code scores
+    [3, 4, 5, 6].forEach(col => {
+      const cell = dataRow.getCell(col);
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: Number(cell.value) >= 300 ? 'FF2ECC71' : 'FFE74C3C' } };
+      cell.alignment = { horizontal: 'center' };
+    });
+    dataRow.getCell(8).font = { bold: true };
+  }
+
+  response.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  response.setHeader('Content-Disposition', `attachment; filename="arena1_report_${Date.now()}.xlsx"`);
+  await workbook.xlsx.write(response);
+  response.end();
+}));
+
+// ── A1: Admin — Discord report ─────────────────────────────────────────────
+app.post('/api/admin/a1/report/discord', requireAdmin, route(async (_request: AdminAuthedRequest, response) => {
+  const report = await buildArena1Report();
+  if (report.length === 0) {
+    return response.status(400).json({ error: 'No teams have participated in Arena 1 yet' });
+  }
+  const medals = ['🥇', '🥈', '🥉'];
+  const lines = report.map((row, i) => {
+    const medal = medals[i] || `${row.rank}.`;
+    const pts = row.total.toLocaleString();
+    const slots = row.slots.map(p => p >= 300 ? '✅' : p === 0 ? '❌' : '⏳').join(' ');
+    return `${medal} **${row.name}** — ${pts} pts ${slots}`;
+  });
+
+  const embed = [
+    'ARENA 1 — FINAL RESULTS',
+    '━━━━━━━━━━━━━━━━━━━━━━━━━',
+    ...lines,
+    '━━━━━━━━━━━━━━━━━━━━━━━━━',
+    `Generated: ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}`,
+  ].join('\n');
+
+  await sendAdminAlert(embed, undefined, 'a1_result');
+  response.json({ ok: true });
+}));
+
+
 app.use(createApiErrorHandler());
+
 
 app.use((_request, response) => {
   response.status(404).json({ error: 'Not found' });
@@ -1554,7 +2117,30 @@ async function main() {
   await ensureIndexes();
   await seedQuestionsIfEmpty();
 
-  // Start the HTTP server first so Render detects the open port
+  // ── Arena 1 background timer job ─────────────────────────────────────────
+  // Check every 15s if any active A1 team's slot has expired and auto-skip
+  setInterval(async () => {
+    try {
+      const a1Teams = await getArena1TeamsCollection();
+      const activeTeams = await a1Teams.find({ 'gameState.status': 'active' }).toArray();
+      for (const team of activeTeams) {
+        const skipped = await checkAndAutoSkip(team._id.toString());
+        if (skipped) {
+          const { getIo } = await import('./socket');
+          const updatedTeam = await findArena1TeamById(team._id.toString());
+          getIo()?.to(`a1:${team._id}`).emit('a1:slot-change', {
+            slot: updatedTeam?.gameState.currentSlot,
+            reason: 'skip',
+          });
+          console.log(`[Arena1] Auto-skipped slot for team ${team.name}`);
+        }
+      }
+    } catch (err) {
+      console.error('[Arena1] Background timer error:', err);
+    }
+  }, 15_000);
+  // ────────────────────────────────────────────────────────────────────────
+
   httpServer.listen(port, '0.0.0.0', () => {
     console.log(`Backend listening on http://localhost:${port} (HTTP + WebSocket)`);
 

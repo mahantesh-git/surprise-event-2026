@@ -113,6 +113,7 @@ export interface VolunteerInfo {
 
 export interface QuestionDocument {
   round: number;
+  isReserve?: boolean;
   p1: PuzzlePart;
   coord: CoordinateInfo;
   volunteer: VolunteerInfo;

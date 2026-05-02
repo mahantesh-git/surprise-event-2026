@@ -44,6 +44,7 @@ import { QRScanner } from '@/components/QRScanner';
 import { TacticalComms } from '@/components/TacticalComms';
 import { LoginScreen } from '@/components/LoginScreen';
 import { TacticalBackground } from '@/components/TacticalBackground';
+import { Arena1App } from '@/Arena1App';
 import { TacticalStatus } from '@/components/TacticalStatus';
 import { QRCodeSVG } from 'qrcode.react';
 import { HardModeHUD } from '@/components/HardModeHUD';
@@ -802,6 +803,10 @@ export default function App() {
       );
     }
 
+    if (session.arena === 'arena1') {
+      return <Arena1App session={session} onLogout={logout} />;
+    }
+
     if (loading || roundsLoading || !gameState) {
       return (
         <motion.div key="loading" variants={fadeScaleVariants} initial="initial" animate="animate" exit="exit" className="relative z-10 w-full min-h-screen flex items-center justify-center">
@@ -1249,7 +1254,7 @@ export default function App() {
       </AnimatePresence>
 
       {/* Persistent Tactical Footer Bar */}
-      {session && role && (
+      {session && role && session.arena !== 'arena1' && (
         <div className="fixed bottom-0 left-0 w-full px-3 sm:px-6 py-4 flex justify-between items-center z-[200000] bg-black/95 border-t border-white/10 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
           <div className="relative">
             <AnimatePresence>

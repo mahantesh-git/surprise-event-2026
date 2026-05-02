@@ -70,6 +70,9 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
   return {
     plugins: [react(), basicSsl(), tailwindcss(), suppressTlsErrors()],
+    optimizeDeps: {
+      include: ['mind-ar/dist/mindar-image-three.prod.js'],
+    },
     define: {},
     resolve: {
       alias: {

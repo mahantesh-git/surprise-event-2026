@@ -17,7 +17,18 @@ export function useWebRTC({ socket, teamId, role, enabled }: UseWebRTCOptions) {
   const localStream = useRef<MediaStream | null>(null);
   const remoteAudio = useRef<HTMLAudioElement | null>(null);
   const iceCandidateQueue = useRef<RTCIceCandidateInit[]>([]);
+  const signalingQueue = useRef<Promise<void>>(Promise.resolve());
   const isSignaling = useRef(false);
+
+  const enqueueSignaling = useCallback((task: () => Promise<void>) => {
+    signalingQueue.current = signalingQueue.current.then(async () => {
+      try {
+        await task();
+      } catch (e) {
+        console.error('[WebRTC] Signaling task failed', e);
+      }
+    });
+  }, []);
 
   // Initialize Remote Audio element
   useEffect(() => {
@@ -111,35 +122,56 @@ export function useWebRTC({ socket, teamId, role, enabled }: UseWebRTCOptions) {
     };
 
     newPc.ontrack = (event) => {
-      console.log(`[WebRTC] Received remote track: ${event.track.kind}`);
+      const track = event.track;
+      console.log(`[WebRTC] Received remote track: ${track.kind} (id: ${track.id})`);
+      
       if (remoteAudio.current) {
-        const stream = event.streams[0] || new MediaStream([event.track]);
+        const stream = event.streams[0] || new MediaStream([track]);
         remoteAudio.current.srcObject = stream;
-        remoteAudio.current.play().catch(e => console.warn('[WebRTC] Play blocked', e));
+        
+        // Listen for track changes
+        track.onmute = () => console.log(`[WebRTC] Remote track ${track.id} muted`);
+        track.onunmute = () => console.log(`[WebRTC] Remote track ${track.id} unmuted`);
+        
+        remoteAudio.current.play()
+          .then(() => console.log('[WebRTC] Remote audio playing'))
+          .catch(e => console.warn('[WebRTC] Play blocked. User interaction required.', e));
       }
     };
 
     newPc.onconnectionstatechange = () => {
-      console.log(`[WebRTC] State: ${newPc.connectionState}`);
+      console.log(`[WebRTC] Connection State Changed: ${newPc.connectionState}`);
+      console.log(`[WebRTC] Signaling State: ${newPc.signalingState}`);
+      console.log(`[WebRTC] ICE Connection State: ${newPc.iceConnectionState}`);
+      
       setPeerConnected(newPc.connectionState === 'connected');
+      
+      if (newPc.connectionState === 'connected') {
+        console.log('[WebRTC] PEER CONNECTED - Audio should flow if tracks exist');
+      }
+      
       if (newPc.connectionState === 'disconnected' || newPc.connectionState === 'failed') {
+        console.warn('[WebRTC] Peer disconnected or failed');
         setIsIncoming(false);
       }
     };
 
-    newPc.onnegotiationneeded = async () => {
-      if (isSignaling.current) return;
-      isSignaling.current = true;
-      try {
-        console.log('[WebRTC] Negotiating...');
-        const offer = await newPc.createOffer();
-        await newPc.setLocalDescription(offer);
-        socket?.emit('webrtc:signal', { signal: { sdp: offer } });
-      } catch (e) {
-        console.error('[WebRTC] Negotiation error', e);
-      } finally {
-        isSignaling.current = false;
-      }
+    newPc.onnegotiationneeded = () => {
+      enqueueSignaling(async () => {
+        if (isSignaling.current) return;
+        isSignaling.current = true;
+        try {
+          console.log('[WebRTC] Negotiating (creating offer)...');
+          const offer = await newPc.createOffer();
+          await newPc.setLocalDescription(offer);
+          socket?.emit('webrtc:signal', { signal: { sdp: offer } });
+          console.log('[WebRTC] Offer sent');
+        } catch (e) {
+          console.error('[WebRTC] Negotiation error', e);
+        } finally {
+          isSignaling.current = false;
+        }
+      });
     };
 
     pc.current = newPc;
@@ -151,55 +183,93 @@ export function useWebRTC({ socket, teamId, role, enabled }: UseWebRTCOptions) {
 
     const handleSignal = async (data: { from: string; signal: any }) => {
       if (data.from === role) return;
-      const connection = createPeerConnection();
+      
+      enqueueSignaling(async () => {
+        const connection = createPeerConnection();
+        if (connection.signalingState === 'closed') return;
 
-      if (data.signal.type === 'ready') {
-        if (role === 'solver') {
-          console.log('[WebRTC] Solver initiating...');
-          const stream = await initLocalStream();
-          if (stream) {
-            const senders = connection.getSenders();
-            if (senders.length === 0) {
-              stream.getTracks().forEach(t => connection.addTrack(t, stream));
+        if (data.signal.type === 'ready') {
+          if (role === 'solver') {
+            // Reset if we are stuck in a non-idle state or already connected but they aren't
+            if (connection.connectionState !== 'new' && connection.connectionState !== 'connected') {
+              console.warn(`[WebRTC] Resetting from state: ${connection.connectionState}`);
+              connection.close();
+              pc.current = null;
+              return;
             }
-          } else {
-            connection.addTransceiver('audio', { direction: 'sendrecv' });
-          }
-        }
-        return;
-      }
-
-      if (data.signal.sdp) {
-        try {
-          console.log(`[WebRTC] Handling SDP: ${data.signal.sdp.type}`);
-          await connection.setRemoteDescription(new RTCSessionDescription(data.signal.sdp));
-          await processIceQueue();
-          
-          if (data.signal.sdp.type === 'offer') {
+            
+            console.log('[WebRTC] Solver initiating/re-syncing...');
             const stream = await initLocalStream();
             if (stream) {
-              // Replace or add track to the answer
               const senders = connection.getSenders();
-              const audioSender = senders.find(s => s.track?.kind === 'audio');
-              if (audioSender) {
-                await audioSender.replaceTrack(stream.getAudioTracks()[0]);
-              } else {
+              if (senders.length === 0) {
                 stream.getTracks().forEach(t => connection.addTrack(t, stream));
+              } else {
+                connection.onnegotiationneeded?.(new Event('negotiationneeded'));
+              }
+            } else {
+              if (connection.getTransceivers().length === 0) {
+                connection.addTransceiver('audio', { direction: 'sendrecv' });
+              } else {
+                connection.onnegotiationneeded?.(new Event('negotiationneeded'));
               }
             }
-            const answer = await connection.createAnswer();
-            await connection.setLocalDescription(answer);
-            socket.emit('webrtc:signal', { signal: { sdp: answer } });
           }
-        } catch (err) { console.error('[WebRTC] SDP error', err); }
-      } else if (data.signal.candidate) {
-        if (connection.remoteDescription) {
-          try { await connection.addIceCandidate(new RTCIceCandidate(data.signal.candidate)); }
-          catch (e) { console.error('[WebRTC] Ice error', e); }
-        } else {
-          iceCandidateQueue.current.push(data.signal.candidate);
+          return;
         }
-      }
+
+        if (data.signal.sdp) {
+          try {
+            const sdp = new RTCSessionDescription(data.signal.sdp);
+            const isOfferCollision = sdp.type === 'offer' && 
+              (connection.signalingState !== 'stable' || isSignaling.current);
+            const isPolite = role === 'runner';
+            
+            if (isOfferCollision) {
+              if (!isPolite) return;
+              await Promise.all([
+                connection.setLocalDescription({ type: 'rollback' } as any),
+                connection.setRemoteDescription(sdp)
+              ]);
+            } else {
+              if (sdp.type === 'answer' && connection.signalingState !== 'have-local-offer') {
+                console.warn(`[WebRTC] Ignoring stale ${sdp.type} in state: ${connection.signalingState}`);
+                return;
+              }
+              
+              console.log(`[WebRTC] Setting Remote Description: ${sdp.type}`);
+              await connection.setRemoteDescription(sdp);
+            }
+
+            await processIceQueue();
+            
+            if (sdp.type === 'offer') {
+              const stream = await initLocalStream();
+              if (stream) {
+                const senders = connection.getSenders();
+                const audioSender = senders.find(s => s.track?.kind === 'audio');
+                if (audioSender) {
+                  await audioSender.replaceTrack(stream.getAudioTracks()[0]);
+                } else {
+                  stream.getTracks().forEach(t => connection.addTrack(t, stream));
+                }
+              }
+              const answer = await connection.createAnswer();
+              await connection.setLocalDescription(answer);
+              socket.emit('webrtc:signal', { signal: { sdp: answer } });
+            }
+          } catch (err) { 
+            console.error('[WebRTC] SDP error', err);
+          }
+        } else if (data.signal.candidate) {
+          if (connection.remoteDescription) {
+            try { await connection.addIceCandidate(new RTCIceCandidate(data.signal.candidate)); }
+            catch (e) { console.error('[WebRTC] Ice error', e); }
+          } else {
+            iceCandidateQueue.current.push(data.signal.candidate);
+          }
+        }
+      });
     };
 
     socket.on('webrtc:signal', handleSignal);

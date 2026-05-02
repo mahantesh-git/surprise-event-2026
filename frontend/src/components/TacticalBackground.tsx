@@ -4,7 +4,7 @@ import { RainEffect } from './RainEffect';
 export function TacticalBackground() {
   const bgUrl = import.meta.env.VITE_BACKGROUND_IMAGE_URL || '/assets/images/login-bg.png';
   return (
-    <div className="fixed inset-0 z-0 bg-[#0a0200] overflow-hidden pointer-events-none">
+    <div className="fixed inset-0 z-0 bg-[#0a0200] overflow-hidden pointer-events-none tactical-background transition-opacity duration-500">
       {/* ATMOSPHERIC BACKGROUND */}
       <div className="absolute inset-0">
         <div className="absolute inset-0 bg-[#0a0200]" />
