@@ -19,28 +19,16 @@ const getApiBaseUrl = () => {
 
   if (!h) return '/api';
 
-  // Ensure protocol exists
+  // Ensure protocol exists and is secure for production
+  const isLocalhost = h.includes('localhost') || h.includes('127.0.0.1');
   if (!h.startsWith('http') && !h.startsWith('//')) {
-    h = `https://${h}`;
+    h = isLocalhost ? `http://${h}` : `https://${h}`;
+  } else if (!isLocalhost && h.startsWith('http://')) {
+    // Force upgrade http to https for production URLs to avoid Mixed Content blocks
+    h = h.replace('http://', 'https://');
   }
 
-  // Render-specific fix: internal service names (no dots) are not resolvable from browsers.
-  // We automatically append .onrender.com if it's not localhost and missing a top-level domain.
-  try {
-    const u = new URL(h);
-    const hostname = u.hostname;
-    
-    if (hostname !== 'localhost' && !hostname.includes('.') && !hostname.includes(':')) {
-      console.log(`[API] Fixing internal hostname: ${hostname} -> ${hostname}.onrender.com`);
-      u.hostname = `${hostname}.onrender.com`;
-      h = u.toString();
-    }
-  } catch (e) {
-    // Fallback for non-URL strings
-    if (!h.includes('.') && !h.includes('localhost') && !h.includes('://localhost')) {
-      h = `${h}.onrender.com`;
-    }
-  }
+
 
   // Cleanup: remove trailing slashes and ensure /api suffix
   h = h.replace(/\/+$/, '');
@@ -110,27 +98,53 @@ export interface GameStateUpdate extends Partial<Omit<GameState, 'handoff'>> {
   handoff?: HandoffDetails | null;
 }
 
-async function requestJson<T>(path: string, init: RequestInit = {}, token?: string): Promise<T> {
-  const response = await fetch(`${API_BASE}${path}`, {
-    ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      'ngrok-skip-browser-warning': 'true',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(init.headers || {}),
-    },
-  });
+async function requestJson<T>(path: string, init: RequestInit = {}, token?: string, _retry = 1): Promise<T> {
+  // 15 second timeout — covers Railway cold-start without hanging forever
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 15_000);
 
-  const payload = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    // Surface device conflicts as a distinct error type
-    if (response.status === 409 && payload?.error === 'DEVICE_CONFLICT') {
-      throw new DeviceConflictError();
+  try {
+    const response = await fetch(`${API_BASE}${path}`, {
+      ...init,
+      signal: controller.signal,
+      headers: {
+        'Content-Type': 'application/json',
+        'ngrok-skip-browser-warning': 'true',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(init.headers || {}),
+      },
+    });
+
+    clearTimeout(timeoutId);
+
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      if (response.status === 409 && payload?.error === 'DEVICE_CONFLICT') {
+        throw new DeviceConflictError();
+      }
+      throw new ApiError(payload?.error || 'Request failed', response.status);
     }
-    throw new ApiError(payload?.error || 'Request failed', response.status);
-  }
 
-  return payload as T;
+    return payload as T;
+  } catch (err: any) {
+    clearTimeout(timeoutId);
+
+    // Retry once on network errors (timeout, connection reset, etc.)
+    // Do NOT retry on API errors (4xx/5xx) — those are intentional responses.
+    const isNetworkError = err instanceof TypeError || err?.name === 'AbortError';
+    if (isNetworkError && _retry > 0) {
+      console.warn(`[API] Network error on ${path}, retrying in 1.5s…`, err?.message);
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      return requestJson<T>(path, init, token, _retry - 1);
+    }
+
+    // Convert AbortError into a friendlier message
+    if (err?.name === 'AbortError') {
+      throw new ApiError('Request timed out — server may be waking up, please try again.', 0);
+    }
+
+    throw err;
+  }
 }
 
 export async function loginTeam(teamName: string, password: string, role: Role, deviceBypassKey?: string) {

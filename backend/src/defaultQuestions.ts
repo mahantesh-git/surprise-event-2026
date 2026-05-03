@@ -14,7 +14,7 @@ export const DEFAULT_QUESTIONS = [
         { input: '50 50 50', output: '150' }
       ]
     },
-    coord: { lat: '15.434850° N', lng: '75.646450° E', place: 'BCA Block, Lab 2 Entrance' },
+    coord: { lat: '15.434417° N', lng: '75.648222° E', place: 'BCA Block, Lab 2 Entrance' },
     volunteer: { name: 'Ravi', initials: 'RV', bg: 'bg-zinc-950/80 border-indigo-500/20', color: 'text-indigo-400' },
     qrPasskey: 'QUEST-R1',
     locationQrCode: 'QUEST-LOC-R1',
@@ -36,7 +36,7 @@ export const DEFAULT_QUESTIONS = [
         { input: 'we love coding', output: '3' }
       ]
     },
-    coord: { lat: '15.433450° N', lng: '75.647950° E', place: 'JT College Central Library' },
+    coord: { lat: '15.435389° N', lng: '75.647222° E', place: 'JT College Central Library' },
     volunteer: { name: 'Priya', initials: 'PR', bg: 'bg-zinc-950/80 border-emerald-500/20', color: 'text-emerald-400' },
     qrPasskey: 'QUEST-R2',
     locationQrCode: 'QUEST-LOC-R2',
@@ -58,7 +58,7 @@ export const DEFAULT_QUESTIONS = [
         { input: '7 7', output: '14' }
       ]
     },
-    coord: { lat: '15.435050° N', lng: '75.647550° E', place: 'Campus Canteen' },
+    coord: { lat: '15.432972° N', lng: '75.649556° E', place: 'Campus Canteen' },
     volunteer: { name: 'Arjun', initials: 'AJ', bg: 'bg-zinc-950/80 border-amber-500/20', color: 'text-amber-400' },
     qrPasskey: 'QUEST-R3',
     locationQrCode: 'QUEST-LOC-R3',
@@ -80,7 +80,7 @@ export const DEFAULT_QUESTIONS = [
         { input: 'one two three', output: 'eno owt eerht' }
       ]
     },
-    coord: { lat: '15.433250° N', lng: '75.646550° E', place: 'Principal\'s Office Corridor' },
+    coord: { lat: '15.433306° N', lng: '75.647472° E', place: 'Principal\'s Office Corridor' },
     volunteer: { name: 'Sita', initials: 'ST', bg: 'bg-zinc-950/80 border-rose-500/20', color: 'text-rose-400' },
     qrPasskey: 'QUEST-R4',
     locationQrCode: 'QUEST-LOC-R4',
@@ -102,7 +102,7 @@ export const DEFAULT_QUESTIONS = [
         { input: '7 7 7', output: '0' }
       ]
     },
-    coord: { lat: '15.434650° N', lng: '75.648150° E', place: 'Campus Quadrangle' },
+    coord: { lat: '15.434028° N', lng: '75.647639° E', place: 'Campus Quadrangle' },
     volunteer: { name: 'Vikram', initials: 'VK', bg: 'bg-zinc-950/80 border-cyan-500/20', color: 'text-cyan-400' },
     qrPasskey: 'QUEST-R5',
     locationQrCode: 'QUEST-LOC-R5',
@@ -124,7 +124,7 @@ export const DEFAULT_QUESTIONS = [
         { input: 'Apple', output: '2' }
       ]
     },
-    coord: { lat: '15.433850° N', lng: '75.645850° E', place: 'Main Gate, Security Post' },
+    coord: { lat: '15.434778° N', lng: '75.646694° E', place: 'Main Gate, Security Post' },
     volunteer: { name: 'Anjali', initials: 'AN', bg: 'bg-zinc-950/80 border-purple-500/20', color: 'text-purple-400' },
     qrPasskey: 'QUEST-R6',
     locationQrCode: 'QUEST-LOC-R6',
@@ -146,7 +146,7 @@ export const DEFAULT_QUESTIONS = [
         { input: 'rat car', output: 'No' }
       ]
     },
-    coord: { lat: '15.432150° N', lng: '75.648850° E', place: 'MCA Lab 1' },
+    coord: { lat: '15.433389° N', lng: '75.646833° E', place: 'MCA Lab 1' },
     volunteer: { name: 'Suresh', initials: 'SR', bg: 'bg-zinc-950/80 border-blue-500/20', color: 'text-blue-400' },
     qrPasskey: 'QUEST-R7',
     locationQrCode: 'QUEST-LOC-R7',
@@ -168,7 +168,7 @@ export const DEFAULT_QUESTIONS = [
         { input: '10 15 20', output: '10' }
       ]
     },
-    coord: { lat: '15.435550° N', lng: '75.646150° E', place: 'Basketball Court' },
+    coord: { lat: '15.434833° N', lng: '75.647472° E', place: 'Basketball Court' },
     volunteer: { name: 'Kavya', initials: 'KV', bg: 'bg-zinc-950/80 border-pink-500/20', color: 'text-pink-400' },
     qrPasskey: 'QUEST-R8',
     locationQrCode: 'QUEST-LOC-R8',

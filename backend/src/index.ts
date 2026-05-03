@@ -7,7 +7,7 @@ import ExcelJS from 'exceljs';
 import dotenv from 'dotenv';
 import express from 'express';
 import path from 'path';
-import { spawn } from 'child_process';
+
 import { ObjectId } from 'mongodb';
 import type { LoginPayload, GameState, QuestionDocument } from './types';
 import { closeClient, ensureIndexes, getQuestionsCollection, getTeamsCollection, getConfigCollection, getAdminPhrasesCollection, getReservePoolCollection, getArena1TeamsCollection, getArena1QuestionsCollection } from './db';
@@ -18,7 +18,7 @@ import { createInitialGameState, normalizeGameState, sanitizeGameStateUpdate, ca
 import { DEFAULT_QUESTIONS } from './defaultQuestions';
 import { asyncHandler, createApiErrorHandler, HttpError } from './errors';
 import type { ChatMessage } from './types';
-import { initDiscordBridge, sendAdminAlert, sendQRToDiscord } from './discord-bridge';
+import { initDiscordBridge, sendAdminAlert } from './discord-bridge';
 import { initSocketServer, broadcastLeaderboard } from './socket';
 import {
   findArena1TeamByName,
@@ -55,8 +55,6 @@ const port = Number(process.env.PORT || 4000);
 // Attach Socket.io to the HTTP server immediately (before any routes)
 initSocketServer(httpServer);
 
-const eventQrCodesDir = path.resolve(__dirname, '../../event_qr_codes');
-const questionQrScriptPath = path.resolve(__dirname, '../scripts/generate_question_qr.py');
 const route = asyncHandler;
 let isShuttingDown = false;
 
@@ -67,49 +65,6 @@ function buildLocationQrCode(round: number) {
 function resolveQuestionLocationQrCode(question: Partial<QuestionDocument> & { round: number }) {
   const savedCode = typeof question.locationQrCode === 'string' ? question.locationQrCode.trim() : '';
   return savedCode || buildLocationQrCode(question.round);
-}
-
-async function generateQuestionQrAsset(question: Pick<QuestionDocument, 'round' | 'coord' | 'locationQrCode'>) {
-  const place = typeof question.coord?.place === 'string' && question.coord.place.trim()
-    ? question.coord.place.trim()
-    : `Location ${question.round}`;
-  const payload = resolveQuestionLocationQrCode(question);
-
-  return await new Promise<string>((resolve, reject) => {
-    const child = spawn('python', [
-      questionQrScriptPath,
-      eventQrCodesDir,
-      String(question.round),
-      place,
-      payload,
-    ], {
-      stdio: ['ignore', 'pipe', 'pipe'],
-    });
-
-    let stdout = '';
-    let stderr = '';
-
-    child.stdout.on('data', (chunk) => {
-      stdout += String(chunk);
-    });
-
-    child.stderr.on('data', (chunk) => {
-      stderr += String(chunk);
-    });
-
-    child.on('error', (error) => {
-      reject(error);
-    });
-
-    child.on('close', (code) => {
-      if (code === 0) {
-        resolve(stdout.trim());
-        return;
-      }
-
-      reject(new Error(stderr.trim() || `QR generation exited with code ${code}`));
-    });
-  });
 }
 
 /**
@@ -213,9 +168,6 @@ async function seedQuestionsIfEmpty() {
   if (count > 0) return;
 
   const now = new Date();
-  for (const question of DEFAULT_QUESTIONS) {
-    await generateQuestionQrAsset(question);
-  }
   await questions.insertMany(DEFAULT_QUESTIONS.map(question => ({ ...question, createdAt: now, updatedAt: now })));
 
   // Seed default tactical phrases
@@ -255,21 +207,14 @@ function buildFinalRoundQrCode(teamId: string) {
 
 // CORS Configuration - Hardened for production
 app.use(cors({
-  origin: '*', // In production, you might want to restrict this to your frontend domain
+  origin: '*', 
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'ngrok-skip-browser-warning'],
   exposedHeaders: ['Content-Range', 'X-Content-Range'],
   credentials: false
 }));
 
-// Manual OPTIONS pre-flight handler
-app.options('*', (req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin, ngrok-skip-browser-warning');
-  res.sendStatus(200);
-});
-
+// Express json parser
 app.use(express.json());
 
 app.get('/api/health', (_request, response) => {
@@ -318,6 +263,10 @@ app.post('/api/admin/teams/:id/swap', requireAdmin, route(async (request: AdminA
 async function augmentGameState(teamId: string, baseState: GameState) {
   const currentQ = await getCurrentQuestionForTeam(teamId);
   const team = await findTeamById(teamId);
+  
+  const configCollection = await getConfigCollection();
+  const bypassConfig = await configCollection.findOne({ key: 'arTestingBypassEnabled' });
+  const arTestingBypassEnabled = !!bypassConfig?.value;
 
   const activeQuestionOverride = currentQ ? {
     id: currentQ._id.toString(),
@@ -328,10 +277,16 @@ async function augmentGameState(teamId: string, baseState: GameState) {
     qrPasskey: currentQ.qrPasskey
   } : null;
 
+  const GAME_TYPES = ['tap', 'memory', 'pattern', 'signal_trace', 'frequency_jam', 'core_dump', 'overload', 'zero_day'] as const;
+  const gameType = GAME_TYPES[baseState.round % GAME_TYPES.length];
+
   return {
     ...baseState,
     activeQuestionOverride,
-    hasSwapped: !!(team?.swappedRounds && Object.keys(team.swappedRounds).length > 0)
+    hasSwapped: !!(team?.swapsUsed && team.swapsUsed >= 4),
+    swapsLeft: Math.max(0, 4 - ((team as any).swapsUsed || 0)),
+    arTestingBypassEnabled,
+    gameType
   };
 }
 
@@ -1000,8 +955,12 @@ app.post('/api/runner/verify-location-qr', requireAuth, route(async (request: Au
     return;
   }
 
+  const configCollection = await getConfigCollection();
+  const bypassConfig = await configCollection.findOne({ key: 'arTestingBypassEnabled' });
+  const isBypassEnabled = !!bypassConfig?.value;
+
   const expectedQrCode = resolveQuestionLocationQrCode(question);
-  if (expectedQrCode.trim().toUpperCase() !== qrCode.trim().toUpperCase()) {
+  if (!isBypassEnabled && expectedQrCode.trim().toUpperCase() !== qrCode.trim().toUpperCase()) {
     response.status(401).json({ error: 'Invalid location QR' });
     return;
   }
@@ -1013,15 +972,17 @@ app.post('/api/runner/verify-location-qr', requireAuth, route(async (request: Au
 
     if (!isNaN(targetLat) && !isNaN(targetLng)) {
       const dist = getDistance(lat, lng, targetLat, targetLng);
-      /* 
-      if (dist > 25) {
+      
+      if (!isBypassEnabled && dist > 25) {
         response.status(403).json({ error: `Area Restricted: You are ${Math.round(dist)}m away from the target location.` });
         return;
       }
-      */
-      console.log(`[TEST] Geofence bypassed. Actual distance: ${Math.round(dist)}m`);
+      
+      if (isBypassEnabled) {
+        console.log(`[TEST] Geofence bypassed by admin. Actual distance: ${Math.round(dist)}m`);
+      }
     }
-  } else {
+  } else if (!isBypassEnabled) {
     response.status(403).json({ error: 'Location required to scan QR. Please enable location services.' });
     return;
   }
@@ -1068,7 +1029,11 @@ app.post('/api/runner/verify-passkey', requireAuth, route(async (request: Authed
     return;
   }
 
-  if (question.qrPasskey.trim().toUpperCase() !== passkey.trim().toUpperCase()) {
+  const configCollection = await getConfigCollection();
+  const bypassConfig = await configCollection.findOne({ key: 'arTestingBypassEnabled' });
+  const isBypassEnabled = !!bypassConfig?.value;
+
+  if (!isBypassEnabled && question.qrPasskey.trim().toUpperCase() !== passkey.trim().toUpperCase()) {
     response.status(401).json({ error: 'Invalid passkey' });
     return;
   }
@@ -1078,9 +1043,9 @@ app.post('/api/runner/verify-passkey', requireAuth, route(async (request: Authed
   const nextState = { ...team.gameState, stage: 'runner_game' as const };
   await teams.updateOne({ _id: team._id }, { $set: { gameState: nextState, updatedAt: new Date() } });
 
-  // Return the game type for this round (cycle through tap/memory/pattern)
-  const gameTypes = ['tap', 'memory', 'pattern'] as const;
-  const gameType = gameTypes[currentRoundIndex % 3];
+  // Return the game type for this round (cycle through all 8 games)
+  const GAME_TYPES = ['tap', 'memory', 'pattern', 'signal_trace', 'frequency_jam', 'core_dump', 'overload', 'zero_day'] as const;
+  const gameType = GAME_TYPES[currentRoundIndex % GAME_TYPES.length];
 
   response.json({ ok: true, gameType, stage: 'runner_game' });
 }));
@@ -1629,17 +1594,8 @@ app.post('/api/admin/questions', requireAdmin, route(async (request: AdminAuthed
   const now = new Date();
   const questions = await getQuestionsCollection();
   try {
-    const qrPath = await generateQuestionQrAsset(payload);
     const result = await questions.insertOne({ ...payload, createdAt: now, updatedAt: now });
-
-    if (payload.coord) {
-      // Background task: send to Discord
-      sendQRToDiscord(qrPath, payload.round, payload.coord.lat, payload.coord.lng, payload.coord.place || `Location ${payload.round}`).catch(err => {
-        console.error('Failed to send QR to Discord on question creation:', err);
-      });
-    }
-
-    response.status(201).json({ id: result.insertedId.toString(), locationQrCode: payload.locationQrCode });
+    response.status(201).json({ id: result.insertedId.toString(), locationQrCode: resolveQuestionLocationQrCode(payload) });
   } catch (error) {
     throw new HttpError(400, 'Invalid question payload or duplicate round number');
   }
@@ -1658,16 +1614,7 @@ app.put('/api/admin/questions/:id', requireAdmin, route(async (request: AdminAut
     }
 
     const payload = createQuestionPayload(request.body, existing);
-    const qrPath = await generateQuestionQrAsset(payload);
     await questions.updateOne({ _id: objectId }, { $set: { ...payload, updatedAt: new Date() } });
-
-    if (payload.coord) {
-      // Background task: send to Discord
-      sendQRToDiscord(qrPath, payload.round, payload.coord.lat, payload.coord.lng, payload.coord.place || `Location ${payload.round}`).catch(err => {
-        console.error('Failed to send QR to Discord on question update:', err);
-      });
-    }
-
     response.json({ ok: true });
   } catch {
     throw new HttpError(400, 'Invalid question payload or duplicate round number');

@@ -15,6 +15,9 @@ export interface GameState {
   difficulty?: 'normal' | 'hard';
   currentRoundStartTime?: string | null;
   hasSwapped?: boolean;
+  swapsLeft?: number;
+  arTestingBypassEnabled?: boolean;
+  gameType?: string;
 }
 
 export interface HandoffDetails {

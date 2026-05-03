@@ -56,6 +56,7 @@ export interface TeamDocument {
   updatedAt: Date;
   lastLoginAt?: Date;
   swappedRounds?: Record<string, string>;
+  swapsUsed?: number;
   // Device lock: tracks which session fingerprint is active per role
   // key = role ('solver'|'runner'), value = session token fingerprint (first 16 chars of JWT)
   activeDevices?: Record<string, string>;

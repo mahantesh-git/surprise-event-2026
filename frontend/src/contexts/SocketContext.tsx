@@ -16,16 +16,15 @@ function getSocketUrl(): string {
     return window.location.origin;
   }
 
-  if (!h.startsWith('http') && !h.startsWith('//')) h = `https://${h}`;
+  // Ensure protocol exists and is secure for production
+  const isLocalhost = h.includes('localhost') || h.includes('127.0.0.1');
+  if (!h.startsWith('http') && !h.startsWith('//')) {
+    h = isLocalhost ? `http://${h}` : `https://${h}`;
+  } else if (!isLocalhost && h.startsWith('http://')) {
+    h = h.replace('http://', 'https://');
+  }
 
-  // Render internal hostname fix (same as api.ts)
-  try {
-    const u = new URL(h);
-    if (u.hostname !== 'localhost' && !u.hostname.includes('.')) {
-      u.hostname = `${u.hostname}.onrender.com`;
-      h = u.toString();
-    }
-  } catch { /* fallback */ }
+
 
   // Remove any trailing /api suffix — Socket.io connects at root
   return h.replace(/\/api\/?$/, '').replace(/\/$/, '');

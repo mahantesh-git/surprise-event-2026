@@ -10,6 +10,7 @@ interface RunnerGyroScannerProps {
   round: number;
   targetData?: string;
   distance?: number | null;
+  testingBypassEnabled?: boolean;
 }
 
 export const RunnerGyroScanner: React.FC<RunnerGyroScannerProps> = ({
@@ -17,7 +18,8 @@ export const RunnerGyroScanner: React.FC<RunnerGyroScannerProps> = ({
   onFail,
   round,
   targetData = `Round ${round} Active`,
-  distance = null
+  distance = null,
+  testingBypassEnabled = false
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -415,8 +417,14 @@ export const RunnerGyroScanner: React.FC<RunnerGyroScannerProps> = ({
         <div className="absolute bottom-8 left-8 w-12 h-12 border-b-2 border-l-2 border-red-500" />
         <div className="absolute bottom-8 right-8 w-12 h-12 border-b-2 border-r-2 border-red-500" />
 
+        {testingBypassEnabled && (
+          <div className="absolute top-2 left-1/2 -translate-x-1/2 bg-red-600 text-white font-mono text-[10px] uppercase tracking-[0.2em] px-3 py-1 animate-pulse z-50">
+            TESTING BYPASS ACTIVE
+          </div>
+        )}
+
         {/* Directional Guide (Arrow) */}
-        {status === 'SEARCHING' && distance !== null && distance > 25 && (
+        {status === 'SEARCHING' && !testingBypassEnabled && distance !== null && distance > 25 && (
           <div className="absolute inset-0 bg-red-950/40 backdrop-blur-md flex flex-col items-center justify-center z-50 p-8 text-center">
             <AlertTriangle className="w-16 h-16 text-red-500 mb-4 animate-pulse" />
             <h2 className="text-red-500 font-mono text-2xl font-bold mb-2 tracking-tighter">OUT OF RANGE</h2>
@@ -430,7 +438,7 @@ export const RunnerGyroScanner: React.FC<RunnerGyroScannerProps> = ({
           </div>
         )}
 
-        {status === 'SEARCHING' && (distance === null || distance <= 25) && (
+        {status === 'SEARCHING' && (testingBypassEnabled || distance === null || distance <= 25) && (
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full flex flex-col items-center justify-center pointer-events-none">
             {/* Scan Progress Bar */}
             {scanProgress > 0 && (

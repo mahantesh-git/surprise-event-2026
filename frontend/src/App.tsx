@@ -288,6 +288,23 @@ export default function App() {
     isSwappingRef.current = isSwapping;
   }, [isSwapping]);
 
+  // Global Copy Protection - Prevent manual copy events
+  useEffect(() => {
+    const handleCopy = (e: ClipboardEvent) => {
+      // Allow copying within inputs/textareas
+      const target = e.target as HTMLElement;
+      const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
+      
+      if (!isInput) {
+        e.preventDefault();
+        console.warn('[SECURITY] System content is read-only. Manual copy rejected.');
+      }
+    };
+
+    document.addEventListener('copy', handleCopy);
+    return () => document.removeEventListener('copy', handleCopy);
+  }, []);
+
   const requestAppFullscreen = async () => {
     const root = document.documentElement as HTMLElement & {
       webkitRequestFullscreen?: () => Promise<void> | void;
@@ -1178,6 +1195,8 @@ export default function App() {
                           stage={gameState.stage}
                           currentRound={currentRound}
                           difficulty={gameState.difficulty as 'normal' | 'hard'}
+                          arTestingBypassEnabled={gameState.arTestingBypassEnabled}
+                          gameType={gameState.gameType}
                         />
 
 
@@ -1267,12 +1286,14 @@ export default function App() {
                 >
                   <button
                     onClick={handleBurnSwap}
-                    disabled={isSwapping}
-                    className="flex items-center justify-between gap-3 px-4 py-3 bg-black/90  border border-red-500/30 text-red-500 hover:bg-red-500/10 transition-all uppercase text-[10px] font-black tracking-widest"
+                    disabled={isSwapping || gameState?.hasSwapped}
+                    className={cn("flex items-center justify-between gap-3 px-4 py-3 bg-black/90 border transition-all uppercase text-[10px] font-black tracking-widest",
+                      gameState?.hasSwapped ? "text-white/20 border-white/5" : "text-red-500 border-red-500/30 hover:bg-red-500/10"
+                    )}
                   >
                     <span className="flex items-center gap-2">
                       <Flame className="w-3.5 h-3.5" />
-                      Burn Swap
+                      Burn Swap {gameState?.swapsLeft !== undefined && `(${gameState.swapsLeft})`}
                     </span>
                     {isSwapping && <Loader2 className="w-3 h-3 animate-spin" />}
                   </button>

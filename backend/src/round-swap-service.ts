@@ -8,8 +8,10 @@ export async function claimReserveRound(teamId: string, isByAdmin: boolean = fal
   if (!team) return { ok: false, error: 'Team not found' };
 
   // Check if they already swapped (Admin bypasses this check)
-  if (!isByAdmin && team.swappedRounds && Object.keys(team.swappedRounds).length > 0) {
-    return { ok: false, error: 'Team has already used their one-time Round Swap' };
+  // Arena 2: allow up to 4 swaps total
+  const swapsUsed = team.swapsUsed || 0;
+  if (!isByAdmin && swapsUsed >= 4) {
+    return { ok: false, error: 'Team has already used all 4 available Round Swaps' };
   }
 
   const currentRoundIndex = team.gameState.round;
@@ -44,7 +46,8 @@ export async function claimReserveRound(teamId: string, isByAdmin: boolean = fal
         'gameState.stage': 'p1_solve',
         'gameState.handoff': null,
         updatedAt: new Date() 
-      } 
+      },
+      $inc: { swapsUsed: 1 }
     }
   );
 

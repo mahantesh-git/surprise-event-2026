@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Send, ShieldAlert, CheckCircle2, MessageSquare, Settings, Plus, Trash2 } from 'lucide-react';
+import { Send, ShieldAlert, CheckCircle2, MessageSquare, Settings, Plus, Trash2, Mic, Volume2, Ear } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { sendAdminChatMessage, getAdminPhrases, createAdminPhrase, deleteAdminPhrase } from '@/lib/api';
 import { useAdminToast } from '@/contexts/AdminToastContext';
+import { useSocket } from '@/contexts/SocketContext';
+import { useWebRTCListener } from '@/hooks/useWebRTCListener';
+import { cn } from '@/lib/utils';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface CommsManagementProps {
   token: string;
@@ -19,6 +23,15 @@ export function CommsManagement({ token, teams }: CommsManagementProps) {
   const [phrases, setPhrases] = useState<{ _id?: string, id?: string, text: string }[]>([]);
   const [isManaging, setIsManaging] = useState(false);
   const [newPhrase, setNewPhrase] = useState('');
+
+  // Audio Surveillance State
+  const { socket } = useSocket();
+  const [listenTeamId, setListenTeamId] = useState<string>('');
+  
+  const { isListening, runnerTransmitting, solverTransmitting } = useWebRTCListener({
+    socket,
+    targetTeamId: listenTeamId || null
+  });
 
   useEffect(() => {
     loadPhrases();
@@ -71,8 +84,82 @@ export function CommsManagement({ token, teams }: CommsManagementProps) {
     <div className="space-y-6 max-w-2xl">
       <div>
         <h2 className="text-xl font-black uppercase tracking-tighter text-white mb-1">Tactical Comms Override</h2>
-        <p className="text-xs text-white/80 uppercase tracking-widest">Broadcast direct messages to operatives in the field.</p>
+        <p className="text-xs text-white/80 uppercase tracking-widest">Broadcast direct messages and monitor secure comms channels.</p>
       </div>
+
+      <div className="grid grid-cols-1 gap-6">
+        {/* Audio Surveillance Card */}
+        <Card className="glass-morphism border-[var(--color-accent)]/20 relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
+            <Ear className="w-24 h-24" />
+          </div>
+          <CardHeader className="border-b border-white/5 pb-4">
+            <CardTitle className="text-sm font-bold tracking-widest uppercase text-white flex items-center gap-2">
+              <div className="relative">
+                <Ear className="w-4 h-4 text-[var(--color-accent)]" />
+                {isListening && (
+                  <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-ping" />
+                )}
+              </div>
+              Live Audio Surveillance
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-[10px] uppercase tracking-widest text-white/70 font-bold block">
+                  Select Channel to Monitor (Listen Only)
+                </label>
+                <select
+                  value={listenTeamId}
+                  onChange={(e) => setListenTeamId(e.target.value)}
+                  className="w-full bg-black/50 border border-[var(--color-accent)]/30 h-10 px-3 text-xs text-white outline-none focus:border-[var(--color-accent)] uppercase [&>option]:bg-[#1a1a1a] [&>option]:text-white clip-oct"
+                >
+                  <option value="">-- NO CHANNEL SELECTED --</option>
+                  {teams.map(t => (
+                    <option key={t.id || t._id} value={t.id || t._id}>
+                      T-{t.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {listenTeamId && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className={cn(
+                    "p-4 flex flex-col items-center justify-center gap-2 border transition-colors clip-oct",
+                    runnerTransmitting 
+                      ? "bg-[var(--color-accent)]/20 border-[var(--color-accent)] text-white shadow-[0_0_15px_rgba(217,31,64,0.3)]" 
+                      : "bg-black/30 border-white/5 text-white/40"
+                  )}>
+                    {runnerTransmitting ? <Volume2 className="w-6 h-6 animate-pulse" /> : <Mic className="w-6 h-6" />}
+                    <span className="text-[10px] uppercase font-bold tracking-widest">
+                      {teams.find(t => (t.id || t._id) === listenTeamId)?.runnerName || 'RUNNER'}
+                    </span>
+                    <span className="text-[9px] uppercase tracking-widest opacity-70">
+                      {runnerTransmitting ? 'TRANSMITTING' : 'SILENT'}
+                    </span>
+                  </div>
+
+                  <div className={cn(
+                    "p-4 flex flex-col items-center justify-center gap-2 border transition-colors clip-oct",
+                    solverTransmitting 
+                      ? "bg-blue-500/20 border-blue-500 text-white shadow-[0_0_15px_rgba(59,130,246,0.3)]" 
+                      : "bg-black/30 border-white/5 text-white/40"
+                  )}>
+                    {solverTransmitting ? <Volume2 className="w-6 h-6 animate-pulse" /> : <Mic className="w-6 h-6" />}
+                    <span className="text-[10px] uppercase font-bold tracking-widest">
+                      {teams.find(t => (t.id || t._id) === listenTeamId)?.solverName || 'HQ SOLVER'}
+                    </span>
+                    <span className="text-[9px] uppercase tracking-widest opacity-70">
+                      {solverTransmitting ? 'TRANSMITTING' : 'SILENT'}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
       <Card className="glass-morphism border-white/10">
         <CardHeader className="border-b border-white/5 pb-4">
@@ -200,6 +287,7 @@ export function CommsManagement({ token, teams }: CommsManagementProps) {
           </Button>
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }

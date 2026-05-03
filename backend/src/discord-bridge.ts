@@ -1,4 +1,4 @@
-import { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, ChatInputCommandInteraction, PermissionsBitField, Events, AttachmentBuilder } from 'discord.js';
+import { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, ChatInputCommandInteraction, PermissionsBitField, Events } from 'discord.js';
 import { getTeamsCollection } from './db';
 import { ChatMessage } from './types';
 
@@ -215,34 +215,3 @@ async function handleSlashCommand(interaction: ChatInputCommandInteraction) {
   }
 }
 
-export async function sendQRToDiscord(
-  qrCodePath: string,
-  sequence: number,
-  lat: string | number,
-  lng: string | number,
-  place: string,
-) {
-  if (!discordClient) return;
-  const channelId = process.env.ADMIN_CHANNEL_ID_QR || process.env.ADMIN_CHANNEL_ID;
-  if (!channelId) {
-    console.warn('Discord Bridge: ADMIN_CHANNEL_ID_QR not set, cannot send QR code.');
-    return;
-  }
-
-  try {
-    const channel = await discordClient.channels.fetch(channelId, { force: false });
-    if (!channel || !channel.isTextBased() || !('send' in channel)) {
-      console.error(`Discord Bridge: Channel ${channelId} not found or not text-based.`);
-      return;
-    }
-
-    const attachment = new AttachmentBuilder(qrCodePath, { name: `qr_seq_${sequence}.png` });
-    
-    await channel.send({
-      content: `**NEW QR CODE GENERATED**\n**Sequence**: ${sequence}\n**Location**: ${place}\n**Coordinates**: ${lat}, ${lng}\n**Map**: <https://www.google.com/maps?q=${lat},${lng}>`,
-      files: [attachment]
-    });
-  } catch (error) {
-    console.error('Discord Bridge: Failed to send QR code to Discord', error);
-  }
-}

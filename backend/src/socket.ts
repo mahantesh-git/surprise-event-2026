@@ -59,20 +59,32 @@ export function initSocketServer(httpServer: HttpServer): SocketServer {
         socket.join('solvers');
       }
 
-      // WebRTC Signaling relay (Team-internal only)
+      // WebRTC Signaling relay (Team-internal + admin listeners)
 
       socket.on('webrtc:signal', (data: { signal: any }) => {
         // Broadcast to the team room, excluding the sender
         socket.to(`team_${auth.teamId}`).emit('webrtc:signal', {
-          from: auth.role, // helps the recipient know if it's runner or solver
+          from: auth.role,
           signal: data.signal
+        });
+        // Also forward to any admin listening on this team
+        socket.to(`admin_listening_${auth.teamId}`).emit('webrtc:signal', {
+          from: auth.role,
+          signal: data.signal,
+          teamId: auth.teamId,
         });
       });
 
       socket.on('webrtc:status', (data: { transmitting: boolean }) => {
         socket.to(`team_${auth.teamId}`).emit('webrtc:status', {
           from: auth.role,
-          transmitting: data.transmitting
+          transmitting: data.transmitting,
+        });
+        // Forward PTT status to admin listeners too
+        socket.to(`admin_listening_${auth.teamId}`).emit('webrtc:status', {
+          from: auth.role,
+          transmitting: data.transmitting,
+          teamId: auth.teamId,
         });
       });
 
@@ -88,6 +100,27 @@ export function initSocketServer(httpServer: HttpServer): SocketServer {
       });
     } else if (auth.kind === 'admin') {
       socket.join('admin');
+
+      // Admin can listen-only to a specific team's walkie-talkie
+      socket.on('webrtc:listen', (data: { teamId: string }) => {
+        const roomName = `admin_listening_${data.teamId}`;
+        socket.join(roomName);
+        console.log(`[WT] Admin listening on team ${data.teamId}`);
+      });
+
+      socket.on('webrtc:unlisten', (data: { teamId: string }) => {
+        socket.leave(`admin_listening_${data.teamId}`);
+        console.log(`[WT] Admin stopped listening on team ${data.teamId}`);
+      });
+
+      // Admin sends WebRTC signals back to the team (so team can send audio to admin)
+      socket.on('webrtc:signal', (data: { signal: any; targetTeamId: string }) => {
+        if (!data.targetTeamId) return;
+        socket.to(`team_${data.targetTeamId}`).emit('webrtc:signal', {
+          from: 'admin',
+          signal: data.signal,
+        });
+      });
     }
   });
 

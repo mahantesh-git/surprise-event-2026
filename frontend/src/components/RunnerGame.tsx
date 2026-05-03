@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Crosshair, Brain, LayoutGrid, CheckCircle2, RefreshCcw, Trophy,
@@ -20,26 +20,111 @@ function haptic(pattern: number | number[] = 50) {
 const TapGame = ({ onComplete, difficulty = 'normal' }: { onComplete: () => void, difficulty?: 'normal' | 'hard' }) => {
   const [taps, setTaps] = useState(0);
   const [target, setTarget] = useState({ x: 50, y: 50 });
-  const required = difficulty === 'hard' ? 25 : 15;
-  const [timeLeft, setTimeLeft] = useState(difficulty === 'hard' ? 20 : 25);
+  const [scale, setScale] = useState(1);
+  const [velocity, setVelocity] = useState({ dx: 1, dy: 1, speed: difficulty === 'hard' ? 2 : 1.2 });
+  const [timeLeft, setTimeLeft] = useState(difficulty === 'hard' ? 12 : 15);
+  const [isDone, setIsDone] = useState(false);
+  const [restarts, setRestarts] = useState(0);
 
+  const required = difficulty === 'hard' ? 15 : 10;
+  const shrinkInterval = 5;
+  const shrinkAmount = 0.08;
+
+  // Refs for interval stability
+  const tapsRef = useRef(0);
+  const velocityRef = useRef(velocity);
+  const isDoneRef = useRef(false);
+
+  useEffect(() => { tapsRef.current = taps; }, [taps]);
+  useEffect(() => { velocityRef.current = velocity; }, [velocity]);
+
+  // Timer Effect - High Res (0.1s)
   useEffect(() => {
-    if (timeLeft > 0 && taps < required) {
-      const t = setInterval(() => setTimeLeft((v) => v - 1), 1000);
-      return () => clearInterval(t);
-    }
-    if (taps >= required) onComplete();
-  }, [timeLeft, taps, onComplete]);
+    let lastTick = Date.now();
+    const timer = setInterval(() => {
+      if (isDoneRef.current) return;
+      
+      const now = Date.now();
+      if (now - lastTick >= 100) {
+        lastTick = now;
+        setTimeLeft(v => {
+          const next = Math.max(0, v - 0.1);
+          if (next <= 0) {
+            clearInterval(timer);
+            return 0;
+          }
+          return parseFloat(next.toFixed(1));
+        });
+      }
+    }, 100);
+    return () => clearInterval(timer);
+  }, [restarts]);
 
+  // Movement Effect - Stable 50ms
+  useEffect(() => {
+    const moveTimer = setInterval(() => {
+      if (isDoneRef.current || timeLeft <= 0) return;
+      
+      setTarget(prev => {
+        const vel = velocityRef.current;
+        let nx = prev.x + vel.dx * vel.speed;
+        let ny = prev.y + vel.dy * vel.speed;
+        let ndx = vel.dx;
+        let ndy = vel.dy;
 
-  const handleTap = () => {
+        if (nx < 10 || nx > 90) { ndx *= -1; nx = nx < 10 ? 10 : 90; }
+        if (ny < 10 || ny > 90) { ndy *= -1; ny = ny < 10 ? 10 : 90; }
+
+        if (ndx !== vel.dx || ndy !== vel.dy) {
+          setVelocity(v => ({ ...v, dx: ndx, dy: ndy }));
+        }
+        return { x: nx, y: ny };
+      });
+    }, 40); // Faster tick for smoother movement
+    return () => clearInterval(moveTimer);
+  }, [restarts]); 
+
+  const handleTap = (e: React.PointerEvent) => {
+    e.stopPropagation();
+    if (timeLeft <= 0 || isDoneRef.current) return;
+    
     haptic(25);
-    setTaps((t) => t + 1);
-    // Constrain to 15–75% to avoid tap target clipping near edges on small phones
+    const newTaps = taps + 1;
+    setTaps(newTaps);
+    
+    if (newTaps >= required) {
+      isDoneRef.current = true;
+      setIsDone(true);
+      setTimeout(onComplete, 1000);
+      return;
+    }
+
+    if (newTaps % shrinkInterval === 0) {
+      setScale(s => Math.max(0.7, s - shrinkAmount));
+    }
+    
+    // Smooth speed ramp
+    const speedCap = difficulty === 'hard' ? 4.0 : 3.0;
+    const speedInc = difficulty === 'hard' ? 1.08 : 1.05;
+    
+    setVelocity(v => ({ 
+      ...v, 
+      speed: Math.min(speedCap, v.speed * speedInc),
+      dx: Math.random() > 0.5 ? 1 : -1, 
+      dy: Math.random() > 0.5 ? 1 : -1 
+    }));
+
     setTarget({ x: Math.random() * 60 + 15, y: Math.random() * 55 + 15 });
   };
 
-  if (taps >= required) return (
+  const handleMiss = () => {
+    if (difficulty === 'hard' && taps > 0 && !isDoneRef.current) {
+      setTaps(t => Math.max(0, t - 1));
+      haptic([50, 50]);
+    }
+  };
+
+  if (isDone) return (
     <div className="text-center p-6 space-y-4">
       <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ duration: 0.5 }}>
         <CheckCircle2 className="w-16 h-16 text-[var(--color-accent)] mx-auto" />
@@ -49,7 +134,7 @@ const TapGame = ({ onComplete, difficulty = 'normal' }: { onComplete: () => void
     </div>
   );
 
-  if (timeLeft === 0) return (
+  if (timeLeft <= 0) return (
     <div className="flex flex-col items-center justify-center p-8 space-y-6">
       <TacticalStatus
         tone="error"
@@ -58,7 +143,17 @@ const TapGame = ({ onComplete, difficulty = 'normal' }: { onComplete: () => void
         icon={RefreshCcw}
       />
       <button
-        onClick={() => { setTaps(0); setTimeLeft(difficulty === 'hard' ? 20 : 25); haptic(100); }}
+        onClick={() => {
+          setTaps(0);
+          setTimeLeft(difficulty === 'hard' ? 12 : 15);
+          setIsDone(false);
+          isDoneRef.current = false;
+          setTarget({ x: 50, y: 50 });
+          setScale(1);
+          setVelocity({ dx: 1, dy: 1, speed: difficulty === 'hard' ? 2 : 1.2 });
+          setRestarts(s => s + 1);
+          haptic(100);
+        }}
         className="bg-zinc-800 hover:bg-zinc-700 px-8 py-4 font-bold text-sm uppercase tracking-widest transition-colors text-white/80 clip-oct"
       >🔄 Try Again</button>
     </div>
@@ -68,21 +163,24 @@ const TapGame = ({ onComplete, difficulty = 'normal' }: { onComplete: () => void
     <div className="space-y-4">
       <div className="flex justify-between text-sm font-mono text-white/40 px-1">
         <span>HITS: <span className="text-[var(--color-accent)]">{taps}</span>/{required}</span>
-        <span>TIME: <span className={timeLeft <= 5 ? 'text-[var(--color-accent)]' : 'text-white/80'}>{timeLeft}s</span></span>
+        <span>TIME: <span className={timeLeft <= 3 ? 'text-[var(--color-accent)]' : 'text-white/80'}>{timeLeft.toFixed(1)}s</span></span>
       </div>
-      {/* Arena: fluid height — scales from 200px on small phones to 360px on large screens */}
-      <div className="relative w-full bg-black overflow-hidden border-b border-white/10" style={{ height: 'clamp(200px, 42dvh, 360px)' }}>
+      <div 
+        className="relative w-full bg-black overflow-hidden border-b border-white/10" 
+        style={{ height: 'clamp(200px, 42dvh, 360px)' }}
+        onPointerDown={handleMiss}
+      >
         <div className="absolute inset-0 opacity-10 bg-[linear-gradient(to_right,#374151_1px,transparent_1px),linear-gradient(to_bottom,#374151_1px,transparent_1px)] bg-[size:2rem_2rem]" />
         <div className="absolute bottom-0 left-0 h-1 bg-[var(--color-accent)]/20 w-full">
           <motion.div className="h-full bg-[var(--color-accent)]" animate={{ width: `${(taps / required) * 100}%` }} transition={{ type: 'spring', stiffness: 300 }} />
         </div>
         <motion.button
-          animate={{ left: `${target.x}%`, top: `${target.y}%` }}
-          transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-          onClick={handleTap}
-          className="absolute w-16 h-16 bg-[var(--color-accent)] clip-oct shadow-accent-lg flex items-center justify-center -translate-x-1/2 -translate-y-1/2 active:scale-75 transition-transform"
+          animate={{ left: `${target.x}%`, top: `${target.y}%`, scale }}
+          transition={{ left: { type: 'tween', duration: 0.04 }, top: { type: 'tween', duration: 0.04 }, scale: { type: 'spring', damping: 15 } }}
+          onPointerDown={handleTap}
+          className="absolute w-20 h-20 bg-[var(--color-accent)] clip-oct shadow-accent-lg flex items-center justify-center -translate-x-1/2 -translate-y-1/2 active:brightness-150 transition-transform"
         >
-          <Crosshair className="text-black w-7 h-7" />
+          <Crosshair className="text-black w-8 h-8" />
         </motion.button>
       </div>
     </div>
@@ -92,10 +190,22 @@ const TapGame = ({ onComplete, difficulty = 'normal' }: { onComplete: () => void
 // ─── MEMORY GAME ──────────────────────────────────────────────
 const MemoryGame = ({ onComplete, difficulty = 'normal' }: { onComplete: () => void, difficulty?: 'normal' | 'hard' }) => {
   const allSymbols = ['🚀', '💻', '⚡', '🧠', '🔒', '🔑', '🎯', '📡', '🛡️'];
-  const symbols = difficulty === 'hard' ? allSymbols : allSymbols.slice(0, 6);
+  const symbols = difficulty === 'hard' ? allSymbols.slice(0, 8) : allSymbols.slice(0, 6);
   const [cards] = useState(() => [...symbols, ...symbols].sort(() => Math.random() - 0.5));
   const [flipped, setFlipped] = useState<number[]>([]);
   const [solved, setSolved] = useState<number[]>([]);
+  
+  const [timeLeft, setTimeLeft] = useState(difficulty === 'hard' ? 30 : 45);
+  const [wrongCount, setWrongCount] = useState(0);
+  const maxWrong = difficulty === 'hard' ? 2 : 3;
+  const flipTime = difficulty === 'hard' ? 250 : 400;
+
+  useEffect(() => {
+    if (timeLeft > 0 && solved.length < cards.length && wrongCount < maxWrong) {
+      const t = setInterval(() => setTimeLeft((v) => v - 1), 1000);
+      return () => clearInterval(t);
+    }
+  }, [timeLeft, solved.length, cards.length, wrongCount, maxWrong]);
 
   useEffect(() => {
     if (flipped.length === 2) {
@@ -105,11 +215,21 @@ const MemoryGame = ({ onComplete, difficulty = 'normal' }: { onComplete: () => v
         setFlipped([]);
       } else {
         haptic(100);
-        const t = setTimeout(() => setFlipped([]), 800);
+        setWrongCount(w => w + 1);
+        if (difficulty === 'hard') {
+          setSolved(s => {
+            if (s.length === 0) return s;
+            const newS = [...s];
+            newS.pop(); newS.pop(); // remove 1 pair
+            if (newS.length > 0) { newS.pop(); newS.pop(); } // remove 2nd pair
+            return newS;
+          });
+        }
+        const t = setTimeout(() => setFlipped([]), flipTime);
         return () => clearTimeout(t);
       }
     }
-  }, [flipped, cards]);
+  }, [flipped, cards, difficulty, flipTime]);
 
   useEffect(() => {
     if (solved.length === cards.length && solved.length > 0) onComplete();
@@ -125,12 +245,29 @@ const MemoryGame = ({ onComplete, difficulty = 'normal' }: { onComplete: () => v
     </div>
   );
 
+  if (timeLeft <= 0 || wrongCount >= maxWrong) return (
+    <div className="flex flex-col items-center justify-center p-8 space-y-6">
+      <TacticalStatus
+        tone="error"
+        label="Operation Failure"
+        message={timeLeft <= 0 ? "Time Expired" : "Integrity Compromised"}
+        icon={RefreshCcw}
+      />
+      <button
+        onClick={() => { setFlipped([]); setSolved([]); setWrongCount(0); setTimeLeft(difficulty === 'hard' ? 30 : 45); haptic(100); }}
+        className="bg-zinc-800 hover:bg-zinc-700 px-8 py-4 font-bold text-sm uppercase tracking-widest transition-colors text-white/80 clip-oct"
+      >🔄 Try Again</button>
+    </div>
+  );
+
   return (
     <div className="space-y-4">
-      <div className="text-sm font-mono text-white/40 text-center">
-        MATCHED: <span className="text-[var(--color-accent)]">{solved.length / 2}</span>/{symbols.length}
+      <div className="flex justify-between text-sm font-mono text-white/40 px-1">
+        <span>MATCHED: <span className="text-[var(--color-accent)]">{solved.length / 2}</span>/{symbols.length}</span>
+        <span>ERRORS: <span className="text-red-400">{wrongCount}</span>/{maxWrong}</span>
+        <span>TIME: <span className={timeLeft <= 5 ? 'text-red-400' : 'text-white/80'}>{timeLeft}s</span></span>
       </div>
-      <div className={`grid gap-2 xs:gap-2.5 ${difficulty === 'hard' ? 'grid-cols-4' : 'grid-cols-3'}`}>
+      <div className={`grid gap-2 xs:gap-2.5 ${difficulty === 'hard' ? 'grid-cols-4' : 'grid-cols-4 sm:grid-cols-3'}`}>
         {cards.map((symbol, i) => {
           const isFlipped = flipped.includes(i);
           const isSolved = solved.includes(i);
@@ -159,6 +296,13 @@ const PatternGame = ({ onComplete, difficulty = 'normal' }: { onComplete: () => 
   const [active, setActive] = useState<number | null>(null);
   const [done, setDone] = useState(false);
   const [wrongFlash, setWrongFlash] = useState(false);
+  const [restarts, setRestarts] = useState(0);
+  const [failed, setFailed] = useState(false);
+  const [distractionActive, setDistractionActive] = useState<number | null>(null);
+
+  const patternLength = difficulty === 'hard' ? 7 : 5;
+  const flashSpeed = difficulty === 'hard' ? 350 : 600;
+  const maxRestarts = difficulty === 'hard' ? 0 : 3;
 
   const colorClasses = [
     { bg: 'bg-[var(--color-accent)]', dim: 'bg-[var(--color-accent)]/20' },
@@ -168,7 +312,6 @@ const PatternGame = ({ onComplete, difficulty = 'normal' }: { onComplete: () => 
   ];
 
   const start = () => {
-    const patternLength = difficulty === 'hard' ? 7 : 4;
     const newPattern = Array.from({ length: patternLength }, () => Math.floor(Math.random() * 4));
     setPattern(newPattern); setUserPattern([]); setPlaying(true); setWrongFlash(false);
     playPatternSeq(newPattern);
@@ -178,21 +321,46 @@ const PatternGame = ({ onComplete, difficulty = 'normal' }: { onComplete: () => 
     await new Promise((r) => setTimeout(r, 500));
     for (let i = 0; i < p.length; i++) {
       setActive(p[i]); haptic(30);
-      await new Promise((r) => setTimeout(r, 600));
+      await new Promise((r) => setTimeout(r, flashSpeed));
       setActive(null);
-      await new Promise((r) => setTimeout(r, 250));
+      await new Promise((r) => setTimeout(r, 200));
     }
     setPlaying(false);
   };
 
+  useEffect(() => {
+    if (difficulty === 'hard' && !playing && !done && !failed && pattern.length > 0) {
+      const interval = setInterval(() => {
+        if (Math.random() < 0.3) {
+           const idx = Math.floor(Math.random() * 4);
+           setDistractionActive(idx);
+           setTimeout(() => setDistractionActive(null), 150);
+        }
+      }, 800);
+      return () => {
+        clearInterval(interval);
+        setDistractionActive(null);
+      };
+    }
+  }, [difficulty, playing, done, failed, pattern.length]);
+
   const handlePress = (i: number) => {
-    if (playing) return;
+    if (playing || failed || done || wrongFlash) return;
     haptic(20);
+    setActive(i);
+    setTimeout(() => setActive(null), 150);
+
     const next = [...userPattern, i];
     setUserPattern(next);
+    
     if (pattern[userPattern.length] !== i) {
       setWrongFlash(true); haptic([100, 50, 100]);
-      setTimeout(() => start(), 1000);
+      if (restarts >= maxRestarts) {
+        setFailed(true);
+      } else {
+        setRestarts(r => r + 1);
+        setTimeout(() => start(), 2000);
+      }
       return;
     }
     if (next.length === pattern.length) { setDone(true); onComplete(); }
@@ -208,6 +376,21 @@ const PatternGame = ({ onComplete, difficulty = 'normal' }: { onComplete: () => 
     </div>
   );
 
+  if (failed) return (
+    <div className="flex flex-col items-center justify-center p-8 space-y-6">
+      <TacticalStatus
+        tone="error"
+        label="Operation Failure"
+        message={difficulty === 'hard' ? "Instant Lockout: Invalid Sequence" : "Too Many Restart Attempts"}
+        icon={AlertCircle}
+      />
+      <button
+        onClick={() => { setFailed(false); setRestarts(0); setPattern([]); setWrongFlash(false); setUserPattern([]); }}
+        className="bg-zinc-800 hover:bg-zinc-700 px-8 py-4 font-bold text-sm uppercase tracking-widest transition-colors text-white/80 clip-oct"
+      >🔄 Reboot Sequence</button>
+    </div>
+  );
+
   return (
     <div className="space-y-4">
       {wrongFlash && (
@@ -219,32 +402,846 @@ const PatternGame = ({ onComplete, difficulty = 'normal' }: { onComplete: () => 
           <TacticalStatus
             tone="error"
             label="Security Alert"
-            message="Sequence Mismatch: Restarting"
+            message={`Sequence Mismatch: ${maxRestarts > 0 ? 'Penalty Active' : 'Lockout'}`}
             icon={AlertCircle}
           />
         </motion.div>
       )}
+      <div className="flex justify-between text-sm font-mono text-white/40 px-1">
+        <span>LENGTH: <span className="text-[var(--color-accent)]">{patternLength}</span></span>
+        <span>RESTARTS: <span className="text-red-400">{restarts}</span>/{maxRestarts}</span>
+      </div>
       <div className="text-sm font-mono text-white/40 text-center">
         {pattern.length === 0 ? 'Press Start to begin' : playing ? '⟐ Watch the pattern…' : '⟐ Repeat the pattern!'}
       </div>
       <div className="grid grid-cols-2 gap-3">
-        {[0, 1, 2, 3].map((i) => (
-          <motion.div
-            key={i} whileTap={{ scale: 0.92 }} onClick={() => handlePress(i)}
-            className={`cursor-pointer transition-all duration-200 border-0 ${active === i ? `${colorClasses[i].bg} shadow-lg scale-105` : colorClasses[i].dim}`}
-            style={{ height: 'clamp(80px, 22vw, 120px)' }}
-          />
-        ))}
+        {[0, 1, 2, 3].map((i) => {
+           const isActive = active === i;
+           const isDistraction = distractionActive === i;
+           const bgClass = isActive ? `${colorClasses[i].bg} shadow-lg scale-105` : 
+                           isDistraction ? `${colorClasses[i].bg} shadow-lg scale-105 opacity-60` : 
+                           colorClasses[i].dim;
+           return (
+            <motion.div
+              key={i} whileTap={{ scale: 0.92 }} onClick={() => handlePress(i)}
+              className={`cursor-pointer transition-all duration-200 border-0 ${bgClass}`}
+              style={{ height: 'clamp(80px, 22vw, 120px)' }}
+            />
+          );
+        })}
       </div>
-      <button onClick={start} className="w-full bg-zinc-900 hover:bg-zinc-800 py-4 font-bold text-lg transition-colors border-0 mt-4 clip-oct">
+      <button onClick={start} disabled={playing || wrongFlash} className="w-full bg-zinc-900 hover:bg-zinc-800 disabled:opacity-50 py-4 font-bold text-lg transition-colors border-0 mt-4 clip-oct">
         {pattern.length === 0 ? '▶ Start Pattern' : '🔄 Replay'}
       </button>
     </div>
   );
 };
 
+// ─── SIGNAL TRACE ─────────────────────────────────────────────
+const SignalTraceGame = ({ onComplete, difficulty = 'normal' }: { onComplete: () => void, difficulty?: 'normal' | 'hard' }) => {
+  const canvasRef = React.useRef<HTMLCanvasElement>(null);
+  const [playing, setPlaying] = useState(false);
+  const maxTime = difficulty === 'hard' ? 8 : 12;
+  const [timeLeft, setTimeLeft] = useState(maxTime);
+  const [done, setDone] = useState(false);
+  const [status, setStatus] = useState<string | null>(null);
+  const [errors, setErrors] = useState(0);
+  const [failed, setFailed] = useState(false);
+  const maxErrors = difficulty === 'hard' ? 0 : 2;
+
+  const stateRef = React.useRef({
+    path: [] as {x: number, y: number}[], progress: 0, dragging: false, nodePos: {x: 0, y: 0},
+    corridorW: difficulty === 'hard' ? 20 : 32
+  });
+
+  const generatePath = (W: number, H: number) => {
+    const pts = []; const margin = 40; const steps = 7;
+    pts.push({x: margin+10, y: H - margin});
+    for (let i = 1; i < steps; i++) {
+      const x = margin + (W - margin*2) * (i / (steps-1));
+      const y = (i % 2 === 0) ? H - margin : margin + 30;
+      pts.push({x, y});
+    }
+    const smooth = [];
+    for (let i = 0; i < pts.length-1; i++) {
+      for (let t = 0; t < 20; t++) smooth.push({ x: pts[i].x + (pts[i+1].x - pts[i].x) * (t/20), y: pts[i].y + (pts[i+1].y - pts[i].y) * (t/20) });
+    }
+    smooth.push(pts[pts.length-1]);
+    return smooth;
+  };
+
+  const draw = () => {
+    const canvas = canvasRef.current; if (!canvas) return;
+    const ctx = canvas.getContext('2d'); if (!ctx) return;
+    const { path, corridorW, progress, nodePos } = stateRef.current;
+    if (path.length === 0) return;
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    
+    ctx.lineWidth = corridorW * 2; ctx.strokeStyle = '#1e2d3d'; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.beginPath(); ctx.moveTo(path[0].x, path[0].y);
+    for (let i = 1; i < path.length; i++) ctx.lineTo(path[i].x, path[i].y);
+    ctx.stroke(); ctx.lineWidth = 1; ctx.strokeStyle = '#1e4060'; ctx.stroke();
+
+    if (progress > 0) {
+      const idx = Math.floor(progress * (path.length-1));
+      ctx.lineWidth = 3; ctx.strokeStyle = '#00f5a0'; ctx.shadowColor = '#00f5a0'; ctx.shadowBlur = 8;
+      ctx.beginPath(); ctx.moveTo(path[0].x, path[0].y);
+      for (let i = 1; i <= idx; i++) ctx.lineTo(path[i].x, path[i].y);
+      ctx.stroke(); ctx.shadowBlur = 0;
+    }
+    
+    ctx.beginPath(); ctx.arc(path[0].x, path[0].y, 8, 0, Math.PI*2); ctx.fillStyle = '#00f5a0'; ctx.fill();
+    ctx.beginPath(); ctx.arc(path[path.length-1].x, path[path.length-1].y, 8, 0, Math.PI*2); ctx.fillStyle = progress >= 1 ? '#00f5a0' : '#5a7a8a'; ctx.fill();
+
+    ctx.beginPath(); ctx.arc(nodePos.x, nodePos.y, 10, 0, Math.PI*2); ctx.fillStyle = '#00f5a0'; ctx.shadowColor = '#00f5a0'; ctx.shadowBlur = 12; ctx.fill(); ctx.shadowBlur = 0;
+    ctx.beginPath(); ctx.arc(nodePos.x, nodePos.y, 5, 0, Math.PI*2); ctx.fillStyle = '#fff'; ctx.fill();
+  };
+
+  const start = () => {
+    const canvas = canvasRef.current; if (!canvas) return;
+    stateRef.current.path = generatePath(canvas.width, canvas.height);
+    stateRef.current.progress = 0;
+    stateRef.current.nodePos = {...stateRef.current.path[0]};
+    setPlaying(true); setTimeLeft(maxTime); setStatus(null); setFailed(false); setErrors(0);
+    draw();
+  };
+
+  useEffect(() => {
+    if (playing && !done && !failed) {
+      const tid = setInterval(() => {
+        setTimeLeft(v => {
+          if (v <= 0) {
+            clearInterval(tid);
+            setPlaying(false);
+            setFailed(true);
+            setStatus("TIME'S UP - RESTART");
+            haptic(300);
+            return 0;
+          }
+          return Math.round((v - 0.1) * 10) / 10;
+        });
+      }, 100);
+      return () => clearInterval(tid);
+    }
+  }, [playing, done, failed]);
+
+  useEffect(() => {
+    if (canvasRef.current && !playing && !done && stateRef.current.path.length === 0) {
+      stateRef.current.path = generatePath(canvasRef.current.width, canvasRef.current.height);
+      stateRef.current.nodePos = {...stateRef.current.path[0]};
+      draw();
+    }
+  }, [playing, done]);
+
+  const getPos = (e: any) => {
+    const canvas = canvasRef.current; if (!canvas) return {x:0,y:0};
+    const r = canvas.getBoundingClientRect();
+    const src = e.touches ? e.touches[0] : e;
+    return { x: (src.clientX - r.left) * (canvas.width / r.width), y: (src.clientY - r.top) * (canvas.height / r.height) };
+  };
+
+  const onStartMove = (e: any) => {
+    if (!playing || failed) return;
+    const pos = getPos(e);
+    const startPos = stateRef.current.path[0];
+    if (Math.hypot(pos.x - startPos.x, pos.y - startPos.y) < 30) stateRef.current.dragging = true;
+  };
+
+  const onMove = (e: any) => {
+    if (!playing || !stateRef.current.dragging || failed) return;
+    const pos = getPos(e);
+    const { path, corridorW, progress } = stateRef.current;
+    let bestIdx = Math.floor(progress * (path.length-1));
+    let bestDist = Infinity;
+    for (let i = bestIdx; i < path.length; i++) {
+      const d = Math.hypot(pos.x - path[i].x, pos.y - path[i].y);
+      if (d < bestDist) { bestDist = d; bestIdx = i; }
+      if (i - Math.floor(progress * (path.length-1)) > 30) break;
+    }
+    
+    if (bestDist > corridorW) {
+      stateRef.current.dragging = false; stateRef.current.progress = 0; stateRef.current.nodePos = {...path[0]};
+      haptic(100); 
+      setErrors(err => {
+        const next = err + 1;
+        if (next > maxErrors) {
+           setPlaying(false);
+           setFailed(true);
+           setStatus(difficulty === 'hard' ? 'INSTANT FAIL: OFF TRACK' : 'TOO MANY ERRORS');
+        } else {
+           setStatus('OFF TRACK - RESTART'); 
+           setTimeout(() => setStatus(null), 800);
+        }
+        return next;
+      });
+    } else {
+      const newProg = bestIdx / (path.length-1);
+      if (newProg > stateRef.current.progress) {
+        stateRef.current.progress = newProg;
+        stateRef.current.nodePos = {...path[bestIdx]};
+      }
+      if (stateRef.current.progress >= 0.99) {
+        stateRef.current.dragging = false; setPlaying(false); setDone(true); onComplete(); haptic([50,30,100]);
+      }
+    }
+    draw();
+  };
+  const onEndMove = () => { stateRef.current.dragging = false; };
+
+  if (done) return (
+    <div className="text-center p-6 space-y-4">
+      <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ duration: 0.5 }}><CheckCircle2 className="w-16 h-16 text-[var(--color-accent)] mx-auto" /></motion.div>
+      <h2 className="text-2xl font-bold text-[var(--color-accent)]">Path Cleared!</h2>
+      <p className="text-white/40 text-sm font-mono uppercase tracking-widest">Circuit secured...</p>
+    </div>
+  );
+
+  if (failed) return (
+    <div className="flex flex-col items-center justify-center p-8 space-y-6">
+      <TacticalStatus
+        tone="error"
+        label="Trace Failure"
+        message={status || "Operation Failed"}
+        icon={AlertCircle}
+      />
+      <button
+        onClick={() => { setFailed(false); setErrors(0); setTimeLeft(maxTime); setStatus(null); }}
+        className="bg-zinc-800 hover:bg-zinc-700 px-8 py-4 font-bold text-sm uppercase tracking-widest transition-colors text-white/80 clip-oct"
+      >🔄 Re-establish Connection</button>
+    </div>
+  );
+
+  return (
+    <div className="space-y-4 flex flex-col items-center">
+      <div className="flex justify-between w-full text-sm font-mono text-white/40 px-1">
+        <span>ERRORS: <span className="text-red-400">{errors}</span>/{maxErrors}</span>
+        <span>TIME: <span className={timeLeft <= 5 ? 'text-red-400' : 'text-white/80'}>{timeLeft.toFixed(1)}s</span></span>
+      </div>
+      <div className="w-full h-1 bg-white/10 overflow-hidden"><div className="h-full bg-[var(--color-accent)] transition-all" style={{ width: `${(timeLeft/maxTime)*100}%`, background: timeLeft<maxTime*0.3?'#ff4757':'var(--color-accent)' }} /></div>
+      <canvas 
+        ref={canvasRef} width={420} height={340} 
+        className="border border-white/10 w-full touch-none bg-black cursor-crosshair rounded"
+        onMouseDown={onStartMove} onMouseMove={onMove} onMouseUp={onEndMove} onMouseLeave={onEndMove}
+        onTouchStart={onStartMove} onTouchMove={onMove} onTouchEnd={onEndMove}
+      />
+      {status && !failed && <div className="text-red-400 font-mono text-sm uppercase">{status}</div>}
+      {!playing && !failed && <button onClick={start} className="w-full bg-zinc-900 hover:bg-zinc-800 py-4 font-bold text-lg transition-colors border-0 mt-4 clip-oct">{timeLeft < maxTime ? '🔄 Restart Trace' : '▶ Start Trace'}</button>}
+    </div>
+  );
+};
+
+// ─── FREQUENCY JAM ────────────────────────────────────────────
+const FrequencyJamGame = ({ onComplete, difficulty = 'normal' }: { onComplete: () => void, difficulty?: 'normal' | 'hard' }) => {
+  const [playing, setPlaying] = useState(false);
+  const [level, setLevel] = useState(30);
+  const [timeInZone, setTimeInZone] = useState(0);
+  const [done, setDone] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  const dropRate = difficulty === 'hard' ? 8 : 5; // % per second
+  const minTarget = difficulty === 'hard' ? 70 : 60;
+  const maxTarget = difficulty === 'hard' ? 85 : 80;
+  const targetTime = difficulty === 'hard' ? 4000 : 3000;
+
+  const start = () => {
+    setLevel(30);
+    setTimeInZone(0);
+    setPlaying(true);
+    setFailed(false);
+  };
+
+  useEffect(() => {
+    if (!playing || done || failed) return;
+    const interval = setInterval(() => {
+      setLevel(prev => {
+        const next = prev - (dropRate / 10); // 10 ticks per second
+        if (difficulty === 'hard' && next <= 0) {
+           setFailed(true);
+           setPlaying(false);
+           haptic([100, 100]);
+           return 0;
+        }
+        return Math.max(0, next);
+      });
+    }, 100);
+    return () => clearInterval(interval);
+  }, [playing, done, failed, difficulty, dropRate]);
+
+  useEffect(() => {
+    if (!playing || done || failed) return;
+    const interval = setInterval(() => {
+      if (level >= minTarget && level <= maxTarget) {
+        setTimeInZone(prev => {
+           const next = prev + 100;
+           if (next >= targetTime) {
+              setDone(true);
+              setPlaying(false);
+              onComplete();
+              haptic([50, 30, 100]);
+           }
+           return next;
+        });
+      } else {
+        setTimeInZone(prev => Math.max(0, prev - 200)); // drain quickly if outside zone
+      }
+    }, 100);
+    return () => clearInterval(interval);
+  }, [playing, done, failed, level, minTarget, maxTarget, targetTime, onComplete]);
+
+  const handleTap = (e: React.PointerEvent) => {
+    if (!playing || failed || done) return;
+    e.stopPropagation();
+    e.preventDefault();
+    haptic(15);
+    setLevel(prev => Math.min(100, prev + 10));
+  };
+
+  if (done) return (
+    <div className="text-center p-6 space-y-4">
+      <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ duration: 0.5 }}><CheckCircle2 className="w-16 h-16 text-[var(--color-accent)] mx-auto" /></motion.div>
+      <h2 className="text-2xl font-bold text-[var(--color-accent)]">Frequency Locked!</h2>
+      <p className="text-white/40 text-sm font-mono uppercase tracking-widest">Signal stabilized...</p>
+    </div>
+  );
+
+  if (failed) return (
+    <div className="flex flex-col items-center justify-center p-8 space-y-6">
+      <TacticalStatus
+        tone="error"
+        label="Signal Lost"
+        message="Frequency Flatline: Instant Fail"
+        icon={RefreshCcw}
+      />
+      <button
+        onClick={() => { setFailed(false); setLevel(30); setTimeInZone(0); }}
+        className="bg-zinc-800 hover:bg-zinc-700 px-8 py-4 font-bold text-sm uppercase tracking-widest transition-colors text-white/80 clip-oct"
+      >🔄 Re-Initialize</button>
+    </div>
+  );
+
+  const inZone = level >= minTarget && level <= maxTarget;
+
+  return (
+    <div className="space-y-4 flex flex-col items-center select-none" onPointerDown={playing ? handleTap : undefined}>
+      <div className="flex justify-between w-full text-sm font-mono text-white/40 px-1">
+        <span>HOLD TARGET: <span className="text-[var(--color-accent)]">{minTarget}% - {maxTarget}%</span></span>
+        <span>SYNC: <span className={inZone ? 'text-[var(--color-accent)]' : 'text-white/80'}>{(timeInZone / 1000).toFixed(1)}s / {(targetTime / 1000).toFixed(1)}s</span></span>
+      </div>
+      
+      <div className="relative w-full h-48 bg-black border border-white/10 rounded flex items-end justify-center overflow-hidden">
+        {/* Sweet spot background indicator */}
+        <div 
+          className="absolute w-full bg-[var(--color-accent)]/10 border-y border-[var(--color-accent)]/30 transition-all" 
+          style={{ bottom: `${minTarget}%`, height: `${maxTarget - minTarget}%` }} 
+        />
+        
+        {/* Level Bar */}
+        <div 
+          className={`w-24 transition-all duration-100 ${inZone ? 'bg-[var(--color-accent)] shadow-[0_0_15px_var(--color-accent)]' : 'bg-white/40'}`}
+          style={{ height: `${level}%` }}
+        />
+        
+        {/* Percent Label */}
+        <div className="absolute top-4 left-4 font-mono text-xl text-white/50">{Math.round(level)}%</div>
+      </div>
+
+      {!playing && !failed && (
+         <button onClick={(e) => { e.stopPropagation(); start(); }} className="w-full bg-zinc-900 hover:bg-zinc-800 py-4 font-bold text-lg transition-colors border-0 mt-4 clip-oct">
+           {level === 30 && timeInZone === 0 ? '▶ Start Jam' : '🔄 Restart Jam'}
+         </button>
+      )}
+      
+      {playing && (
+         <div className="text-white/40 font-mono text-sm mt-4 animate-pulse">
+           TAP RAPIDLY TO MAINTAIN FREQUENCY
+         </div>
+      )}
+    </div>
+  );
+};
+
+// ─── CORE DUMP ────────────────────────────────────────────────
+const CoreDumpGame = ({ onComplete, difficulty = 'normal' }: { onComplete: () => void, difficulty?: 'normal' | 'hard' }) => {
+  const len = difficulty === 'hard' ? 12 : 8;
+  const timeLimit = difficulty === 'hard' ? 12 : 15;
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const genCode = () => Array.from({length:len}, () => chars[Math.floor(Math.random()*chars.length)]).join('');
+  
+  const [code, setCode] = useState(genCode);
+  const [input, setInput] = useState('');
+  const [playing, setPlaying] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(timeLimit);
+  const [status, setStatus] = useState<string|null>(null);
+  const [done, setDone] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  const start = () => { setCode(genCode()); setInput(''); setPlaying(true); setTimeLeft(timeLimit); setStatus(null); setFailed(false); };
+
+  useEffect(() => {
+    if (playing && !done && !failed) {
+      const tid = setInterval(() => {
+        setTimeLeft(v => {
+          if (v <= 0.1) {
+            clearInterval(tid);
+            setPlaying(false);
+            setFailed(true);
+            setStatus("TIME'S UP");
+            haptic(300);
+            return 0;
+          }
+          return Math.round((v - 0.1) * 10) / 10;
+        });
+      }, 100);
+      return () => clearInterval(tid);
+    }
+  }, [playing, done, failed]);
+
+  useEffect(() => {
+    if (difficulty === 'normal' && playing && !done && !failed) {
+      const rid = setInterval(() => {
+        setInput(prev => {
+          if (prev.length < len && prev === code.substring(0, prev.length)) {
+             haptic(15);
+             return prev + code[prev.length];
+          }
+          return prev;
+        });
+      }, 2500);
+      return () => clearInterval(rid);
+    }
+  }, [difficulty, playing, done, failed, code, len]);
+
+  useEffect(() => {
+    if (input.length === len && input === code && playing) {
+      setPlaying(false); setDone(true); onComplete(); haptic([30,30,80]);
+    }
+  }, [input, code, len, playing, onComplete]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!playing || failed || done) return;
+    const val = e.target.value.toUpperCase();
+    
+    if (val.length < input.length) {
+       setInput(val);
+       return;
+    }
+
+    if (!code.startsWith(val)) {
+       haptic(100);
+       if (difficulty === 'hard') {
+          setTimeLeft(v => Math.max(0, v - 1));
+          setStatus('PENALTY: -1s');
+          setTimeout(() => setStatus(null), 800);
+       } else {
+          setStatus('INVALID CHAR');
+          setTimeout(() => setStatus(null), 800);
+       }
+       return;
+    }
+
+    setInput(val);
+    haptic(10);
+  };
+
+  if (done) return (
+    <div className="text-center p-6 space-y-4">
+      <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ duration: 0.5 }}><CheckCircle2 className="w-16 h-16 text-[var(--color-accent)] mx-auto" /></motion.div>
+      <h2 className="text-2xl font-bold text-[var(--color-accent)]">Code Accepted!</h2>
+      <p className="text-white/40 text-sm font-mono uppercase tracking-widest">System dumped...</p>
+    </div>
+  );
+
+  if (failed) return (
+    <div className="flex flex-col items-center justify-center p-8 space-y-6">
+      <TacticalStatus
+        tone="error"
+        label="Dump Failed"
+        message={status || "Time Expired"}
+        icon={RefreshCcw}
+      />
+      <button
+        onClick={() => { setFailed(false); setTimeLeft(timeLimit); setInput(''); setCode(genCode()); setStatus(null); }}
+        className="bg-zinc-800 hover:bg-zinc-700 px-8 py-4 font-bold text-sm uppercase tracking-widest transition-colors text-white/80 clip-oct"
+      >🔄 Re-Initialize</button>
+    </div>
+  );
+
+  return (
+    <div className="space-y-4 flex flex-col items-center w-full">
+      <div className="flex justify-between w-full text-sm font-mono text-white/40 px-1">
+        <span>CHARS: <span className="text-[var(--color-accent)]">{input.length}</span>/{len}</span>
+        <span>TIME: <span className={timeLeft <= 3 ? 'text-red-400' : 'text-white/80'}>{timeLeft.toFixed(1)}s</span></span>
+      </div>
+      <div className="w-full h-1 bg-white/10 overflow-hidden"><div className="h-full transition-all bg-[var(--color-accent)]" style={{ width: `${(timeLeft/timeLimit)*100}%`, background: timeLeft<3?'#ff4757':'var(--color-accent)' }} /></div>
+      
+      <div className="w-full bg-zinc-900 border border-white/10 p-6 rounded text-center font-mono text-3xl tracking-[0.2em] break-all h-24 flex items-center justify-center">
+        {!playing ? <span className="text-white/20 text-sm">Press start to begin</span> : 
+          code.split('').map((c, i) => {
+            const isInput = i < input.length;
+            const isCorrect = isInput && input[i] === c;
+            return <span key={i} className={cn('transition-opacity', isInput ? (isCorrect ? 'text-[var(--color-accent)]' : 'text-red-500') : 'text-white/30')}>{c}</span>;
+          })
+        }
+      </div>
+      
+      <input type="text" value={input} onChange={handleChange} disabled={!playing} placeholder="TYPE CODE..." className="w-full bg-black border border-white/20 text-center text-xl font-mono p-4 text-white uppercase focus:border-[var(--color-accent)] outline-none" autoFocus={playing} />
+      
+      <div className="font-mono text-sm font-bold text-red-500 h-4">{status || ''}</div>
+      {!playing && !failed && <button onClick={start} className="w-full bg-zinc-900 hover:bg-zinc-800 py-4 font-bold text-lg transition-colors border-0 mt-2 clip-oct">▶ Start Dump</button>}
+    </div>
+  );
+};
+
+// ─── OVERLOAD ─────────────────────────────────────────────────
+const OverloadGame = ({ onComplete, difficulty = 'normal' }: { onComplete: () => void, difficulty?: 'normal' | 'hard' }) => {
+  const goal = difficulty === 'hard' ? 20 : 15; 
+  const timeLimit = difficulty === 'hard' ? 20 : 18; 
+  const windowMs = difficulty === 'hard' ? 500 : 750;
+  const initialLives = difficulty === 'hard' ? 1 : 2;
+  
+  const [playing, setPlaying] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(timeLimit);
+  const [hits, setHits] = useState(0);
+  const [lives, setLives] = useState(initialLives);
+  const [locked, setLocked] = useState(false);
+  const [status, setStatus] = useState<string|null>(null);
+  const [done, setDone] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const [nodes, setNodes] = useState<Record<number, {type: 'threat'|'decoy', id: number}>>({});
+  
+  const stateRef = React.useRef({ hits: 0, lives: initialLives, idCounter: 0, startTime: 0 });
+  const nodesRef = React.useRef(nodes);
+  useEffect(() => { nodesRef.current = nodes; }, [nodes]);
+
+  const start = () => { 
+    setHits(0); 
+    setLives(initialLives); 
+    setTimeLeft(timeLimit); 
+    setPlaying(true); 
+    setNodes({}); 
+    setLocked(false); 
+    setStatus(null); 
+    setFailed(false);
+    stateRef.current = { hits: 0, lives: initialLives, idCounter: 0, startTime: Date.now() }; 
+  };
+
+  useEffect(() => {
+    if (!playing || done || failed) return;
+    const tid = setInterval(() => {
+      setTimeLeft(v => {
+        if (v <= 0.1) { setPlaying(false); setFailed(true); setStatus('TIME EXPIRED'); haptic(300); return 0; }
+        return v - 0.1;
+      });
+    }, 100);
+    return () => clearInterval(tid as any);
+  }, [playing, done, failed]);
+
+  useEffect(() => {
+    if (!playing || locked || done || failed) return;
+    const maxActive = difficulty === 'hard' ? 6 : 4;
+    let active = true;
+    let timeoutId: any;
+    
+    const scheduleNext = () => {
+      if (!active) return;
+      const elapsed = (Date.now() - stateRef.current.startTime) / 1000;
+      const speedUpInterval = difficulty === 'hard' ? 2 : 4;
+      const speedLevel = Math.floor(elapsed / speedUpInterval);
+      const spawnBase = 400 - (speedLevel * 40); // gets faster
+      const spawnVar = 250 - (speedLevel * 25);
+      const delay = Math.max(100, spawnBase + Math.random() * spawnVar);
+
+      timeoutId = setTimeout(() => {
+        if (!active) return;
+        
+        const currentNodes = nodesRef.current;
+        if (Object.keys(currentNodes).length < maxActive) {
+          const free = [0,1,2,3,4,5,6,7,8].filter(i => !currentNodes[i]);
+          if (free.length > 0) {
+            const idx = free[Math.floor(Math.random() * free.length)];
+            const isDecoy = Math.random() < (difficulty === 'hard' ? 0.4 : 0.3);
+            const id = ++stateRef.current.idCounter;
+            
+            setNodes(prev => ({...prev, [idx]: { type: isDecoy ? 'decoy' : 'threat', id }}));
+            
+            // Setup expiration
+            setTimeout(() => {
+              if (!active) return;
+              setNodes(curr => {
+                const node = curr[idx];
+                if (node && node.id === id) {
+                  if (node.type === 'threat') {
+                    const newLives = stateRef.current.lives - 1;
+                    stateRef.current.lives = newLives; setLives(newLives);
+                    if (newLives <= 0) { setPlaying(false); setFailed(true); setStatus('SYSTEM OVERRUN'); haptic([200, 200]); }
+                  }
+                  const next = {...curr}; delete next[idx]; return next;
+                }
+                return curr;
+              });
+            }, windowMs);
+          }
+        }
+        
+        scheduleNext();
+      }, delay);
+    };
+
+    scheduleNext();
+
+    return () => { active = false; clearTimeout(timeoutId); };
+  }, [playing, locked, difficulty, windowMs, done, failed]);
+
+  const handleTap = (idx: number) => {
+    if (!playing || locked || failed || done) return;
+    const node = nodes[idx]; if (!node) return;
+    
+    setNodes(prev => { const next = {...prev}; delete next[idx]; return next; });
+    
+    if (node.type === 'threat') {
+      const newHits = stateRef.current.hits + 1;
+      stateRef.current.hits = newHits; setHits(newHits); haptic(30);
+      if (newHits >= goal) { setPlaying(false); setDone(true); onComplete(); haptic([50,30,100]); }
+    } else {
+      haptic(200); 
+      setLocked(true); 
+      
+      let lockTime = 1500;
+      if (difficulty === 'hard') {
+        lockTime = 2000;
+        const newHits = Math.max(0, stateRef.current.hits - 1);
+        stateRef.current.hits = newHits; setHits(newHits);
+        setStatus('LOCKOUT: -1 HIT');
+      } else {
+        setStatus('LOCKOUT - DECOY HIT');
+      }
+
+      setTimeout(() => { setLocked(false); setStatus(null); }, lockTime);
+    }
+  };
+
+  if (done) return (
+    <div className="text-center p-6 space-y-4">
+      <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ duration: 0.5 }}><CheckCircle2 className="w-16 h-16 text-[var(--color-accent)] mx-auto" /></motion.div>
+      <h2 className="text-2xl font-bold text-[var(--color-accent)]">Threats Neutralized!</h2>
+    </div>
+  );
+
+  if (failed) return (
+    <div className="flex flex-col items-center justify-center p-8 space-y-6">
+      <TacticalStatus
+        tone="error"
+        label="Defense Failed"
+        message={status || "System Overrun"}
+        icon={RefreshCcw}
+      />
+      <button
+        onClick={start}
+        className="bg-zinc-800 hover:bg-zinc-700 px-8 py-4 font-bold text-sm uppercase tracking-widest transition-colors text-white/80 clip-oct"
+      >🔄 Re-Initialize</button>
+    </div>
+  );
+
+  return (
+    <div className="space-y-4 flex flex-col items-center select-none">
+      <div className="flex justify-between w-full text-sm font-mono text-white/40 px-1">
+        <span>HITS: <span className="text-[var(--color-accent)]">{hits}</span>/{goal}</span>
+        <span>TOLERANCE: <span className="text-red-400">{lives}</span></span>
+        <span>TIME: <span className={timeLeft <= 5 ? 'text-red-400' : 'text-white/80'}>{timeLeft.toFixed(1)}s</span></span>
+      </div>
+      <div className="w-full h-1 bg-white/10 overflow-hidden"><div className="h-full transition-all bg-[var(--color-accent)]" style={{ width: `${(timeLeft/timeLimit)*100}%`, background: timeLeft<5?'#ff4757':'var(--color-accent)' }} /></div>
+      
+      <div className="relative w-full aspect-square max-w-[320px] mx-auto mt-4">
+        <div className="grid grid-cols-3 grid-rows-3 gap-3 absolute inset-0">
+          {[0,1,2,3,4,5,6,7,8].map(i => {
+            const node = nodes[i];
+            return (
+              <motion.div key={i} whileTap={{ scale: 0.9 }} onPointerDown={(e) => { e.preventDefault(); handleTap(i); }}
+                className={cn("flex items-center justify-center rounded-lg border text-3xl cursor-pointer transition-colors", !node ? "border-white/10 bg-zinc-900/50" : node.type === 'threat' ? "border-[var(--color-accent)] bg-[var(--color-accent)]/20 text-[var(--color-accent)] shadow-[0_0_15px_var(--color-accent)]" : "border-zinc-500 bg-white/10 text-zinc-400")}
+              >
+                {node ? (node.type === 'threat' ? '✕' : '●') : ''}
+              </motion.div>
+            )
+          })}
+        </div>
+        {locked && <div className="absolute inset-0 bg-red-500/20 backdrop-blur-sm flex items-center justify-center font-mono text-red-500 font-bold tracking-widest z-10 rounded-lg">LOCKOUT</div>}
+      </div>
+      
+      <div className="font-mono text-sm font-bold text-red-500 h-4">{status || ''}</div>
+      {!playing && !failed && <button onClick={start} className="w-full bg-zinc-900 hover:bg-zinc-800 py-4 font-bold text-lg transition-colors border-0 mt-2 clip-oct text-[var(--color-accent)]">▶ Start Defense</button>}
+    </div>
+  );
+};
+
+// ─── ZERO DAY ─────────────────────────────────────────────────
+const ZeroDayGame = ({ onComplete, difficulty = 'normal' }: { onComplete: () => void, difficulty?: 'normal' | 'hard' }) => {
+  const canvasRef = React.useRef<HTMLCanvasElement>(null);
+  const [playing, setPlaying] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(difficulty === 'hard' ? 25 : 20);
+  const [done, setDone] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const [status, setStatus] = useState<string|null>(null);
+  
+  const stateRef = React.useRef({ 
+    x: 170, y: 360, targetX: 170, 
+    barriers: [] as {y: number, gapX: number, gapW: number, nearMissToggled?: boolean}[], 
+    speed: 2, lastTime: 0, 
+    surviveMs: difficulty === 'hard' ? 25000 : 20000, 
+    startMs: 0, animFrame: 0, 
+    nearMissCount: 0,
+    isPlaying: false
+  });
+
+  const start = () => {
+    stateRef.current.x = 170; 
+    stateRef.current.targetX = 170; 
+    stateRef.current.barriers = []; 
+    stateRef.current.startMs = performance.now(); 
+    stateRef.current.lastTime = performance.now(); 
+    stateRef.current.nearMissCount = 0;
+    stateRef.current.isPlaying = true;
+    
+    setPlaying(true); 
+    setTimeLeft(stateRef.current.surviveMs/1000); 
+    setStatus(null); 
+    setFailed(false);
+    
+    const hard = difficulty === 'hard';
+    const W = 340; const H = 420; 
+    const gapW = hard ? W*0.22 : W*0.30; 
+    const spY = hard ? 110 : 130;
+    
+    for(let y = -spY; y > -H; y -= spY) stateRef.current.barriers.push({y, gapX: Math.random()*(W-gapW), gapW});
+    loop();
+  };
+
+  const loop = () => {
+    const s = stateRef.current;
+    if (!s.isPlaying && s.animFrame) { cancelAnimationFrame(s.animFrame); return; }
+    const now = performance.now();
+    const elapsed = now - s.startMs;
+    if (elapsed >= s.surviveMs) {
+      s.isPlaying = false; setPlaying(false); setDone(true); onComplete(); haptic([50,30,100]); return;
+    }
+    
+    setTimeLeft((s.surviveMs - elapsed)/1000);
+    
+    // Speed ramps every 3s for normal, 2s for hard
+    const rampInterval = difficulty === 'hard' ? 2000 : 3000;
+    s.speed = 2 + Math.floor(elapsed / rampInterval) * 0.4;
+    
+    s.x += (s.targetX - s.x) * 0.18;
+    s.x = Math.max(12, Math.min(340-12, s.x));
+    
+    s.barriers.forEach(b => b.y += s.speed);
+    s.barriers = s.barriers.filter(b => b.y < 420 + 30);
+    
+    const tops = s.barriers.map(b => b.y); const topmost = tops.length ? Math.min(...tops) : 0;
+    const spY = difficulty === 'hard' ? 110 : 130; 
+    const gapW = difficulty === 'hard' ? 340*0.22 : 340*0.30;
+    if (topmost > -spY + 60) s.barriers.push({y: topmost - spY, gapX: Math.random()*(340-gapW), gapW});
+    
+    let crashed = false;
+    let nearMiss = false;
+    for (let b of s.barriers) {
+      if (s.y >= b.y - 9 && s.y <= b.y + 9) {
+        if (s.x < b.gapX || s.x > b.gapX + b.gapW) { crashed = true; break; }
+        const margin = Math.min(s.x - b.gapX, b.gapX + b.gapW - s.x);
+        if (margin < gapW * 0.12) { 
+           if (!b.nearMissToggled) {
+              b.nearMissToggled = true;
+              nearMiss = true;
+           }
+        }
+      }
+    }
+    
+    if (nearMiss) {
+        setStatus('⚠ NEAR MISS'); setTimeout(() => setStatus(curr => curr==='⚠ NEAR MISS'?null:curr), 400);
+        if (difficulty === 'hard') {
+           s.nearMissCount++;
+           if (s.nearMissCount >= 2) {
+              s.isPlaying = false; setPlaying(false); setFailed(true); setStatus('HULL INTEGRITY CRITICAL'); haptic(300); return;
+           }
+        } else {
+           s.startMs += 2000; // Add 2s to the survive timer
+        }
+    }
+
+    if (crashed) { s.isPlaying = false; setPlaying(false); setFailed(true); setStatus('BREACH FAILED'); haptic(300); return; }
+    
+    const ctx = canvasRef.current?.getContext('2d');
+    if (ctx) {
+      ctx.fillStyle = '#0d1117'; ctx.fillRect(0,0,340,420);
+      s.barriers.forEach(b => {
+        ctx.fillStyle = '#1e2d3d'; ctx.fillRect(0, b.y-9, b.gapX, 18); ctx.fillRect(b.gapX+b.gapW, b.y-9, 340-b.gapX-b.gapW, 18);
+        ctx.fillStyle = '#9c88ff'; ctx.fillRect(0, b.y-9, b.gapX, 1); ctx.fillRect(b.gapX+b.gapW, b.y-9, 340-b.gapX-b.gapW, 1);
+      });
+      ctx.save(); ctx.translate(s.x, s.y); ctx.fillStyle = '#9c88ff'; ctx.shadowColor = '#9c88ff'; ctx.shadowBlur = 10;
+      ctx.beginPath(); ctx.moveTo(0,-10); ctx.lineTo(8,8); ctx.lineTo(0,4); ctx.lineTo(-8,8); ctx.closePath(); ctx.fill(); ctx.restore();
+    }
+    s.animFrame = requestAnimationFrame(loop);
+  };
+
+  const onMove = (e: any) => {
+    if (!playing) return;
+    const canvas = canvasRef.current; if (!canvas) return;
+    const r = canvas.getBoundingClientRect(); const src = e.touches ? e.touches[0] : e;
+    stateRef.current.targetX = (src.clientX - r.left) * (340 / r.width);
+  };
+
+  useEffect(() => {
+    if (!playing && !done && !failed) {
+      const ctx = canvasRef.current?.getContext('2d');
+      if (ctx) { ctx.fillStyle = '#0d1117'; ctx.fillRect(0,0,340,420); ctx.fillStyle = '#9c88ff'; ctx.font = '14px monospace'; ctx.textAlign = 'center'; ctx.fillText('Ready to breach...', 170, 210); }
+    }
+  }, [playing, done, failed]);
+
+  useEffect(() => {
+    return () => { if (stateRef.current.animFrame) cancelAnimationFrame(stateRef.current.animFrame); };
+  }, []);
+
+  if (done) return (
+    <div className="text-center p-6 space-y-4">
+      <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ duration: 0.5 }}><CheckCircle2 className="w-16 h-16 text-[var(--color-accent)] mx-auto" /></motion.div>
+      <h2 className="text-2xl font-bold text-[var(--color-accent)]">Firewall Bypassed!</h2>
+      <p className="text-white/40 text-sm font-mono uppercase tracking-widest">Network Access Granted</p>
+    </div>
+  );
+
+  if (failed) return (
+    <div className="flex flex-col items-center justify-center p-8 space-y-6">
+      <TacticalStatus
+        tone="error"
+        label="Breach Failed"
+        message={status || "Collision Detected"}
+        icon={RefreshCcw}
+      />
+      <button
+        onClick={start}
+        className="bg-zinc-800 hover:bg-zinc-700 px-8 py-4 font-bold text-sm uppercase tracking-widest transition-colors text-white/80 clip-oct"
+      >🔄 Re-Initialize</button>
+    </div>
+  );
+
+  return (
+    <div className="space-y-4 flex flex-col items-center">
+      <div className="flex justify-between w-full text-sm font-mono text-white/40 px-1">
+        <span>SURVIVE: <span className={timeLeft <= 5 ? 'text-red-400' : 'text-purple-400'}>{Math.max(0, timeLeft).toFixed(1)}s</span></span>
+        {difficulty === 'hard' && <span>NEAR MISS: <span className={stateRef.current.nearMissCount > 0 ? 'text-red-400' : 'text-white/80'}>{stateRef.current.nearMissCount}/2</span></span>}
+      </div>
+      <div className="w-full h-1 bg-white/10 overflow-hidden"><div className="h-full transition-all" style={{ width: `${(1 - timeLeft/(difficulty==='hard'?25:20))*100}%`, background: '#9c88ff' }} /></div>
+      
+      <canvas ref={canvasRef} width={340} height={420} className="w-full max-w-[340px] border border-white/10 bg-black touch-none rounded" onMouseMove={onMove} onTouchMove={onMove} />
+      
+      <div className="font-mono text-sm font-bold text-orange-400 h-4">{status || ''}</div>
+      {!playing && !failed && <button onClick={start} className="w-full bg-zinc-900 hover:bg-zinc-800 py-4 font-bold text-lg transition-colors border-0 mt-2 clip-oct text-[var(--color-accent)]">▶ Breach Network</button>}
+    </div>
+  );
+};
+
 // ─── TYPES ────────────────────────────────────────────────────
-type GameType = 'tap' | 'memory' | 'pattern';
+type GameType = 'tap' | 'memory' | 'pattern' | 'signal_trace' | 'frequency_jam' | 'core_dump' | 'overload' | 'zero_day';
 type RunnerScreen = 'location' | 'ar_scanner' | 'manual_fallback' | 'passkey' | 'game' | 'victory';
 
 interface RunnerGameProps {
@@ -256,6 +1253,8 @@ interface RunnerGameProps {
   currentRound?: any;
   onSwitchToMap?: () => void;
   difficulty?: 'normal' | 'hard';
+  arTestingBypassEnabled?: boolean;
+  gameType?: string;
 }
 
 // ─── MAIN COMPONENT ───────────────────────────────────────────
@@ -267,7 +1266,9 @@ export function RunnerGame({
   stage,
   currentRound,
   onSwitchToMap,
-  difficulty = 'normal'
+  difficulty = 'normal',
+  arTestingBypassEnabled,
+  gameType: initialGameType
 }: RunnerGameProps) {
   const [screen, setScreen] = useState<RunnerScreen>(() => {
     if (stage === 'runner_entry') return 'passkey';
@@ -313,8 +1314,15 @@ export function RunnerGame({
     });
   }, [screen, currentRound]);
   const [passkey, setPasskey] = useState('');
-  const [gameType, setGameType] = useState<GameType>('tap');
+  const [gameType, setGameType] = useState<GameType>((initialGameType as GameType) || 'tap');
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (initialGameType) {
+      setGameType(initialGameType as GameType);
+    }
+  }, [initialGameType]);
+
   const [isVerifyingPasskey, setVerifyingPasskey] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -332,6 +1340,11 @@ export function RunnerGame({
     tap: { title: 'TARGET LOCK', icon: <Crosshair className="w-6 h-6 text-[var(--color-accent)]" />, color: 'text-[var(--color-accent)]' },
     memory: { title: 'NEURAL DECODE', icon: <Brain className="w-6 h-6 text-blue-400" />, color: 'text-blue-400' },
     pattern: { title: 'CIPHER CRACK', icon: <LayoutGrid className="w-6 h-6 text-purple-400" />, color: 'text-purple-400' },
+    signal_trace: { title: 'SIGNAL TRACE', icon: <Activity className="w-6 h-6 text-cyan-400" />, color: 'text-cyan-400' },
+    frequency_jam: { title: 'FREQUENCY JAM', icon: <Activity className="w-6 h-6 text-[var(--color-accent)]" />, color: 'text-[var(--color-accent)]' },
+    core_dump: { title: 'CORE DUMP', icon: <Activity className="w-6 h-6 text-orange-400" />, color: 'text-orange-400' },
+    overload: { title: 'OVERLOAD', icon: <AlertCircle className="w-6 h-6 text-red-400" />, color: 'text-red-400' },
+    zero_day: { title: 'ZERO DAY', icon: <Shield className="w-6 h-6 text-purple-400" />, color: 'text-purple-400' },
   };
 
   const handleVerifyPasskey = async () => {
@@ -428,18 +1441,18 @@ export function RunnerGame({
                 <Button
                   className={cn(
                     "w-full font-bold uppercase tracking-[0.2em] h-14 transition-all",
-                    distance !== null && distance <= 25
+                    (arTestingBypassEnabled || (distance !== null && distance <= 25))
                       ? "btn-primary !bg-[var(--color-accent)] !text-white hover:brightness-125"
                       : "bg-zinc-800 text-white/20 border-white/5 cursor-not-allowed"
                   )}
                   size="md"
-                  disabled={distance === null || distance > 25}
+                  disabled={!arTestingBypassEnabled && (distance === null || distance > 25)}
                   onClick={() => { setError(null); setScreen('ar_scanner'); }}
                 >
                   <Camera className="mr-2 h-5 w-5" />
-                  {distance !== null && distance > 25
+                  {!arTestingBypassEnabled && distance !== null && distance > 25
                     ? `OUT OF RANGE (${Math.round(distance)}m)`
-                    : "OPEN GYRO-AR LINK"}
+                    : (arTestingBypassEnabled ? "BYPASS: OPEN AR LINK" : "OPEN GYRO-AR LINK")}
                 </Button>
                 {/* Manual fallback — always available if AR camera issues */}
                 <button
@@ -462,6 +1475,7 @@ export function RunnerGame({
             round={currentRoundIndex + 1}
             targetData={currentRound?.qrPasskey || `round_${currentRoundIndex + 1}`}
             distance={distance}
+            testingBypassEnabled={arTestingBypassEnabled}
             onCapture={async (scannedData) => {
               setError(null);
               setPasskey(scannedData);
@@ -693,6 +1707,11 @@ export function RunnerGame({
               {gameType === 'tap' && <TapGame onComplete={handleGameComplete} difficulty={difficulty} />}
               {gameType === 'memory' && <MemoryGame onComplete={handleGameComplete} difficulty={difficulty} />}
               {gameType === 'pattern' && <PatternGame onComplete={handleGameComplete} difficulty={difficulty} />}
+              {gameType === 'signal_trace' && <SignalTraceGame onComplete={handleGameComplete} difficulty={difficulty} />}
+              {gameType === 'frequency_jam' && <FrequencyJamGame onComplete={handleGameComplete} difficulty={difficulty} />}
+              {gameType === 'core_dump' && <CoreDumpGame onComplete={handleGameComplete} difficulty={difficulty} />}
+              {gameType === 'overload' && <OverloadGame onComplete={handleGameComplete} difficulty={difficulty} />}
+              {gameType === 'zero_day' && <ZeroDayGame onComplete={handleGameComplete} difficulty={difficulty} />}
             </div>
             <div className="text-center text-white/20 text-[10px] font-mono py-4 uppercase tracking-widest">
               Complete the challenge to finish this round

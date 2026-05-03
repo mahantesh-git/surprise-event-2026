@@ -10,9 +10,9 @@ const client = new MongoClient(uri);
 const newQuestions = [
   {
     round: 1,
-    place: "BCA Block",
-    lat: "15.433925° N",
-    lng: "75.647011° E",
+    place: "BCA Block, Lab 2 Entrance",
+    lat: "15.434417° N",
+    lng: "75.648222° E",
     p1: {
       title: "Shopping Cart Total",
       language: "python",
@@ -28,9 +28,9 @@ const newQuestions = [
   },
   {
     round: 2,
-    place: "Library",
-    lat: "15.434419° N",
-    lng: "75.646872° E",
+    place: "JT College Central Library",
+    lat: "15.435389° N",
+    lng: "75.647222° E",
     p1: {
       title: "Even Length Words",
       language: "python",
@@ -46,9 +46,9 @@ const newQuestions = [
   },
   {
     round: 3,
-    place: "College Ground",
-    lat: "15.435388° N",
-    lng: "75.647494° E",
+    place: "Campus Canteen",
+    lat: "15.432972° N",
+    lng: "75.649556° E",
     p1: {
       title: "Sum of Odd Numbers",
       language: "python",
@@ -64,9 +64,9 @@ const newQuestions = [
   },
   {
     round: 4,
-    place: "Main Gate",
-    lat: "15.435123° N",
-    lng: "75.646234° E",
+    place: "Principal's Office Corridor",
+    lat: "15.433306° N",
+    lng: "75.647472° E",
     p1: {
       title: "ARRAY FLATTEN",
       language: "python",
@@ -82,9 +82,9 @@ const newQuestions = [
   },
   {
     round: 5,
-    place: "Parking Area",
-    lat: "15.434612° N",
-    lng: "75.646618° E",
+    place: "Campus Quadrangle",
+    lat: "15.434028° N",
+    lng: "75.647639° E",
     p1: {
       title: "STRING COMPRESSION",
       language: "python",
@@ -100,9 +100,9 @@ const newQuestions = [
   },
   {
     round: 6,
-    place: "Nikhil's Sector",
-    lat: "15.434859° N",
-    lng: "75.647313° E",
+    place: "Main Gate, Security Post",
+    lat: "15.434778° N",
+    lng: "75.646694° E",
     p1: {
       title: "PALINDROME PERMUTATION",
       language: "python",

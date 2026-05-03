@@ -194,23 +194,56 @@ export function ConfigManagement({ token, config, onRefresh, onError }: ConfigMa
                 <Power className="text-[var(--color-accent)] w-4 h-4" />
                 <h3 className="text-[10px] font-mono uppercase tracking-[0.4em] text-white/60">Access_Control</h3>
               </div>
-              <div className="corner-card glass-morphism p-8 flex justify-between items-center group">
-                 <div className="space-y-1">
-                   <h4 className="font-black uppercase tracking-widest text-sm">Operative Authentication</h4>
-                   <p className="text-[10px] font-mono text-white/60 uppercase tracking-tight max-w-[280px]">
-                     Enable or disable team login globally across all nodes.
-                   </p>
+              <div className="corner-card glass-morphism p-8 flex flex-col gap-8 group">
+                 <div className="flex justify-between items-center">
+                   <div className="space-y-1">
+                     <h4 className="font-black uppercase tracking-widest text-sm">Operative Authentication</h4>
+                     <p className="text-[10px] font-mono text-white/60 uppercase tracking-tight max-w-[280px]">
+                       Enable or disable team login globally across all nodes.
+                     </p>
+                   </div>
+                   <button
+                     onClick={handleToggleLogin}
+                     className={`relative inline-flex h-8 w-14 items-center transition-all focus:outline-none ${
+                       config?.loginEnabled ? 'bg-[var(--color-accent)]' : 'bg-white/10'
+                     }`}
+                   >
+                     <span className={`inline-block h-6 w-6 transform bg-white transition-transform ${
+                       config?.loginEnabled ? 'translate-x-7 bg-black' : 'translate-x-1'
+                     }`} />
+                   </button>
                  </div>
-                 <button
-                   onClick={handleToggleLogin}
-                   className={`relative inline-flex h-8 w-14 items-center transition-all focus:outline-none ${
-                     config?.loginEnabled ? 'bg-[var(--color-accent)]' : 'bg-white/10'
-                   }`}
-                 >
-                   <span className={`inline-block h-6 w-6 transform bg-white transition-transform ${
-                     config?.loginEnabled ? 'translate-x-7 bg-black' : 'translate-x-1'
-                   }`} />
-                 </button>
+
+                 <div className="h-[1px] w-full bg-white/5" />
+
+                 <div className="flex justify-between items-center">
+                   <div className="space-y-1">
+                     <h4 className="font-black uppercase tracking-widest text-sm text-[var(--color-accent)]">AR Testing Geofence Bypass</h4>
+                     <p className="text-[10px] font-mono text-white/60 uppercase tracking-tight max-w-[280px]">
+                       Globally disable 25m distance enforcement and exact QR matching for testing.
+                     </p>
+                   </div>
+                   <button
+                     onClick={async () => {
+                       if (!token) return;
+                       try {
+                         const newVal = !config?.arTestingBypassEnabled;
+                         await updateAdminConfig(token, 'arTestingBypassEnabled', newVal);
+                         showToast(`AR Bypass ${newVal ? 'ENABLED' : 'DISABLED'}`);
+                         onRefresh();
+                       } catch (err) {
+                         showToast(err instanceof Error ? err.message : 'Failed to update config', 'error');
+                       }
+                     }}
+                     className={`relative inline-flex h-8 w-14 items-center transition-all focus:outline-none ${
+                       config?.arTestingBypassEnabled ? 'bg-red-500' : 'bg-white/10'
+                     }`}
+                   >
+                     <span className={`inline-block h-6 w-6 transform bg-white transition-transform ${
+                       config?.arTestingBypassEnabled ? 'translate-x-7 bg-black' : 'translate-x-1'
+                     }`} />
+                   </button>
+                 </div>
               </div>
            </section>
 

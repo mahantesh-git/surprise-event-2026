@@ -1,0 +1,1632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Runner Minigames</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;500;600;700&display=swap');
+
+:root {
+  --bg: #080c10;
+  --surface: #0d1117;
+  --surface2: #141b24;
+  --border: #1e2d3d;
+  --accent: #00f5a0;
+  --accent2: #00b4d8;
+  --danger: #ff4757;
+  --warn: #ffa502;
+  --text: #e8edf3;
+  --muted: #5a7a8a;
+  --mono: 'Share Tech Mono', monospace;
+  --ui: 'Rajdhani', sans-serif;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--ui);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Scanline overlay */
+body::after {
+  content:'';
+  position:fixed;
+  inset:0;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+  pointer-events:none;
+  z-index:9999;
+}
+
+/* ── MENU ── */
+#menu {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+  gap: 2rem;
+}
+
+.menu-header {
+  text-align: center;
+}
+
+.menu-header h1 {
+  font-family: var(--mono);
+  font-size: clamp(1.4rem, 5vw, 2.2rem);
+  color: var(--accent);
+  letter-spacing: 0.1em;
+  text-shadow: 0 0 20px rgba(0,245,160,0.4);
+}
+
+.menu-header p {
+  font-size: 0.95rem;
+  color: var(--muted);
+  margin-top: 0.4rem;
+  letter-spacing: 0.05em;
+}
+
+.mode-toggle {
+  display: flex;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.mode-btn {
+  padding: 0.5rem 1.5rem;
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  transition: all 0.2s;
+}
+
+.mode-btn.active {
+  background: var(--surface2);
+  color: var(--accent);
+}
+
+.games-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+  width: 100%;
+  max-width: 900px;
+}
+
+.game-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.25rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+
+.game-card::before {
+  content:'';
+  position:absolute;
+  top:0; left:0; right:0;
+  height: 2px;
+  background: var(--card-color, var(--accent));
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.game-card:hover {
+  border-color: var(--card-color, var(--accent));
+  transform: translateY(-2px);
+}
+
+.game-card:hover::before { opacity:1; }
+
+.card-num {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--card-color, var(--accent));
+  letter-spacing: 0.15em;
+  margin-bottom: 0.5rem;
+}
+
+.card-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.25rem;
+}
+
+.card-type {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-bottom: 0.75rem;
+}
+
+.card-desc {
+  font-size: 0.85rem;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.card-stats {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.card-stat {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--muted);
+}
+
+/* ── GAME SHELL ── */
+#game-shell {
+  display: none;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.game-topbar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.back-btn {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--muted);
+  cursor: pointer;
+  background: none;
+  border: 1px solid var(--border);
+  padding: 4px 12px;
+  border-radius: 4px;
+  letter-spacing: 0.1em;
+  transition: all 0.15s;
+}
+
+.back-btn:hover { color:var(--accent); border-color:var(--accent); }
+
+.topbar-title {
+  font-family: var(--mono);
+  font-size: 0.9rem;
+  color: var(--text);
+  letter-spacing: 0.1em;
+  flex:1;
+}
+
+.mode-indicator {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  padding: 3px 10px;
+  border-radius: 3px;
+  letter-spacing: 0.1em;
+}
+
+.mode-indicator.hard {
+  background: rgba(255,71,87,0.15);
+  color: var(--danger);
+  border: 1px solid rgba(255,71,87,0.3);
+}
+
+.mode-indicator.normal {
+  background: rgba(0,245,160,0.1);
+  color: var(--accent);
+  border: 1px solid rgba(0,245,160,0.2);
+}
+
+#game-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  position: relative;
+}
+
+/* ── SHARED COMPONENTS ── */
+.game-title-big {
+  font-family: var(--mono);
+  font-size: clamp(1.4rem,5vw,2rem);
+  color: var(--accent);
+  text-align: center;
+  letter-spacing: 0.1em;
+  margin-bottom: 0.5rem;
+}
+
+.game-subtitle {
+  font-size: 0.9rem;
+  color: var(--muted);
+  text-align: center;
+  margin-bottom: 2rem;
+  line-height: 1.5;
+}
+
+.start-btn {
+  font-family: var(--mono);
+  font-size: 1rem;
+  letter-spacing: 0.15em;
+  padding: 0.75rem 2.5rem;
+  background: transparent;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+}
+
+.start-btn:hover {
+  background: rgba(0,245,160,0.1);
+  box-shadow: 0 0 20px rgba(0,245,160,0.2);
+}
+
+.timer-bar-wrap {
+  width: 100%;
+  max-width: 440px;
+  margin: 1rem 0;
+}
+
+.timer-label {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--muted);
+  letter-spacing: 0.1em;
+  margin-bottom: 4px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.timer-bar {
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.timer-fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.1s linear, background 0.3s;
+  border-radius: 2px;
+}
+
+.progress-bar-wrap {
+  width: 100%;
+  max-width: 440px;
+  margin: 0.5rem 0;
+}
+
+.progress-bar {
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--accent2);
+  transition: width 0.15s ease;
+  border-radius: 3px;
+}
+
+.status-text {
+  font-family: var(--mono);
+  font-size: 1.4rem;
+  text-align: center;
+  letter-spacing: 0.05em;
+  min-height: 2rem;
+  margin: 0.5rem 0;
+}
+
+.flash-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1000;
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+
+/* ── GAME 4: SIGNAL TRACE ── */
+#signal-trace canvas {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: crosshair;
+  touch-action: none;
+  display: block;
+}
+
+/* ── GAME 5: FREQUENCY JAM ── */
+.beat-btn-wrap {
+  position: relative;
+  width: 180px;
+  height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 1.5rem auto;
+}
+
+.beat-ring {
+  position: absolute;
+  inset: -20px;
+  border-radius: 50%;
+  border: 2px solid rgba(0,245,160,0.2);
+  transition: transform 0.1s ease, opacity 0.1s;
+}
+
+.beat-btn {
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  border: 2px solid var(--accent);
+  background: rgba(0,245,160,0.05);
+  color: var(--accent);
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  transition: transform 0.08s ease, background 0.08s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 4px;
+  position: relative;
+  z-index: 1;
+}
+
+.beat-btn:active { transform: scale(0.95); }
+.beat-btn.pulse { background: rgba(0,245,160,0.15); }
+.beat-btn.hit { background: rgba(0,245,160,0.25); }
+.beat-btn.miss { border-color: var(--danger); background: rgba(255,71,87,0.1); }
+
+.sync-meter {
+  width: 100%;
+  max-width: 300px;
+  margin: 0 auto;
+}
+
+.sync-arc-wrap {
+  position: relative;
+  width: 60px;
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+  margin: 0.25rem auto;
+}
+
+/* ── GAME 6: CORE DUMP ── */
+.code-display {
+  font-family: var(--mono);
+  font-size: clamp(2rem,8vw,3.5rem);
+  letter-spacing: 0.2em;
+  text-align: center;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  margin: 1rem 0;
+  min-width: 320px;
+  position: relative;
+  overflow: hidden;
+}
+
+.code-char {
+  display: inline-block;
+  transition: color 0.1s;
+  position: relative;
+}
+
+.code-char.correct { color: var(--accent); }
+.code-char.wrong { color: var(--danger); }
+.code-char.obscured { opacity: 0; }
+
+.type-input {
+  font-family: var(--mono);
+  font-size: 1.5rem;
+  letter-spacing: 0.2em;
+  text-align: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  padding: 0.75rem 1rem;
+  width: 100%;
+  max-width: 360px;
+  outline: none;
+  text-transform: uppercase;
+  caret-color: var(--accent);
+}
+
+.type-input:focus { border-color: var(--accent); }
+
+/* ── GAME 7: OVERLOAD ── */
+.overload-grid {
+  display: grid;
+  grid-template-columns: repeat(3,1fr);
+  gap: 12px;
+  margin: 1rem 0;
+}
+
+.over-node {
+  width: clamp(80px,20vw,110px);
+  height: clamp(80px,20vw,110px);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  cursor: pointer;
+  transition: all 0.1s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--mono);
+  font-size: 1.4rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.over-node.threat {
+  border-color: var(--danger);
+  background: rgba(255,71,87,0.12);
+  animation: threatPulse 0.5s infinite alternate;
+  color: var(--danger);
+}
+
+.over-node.decoy {
+  border-color: #888;
+  background: rgba(255,255,255,0.05);
+  color: #aaa;
+}
+
+@keyframes threatPulse {
+  from { box-shadow: 0 0 0 rgba(255,71,87,0); }
+  to { box-shadow: 0 0 16px rgba(255,71,87,0.4); }
+}
+
+.over-node.popped {
+  transform: scale(0.85);
+  opacity: 0.3;
+}
+
+.lockout-msg {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,71,87,0.15);
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  color: var(--danger);
+  letter-spacing: 0.1em;
+  border-radius: 8px;
+  z-index: 10;
+}
+
+/* ── GAME 8: ZERO DAY ── */
+#zero-day canvas {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: block;
+  touch-action: none;
+}
+
+/* ── RESULT SCREEN ── */
+.result-screen {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.result-icon {
+  font-family: var(--mono);
+  font-size: 3rem;
+  margin-bottom: 0.5rem;
+}
+
+.result-title {
+  font-family: var(--mono);
+  font-size: 1.8rem;
+  letter-spacing: 0.1em;
+}
+
+.result-title.win { color: var(--accent); text-shadow: 0 0 20px rgba(0,245,160,0.5); }
+.result-title.lose { color: var(--danger); }
+
+.result-sub { font-size: 1rem; color: var(--muted); }
+
+.result-btns {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.result-btn {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  letter-spacing: 0.12em;
+  padding: 0.5rem 1.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  transition: all 0.2s;
+}
+
+.result-btn.primary {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.result-btn:hover { background: var(--surface2); }
+</style>
+</head>
+<body>
+
+<div class="flash-overlay" id="flash"></div>
+
+<!-- MENU -->
+<div id="menu">
+  <div class="menu-header">
+    <h1>// RUNNER_GAMES</h1>
+    <p>Select a clearance challenge to run</p>
+  </div>
+  <div class="mode-toggle">
+    <button class="mode-btn active" onclick="setMode('normal')">NORMAL</button>
+    <button class="mode-btn" onclick="setMode('hard')">HARD MODE</button>
+  </div>
+  <div class="games-grid">
+    <div class="game-card" style="--card-color:#00b4d8" onclick="openGame(4)">
+      <div class="card-num">// 04</div>
+      <div class="card-title">Signal Trace</div>
+      <div class="card-type">Swipe path game</div>
+      <div class="card-desc">Guide a node along a winding circuit without leaving the track.</div>
+      <div class="card-stats">
+        <span class="card-stat">20s</span>
+        <span class="card-stat">drag</span>
+      </div>
+    </div>
+    <div class="game-card" style="--card-color:#00f5a0" onclick="openGame(5)">
+      <div class="card-num">// 05</div>
+      <div class="card-title">Frequency Jam</div>
+      <div class="card-type">Rhythm tap game</div>
+      <div class="card-desc">Tap in sync with a pulsing beat to fill the sync meter.</div>
+      <div class="card-stats">
+        <span class="card-stat">90 BPM</span>
+        <span class="card-stat">12 hits</span>
+      </div>
+    </div>
+    <div class="game-card" style="--card-color:#ffa502" onclick="openGame(6)">
+      <div class="card-num">// 06</div>
+      <div class="card-title">Core Dump</div>
+      <div class="card-type">Rapid typing challenge</div>
+      <div class="card-desc">Type the displayed code string exactly before time expires.</div>
+      <div class="card-stats">
+        <span class="card-stat">12s</span>
+        <span class="card-stat">8 chars</span>
+      </div>
+    </div>
+    <div class="game-card" style="--card-color:#ff4757" onclick="openGame(7)">
+      <div class="card-num">// 07</div>
+      <div class="card-title">Overload</div>
+      <div class="card-type">Whack-a-mole variant</div>
+      <div class="card-desc">Eliminate 15 threat nodes. Avoid the decoys.</div>
+      <div class="card-stats">
+        <span class="card-stat">20s</span>
+        <span class="card-stat">15 hits</span>
+      </div>
+    </div>
+    <div class="game-card" style="--card-color:#9c88ff" onclick="openGame(8)">
+      <div class="card-num">// 08</div>
+      <div class="card-title">Zero Day</div>
+      <div class="card-type">Scrolling evasion game</div>
+      <div class="card-desc">Steer a packet through firewall barriers for 15 seconds.</div>
+      <div class="card-stats">
+        <span class="card-stat">15s survive</span>
+        <span class="card-stat">tilt/drag</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- GAME SHELL -->
+<div id="game-shell">
+  <div class="game-topbar">
+    <button class="back-btn" onclick="goMenu()">← MENU</button>
+    <span class="topbar-title" id="topbar-title"></span>
+    <span class="mode-indicator" id="mode-ind"></span>
+  </div>
+  <div id="game-area"></div>
+</div>
+
+<script>
+let currentMode = 'normal';
+let currentGame = null;
+let gameState = {};
+
+function setMode(m) {
+  currentMode = m;
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+}
+
+function openGame(n) {
+  currentGame = n;
+  document.getElementById('menu').style.display = 'none';
+  const shell = document.getElementById('game-shell');
+  shell.style.display = 'flex';
+  const titles = {4:'Signal Trace',5:'Frequency Jam',6:'Core Dump',7:'Overload',8:'Zero Day'};
+  document.getElementById('topbar-title').textContent = '// ' + titles[n];
+  const ind = document.getElementById('mode-ind');
+  ind.textContent = currentMode === 'hard' ? 'HARD' : 'NORMAL';
+  ind.className = 'mode-indicator ' + currentMode;
+  renderGame(n);
+}
+
+function goMenu() {
+  stopAll();
+  document.getElementById('game-shell').style.display = 'none';
+  document.getElementById('menu').style.display = 'flex';
+  currentGame = null;
+}
+
+function stopAll() {
+  if (gameState.timers) gameState.timers.forEach(t => clearInterval(t));
+  if (gameState.animFrame) cancelAnimationFrame(gameState.animFrame);
+  gameState = {};
+}
+
+function flash(color) {
+  const el = document.getElementById('flash');
+  el.style.background = color;
+  el.style.opacity = '0.25';
+  setTimeout(() => { el.style.opacity = '0'; }, 150);
+}
+
+function vibrate(pattern) {
+  if (navigator.vibrate) navigator.vibrate(pattern);
+}
+
+function renderGame(n) {
+  stopAll();
+  gameState = { timers: [] };
+  const area = document.getElementById('game-area');
+  if (n === 4) renderSignalTrace(area);
+  else if (n === 5) renderFreqJam(area);
+  else if (n === 6) renderCoreDump(area);
+  else if (n === 7) renderOverload(area);
+  else if (n === 8) renderZeroDay(area);
+}
+
+/* ════════════════════════════════
+   GAME 4 — SIGNAL TRACE
+════════════════════════════════ */
+function renderSignalTrace(area) {
+  const hard = currentMode === 'hard';
+  const timeLimit = 20;
+  area.innerHTML = `
+    <div style="width:100%;max-width:440px;display:flex;flex-direction:column;align-items:center;gap:0.75rem;">
+      <div class="game-title-big" style="color:#00b4d8;">SIGNAL TRACE</div>
+      <div class="game-subtitle">Drag the node along the circuit path<br>without leaving the track</div>
+      <div class="timer-bar-wrap">
+        <div class="timer-label"><span>TIME</span><span id="st-time">20.0s</span></div>
+        <div class="timer-bar"><div class="timer-fill" id="st-tfill" style="width:100%;background:#00b4d8;"></div></div>
+      </div>
+      <canvas id="st-canvas" width="420" height="340" style="max-width:100%;"></canvas>
+      <div class="status-text" id="st-status" style="color:#00b4d8;"></div>
+      <button class="start-btn" id="st-start" style="border-color:#00b4d8;color:#00b4d8;" onclick="startSignalTrace()">START</button>
+    </div>
+  `;
+  drawTraceIdle();
+}
+
+function drawTraceIdle() {
+  const canvas = document.getElementById('st-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const hard = currentMode === 'hard';
+  const corridorW = hard ? 20 : 32;
+
+  gameState.tracePath = generateTracePath(W, H);
+  gameState.traceCorridorW = corridorW;
+  gameState.traceProgress = 0;
+  gameState.tracePlaying = false;
+
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle = '#0d1117';
+  ctx.fillRect(0,0,W,H);
+  drawTrackPath(ctx, gameState.tracePath, corridorW, 0, false);
+
+  // Draw node at start
+  const p = gameState.tracePath[0];
+  ctx.beginPath();
+  ctx.arc(p.x, p.y, 10, 0, Math.PI*2);
+  ctx.fillStyle = '#00b4d8';
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(p.x, p.y, 6, 0, Math.PI*2);
+  ctx.fillStyle = '#fff';
+  ctx.fill();
+}
+
+function generateTracePath(W, H) {
+  const pts = [];
+  const margin = 40;
+  // Generate zigzag path
+  const steps = 7;
+  pts.push({x: margin+10, y: H - margin});
+  for (let i = 1; i < steps; i++) {
+    const x = margin + (W - margin*2) * (i / (steps-1));
+    const y = (i % 2 === 0) ? H - margin : margin + 30;
+    pts.push({x, y});
+  }
+  // Interpolate into smooth path
+  const smooth = [];
+  for (let i = 0; i < pts.length-1; i++) {
+    const n = 20;
+    for (let t = 0; t < n; t++) {
+      smooth.push({
+        x: pts[i].x + (pts[i+1].x - pts[i].x) * (t/n),
+        y: pts[i].y + (pts[i+1].y - pts[i].y) * (t/n)
+      });
+    }
+  }
+  smooth.push(pts[pts.length-1]);
+  return smooth;
+}
+
+function drawTrackPath(ctx, path, corridorW, progress, playing) {
+  // Draw corridor
+  ctx.lineWidth = corridorW * 2;
+  ctx.strokeStyle = '#1e2d3d';
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  ctx.moveTo(path[0].x, path[0].y);
+  for (let i = 1; i < path.length; i++) ctx.lineTo(path[i].x, path[i].y);
+  ctx.stroke();
+
+  // Corridor border
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = '#1e4060';
+  ctx.stroke();
+
+  // Completed portion glow
+  if (progress > 0) {
+    const idx = Math.floor(progress * (path.length-1));
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = '#00b4d8';
+    ctx.shadowColor = '#00b4d8';
+    ctx.shadowBlur = 8;
+    ctx.beginPath();
+    ctx.moveTo(path[0].x, path[0].y);
+    for (let i = 1; i <= idx; i++) ctx.lineTo(path[i].x, path[i].y);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+  }
+
+  // Start dot
+  ctx.beginPath();
+  ctx.arc(path[0].x, path[0].y, 8, 0, Math.PI*2);
+  ctx.fillStyle = '#00f5a0';
+  ctx.fill();
+  // End dot
+  const last = path[path.length-1];
+  ctx.beginPath();
+  ctx.arc(last.x, last.y, 8, 0, Math.PI*2);
+  ctx.fillStyle = progress >= 1 ? '#00f5a0' : '#5a7a8a';
+  ctx.fill();
+}
+
+function startSignalTrace() {
+  if (gameState.tracePlaying) return;
+  const hard = currentMode === 'hard';
+  gameState.tracePlaying = true;
+  gameState.traceTime = 20;
+  gameState.traceNodePos = {...gameState.tracePath[0]};
+  gameState.traceProgress = 0;
+  gameState.traceDragging = false;
+  gameState.traceFailed = false;
+
+  document.getElementById('st-start').style.display = 'none';
+
+  const canvas = document.getElementById('st-canvas');
+  const ctx = canvas.getContext('2d');
+
+  function getPos(e) {
+    const r = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / r.width;
+    const scaleY = canvas.height / r.height;
+    const src = e.touches ? e.touches[0] : e;
+    return { x: (src.clientX - r.left) * scaleX, y: (src.clientY - r.top) * scaleY };
+  }
+
+  function onStart(e) {
+    if (!gameState.tracePlaying) return;
+    e.preventDefault();
+    const pos = getPos(e);
+    const start = gameState.tracePath[0];
+    const d = Math.hypot(pos.x - start.x, pos.y - start.y);
+    if (d < 20) { gameState.traceDragging = true; }
+  }
+
+  function onMove(e) {
+    if (!gameState.tracePlaying || !gameState.traceDragging) return;
+    e.preventDefault();
+    const pos = getPos(e);
+    const path = gameState.tracePath;
+    const cw = gameState.traceCorridorW;
+
+    // Find closest point on path ahead of current progress
+    let bestIdx = Math.floor(gameState.traceProgress * (path.length-1));
+    let bestDist = Infinity;
+    for (let i = bestIdx; i < path.length; i++) {
+      const d = Math.hypot(pos.x - path[i].x, pos.y - path[i].y);
+      if (d < bestDist) { bestDist = d; bestIdx = i; }
+      if (i - Math.floor(gameState.traceProgress * (path.length-1)) > 30) break;
+    }
+
+    if (bestDist > cw) {
+      // Off track!
+      gameState.traceDragging = false;
+      gameState.traceProgress = 0;
+      gameState.traceNodePos = {...path[0]};
+      flash('#ff4757');
+      vibrate([100]);
+      document.getElementById('st-status').textContent = 'OFF TRACK — RESTART';
+      document.getElementById('st-status').style.color = '#ff4757';
+      setTimeout(() => {
+        if (document.getElementById('st-status'))
+          document.getElementById('st-status').textContent = '';
+      }, 800);
+    } else {
+      const newProg = bestIdx / (path.length-1);
+      if (newProg > gameState.traceProgress) {
+        gameState.traceProgress = newProg;
+        gameState.traceNodePos = {...path[bestIdx]};
+      }
+      if (gameState.traceProgress >= 0.99) {
+        endSignalTrace(true);
+      }
+    }
+    drawTrace(ctx);
+  }
+
+  function onEnd(e) { gameState.traceDragging = false; }
+
+  canvas.addEventListener('mousedown', onStart);
+  canvas.addEventListener('mousemove', onMove);
+  canvas.addEventListener('mouseup', onEnd);
+  canvas.addEventListener('touchstart', onStart, {passive:false});
+  canvas.addEventListener('touchmove', onMove, {passive:false});
+  canvas.addEventListener('touchend', onEnd);
+
+  gameState.stCleanup = () => {
+    canvas.removeEventListener('mousedown', onStart);
+    canvas.removeEventListener('mousemove', onMove);
+    canvas.removeEventListener('mouseup', onEnd);
+    canvas.removeEventListener('touchstart', onStart);
+    canvas.removeEventListener('touchmove', onMove);
+    canvas.removeEventListener('touchend', onEnd);
+  };
+
+  const tid = setInterval(() => {
+    gameState.traceTime -= 0.1;
+    if (gameState.traceTime <= 0) {
+      clearInterval(tid);
+      endSignalTrace(false);
+    }
+    const pct = Math.max(0, gameState.traceTime / 20);
+    const fill = document.getElementById('st-tfill');
+    if (fill) { fill.style.width = (pct*100)+'%'; fill.style.background = pct < 0.3 ? '#ff4757' : '#00b4d8'; }
+    const tl = document.getElementById('st-time');
+    if (tl) tl.textContent = Math.max(0, gameState.traceTime).toFixed(1) + 's';
+    drawTrace(ctx);
+  }, 100);
+  gameState.timers.push(tid);
+}
+
+function drawTrace(ctx) {
+  const canvas = document.getElementById('st-canvas');
+  if (!canvas) return;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle = '#0d1117';
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+  drawTrackPath(ctx, gameState.tracePath, gameState.traceCorridorW, gameState.traceProgress, true);
+  // Node
+  const n = gameState.traceNodePos;
+  ctx.beginPath();
+  ctx.arc(n.x, n.y, 10, 0, Math.PI*2);
+  ctx.fillStyle = '#00b4d8';
+  ctx.shadowColor = '#00b4d8';
+  ctx.shadowBlur = 12;
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.beginPath();
+  ctx.arc(n.x, n.y, 5, 0, Math.PI*2);
+  ctx.fillStyle = '#fff';
+  ctx.fill();
+}
+
+function endSignalTrace(won) {
+  gameState.tracePlaying = false;
+  gameState.traceDragging = false;
+  if (gameState.stCleanup) gameState.stCleanup();
+  if (won) {
+    vibrate([50,30,100]);
+    flash('#00f5a0');
+    showResult(true, 'PATH CLEARED', 'Circuit secured successfully.');
+  } else {
+    vibrate([300]);
+    flash('#ff4757');
+    showResult(false, 'TIME\'S UP', 'Signal lost. Restart trace.');
+  }
+}
+
+/* ════════════════════════════════
+   GAME 5 — FREQUENCY JAM
+════════════════════════════════ */
+function renderFreqJam(area) {
+  const hard = currentMode === 'hard';
+  const bpm = hard ? 130 : 90;
+  const window = hard ? 80 : 150;
+  const goal = 12;
+
+  area.innerHTML = `
+    <div style="width:100%;max-width:380px;display:flex;flex-direction:column;align-items:center;gap:0.5rem;">
+      <div class="game-title-big" style="color:#00f5a0;">FREQUENCY JAM</div>
+      <div class="game-subtitle">Tap the button on every beat<br>${bpm} BPM · ±${window}ms window · ${goal} consecutive hits</div>
+      <div style="display:flex;gap:1.5rem;justify-content:center;margin:0.25rem 0;">
+        <div style="text-align:center;">
+          <div style="font-family:var(--mono);font-size:0.7rem;color:var(--muted);letter-spacing:0.1em;">STREAK</div>
+          <div style="font-family:var(--mono);font-size:1.6rem;color:#00f5a0;" id="fj-streak">0</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-family:var(--mono);font-size:0.7rem;color:var(--muted);letter-spacing:0.1em;">GOAL</div>
+          <div style="font-family:var(--mono);font-size:1.6rem;color:var(--muted);">${goal}</div>
+        </div>
+      </div>
+      <div class="sync-meter">
+        <div style="font-family:var(--mono);font-size:0.7rem;color:var(--muted);letter-spacing:0.1em;text-align:center;margin-bottom:4px;">SYNC</div>
+        <div class="progress-bar"><div class="progress-fill" id="fj-sync" style="background:#00f5a0;width:0%;"></div></div>
+      </div>
+      <div class="beat-btn-wrap">
+        <div class="beat-ring" id="fj-ring"></div>
+        <button class="beat-btn" id="fj-btn" onclick="fjTap()" disabled>
+          <span style="font-size:0.7rem;letter-spacing:0.1em;color:var(--muted);">TAP</span>
+        </button>
+      </div>
+      <div class="status-text" id="fj-status" style="color:#00f5a0;font-size:1rem;"></div>
+      <button class="start-btn" id="fj-start" onclick="startFreqJam(${bpm},${window},${goal})">START</button>
+    </div>
+  `;
+}
+
+function startFreqJam(bpm, windowMs, goal) {
+  document.getElementById('fj-start').style.display = 'none';
+  document.getElementById('fj-btn').disabled = false;
+
+  const beatMs = 60000 / bpm;
+  let streak = 0;
+  let lastBeatTime = null;
+  let isPlaying = true;
+
+  gameState.fjStreak = 0;
+  gameState.fjBeatMs = beatMs;
+  gameState.fjWindowMs = windowMs;
+  gameState.fjGoal = goal;
+  gameState.fjIsPlaying = true;
+
+  // Schedule beats
+  let beatCount = 0;
+  function scheduleBeat() {
+    if (!gameState.fjIsPlaying) return;
+    lastBeatTime = performance.now();
+    gameState.fjLastBeat = lastBeatTime;
+    const btn = document.getElementById('fj-btn');
+    const ring = document.getElementById('fj-ring');
+    if (btn) {
+      btn.classList.add('pulse');
+      if (ring) { ring.style.transform = 'scale(1.15)'; ring.style.opacity = '0.8'; }
+      setTimeout(() => {
+        btn.classList.remove('pulse');
+        if (ring) { ring.style.transform = 'scale(1)'; ring.style.opacity = '0.2'; }
+      }, 120);
+    }
+    beatCount++;
+    const t = setTimeout(scheduleBeat, beatMs);
+    gameState.timers.push(t);
+  }
+
+  // Countdown
+  let count = 3;
+  document.getElementById('fj-status').textContent = count + '...';
+  document.getElementById('fj-status').style.color = '#ffa502';
+  const countTid = setInterval(() => {
+    count--;
+    if (count > 0) {
+      document.getElementById('fj-status').textContent = count + '...';
+    } else {
+      clearInterval(countTid);
+      document.getElementById('fj-status').textContent = '';
+      gameState.fjLastBeat = performance.now() + beatMs * 0.5;
+      scheduleBeat();
+    }
+  }, 800);
+  gameState.timers.push(countTid);
+}
+
+function fjTap() {
+  if (!gameState.fjIsPlaying || !gameState.fjLastBeat) return;
+  const now = performance.now();
+  const diff = Math.abs(now - gameState.fjLastBeat);
+  const win = gameState.fjWindowMs;
+  const btn = document.getElementById('fj-btn');
+  const status = document.getElementById('fj-status');
+
+  if (diff <= win) {
+    // Hit!
+    gameState.fjStreak = (gameState.fjStreak || 0) + 1;
+    vibrate([30]);
+    btn.classList.add('hit');
+    setTimeout(() => btn && btn.classList.remove('hit'), 100);
+    const pct = Math.min(100, (gameState.fjStreak / gameState.fjGoal) * 100);
+    const fill = document.getElementById('fj-sync');
+    if (fill) fill.style.width = pct + '%';
+    const streakEl = document.getElementById('fj-streak');
+    if (streakEl) streakEl.textContent = gameState.fjStreak;
+    if (status) { status.textContent = 'IN SYNC +' + gameState.fjStreak; status.style.color = '#00f5a0'; }
+    if (gameState.fjStreak >= gameState.fjGoal) {
+      gameState.fjIsPlaying = false;
+      vibrate([50,30,100]);
+      flash('#00f5a0');
+      showResult(true, 'SYNCHRONIZED', 'Frequency locked. Beat maintained.');
+    }
+  } else {
+    // Miss
+    gameState.fjStreak = 0;
+    vibrate([100]);
+    flash('#ff4757');
+    btn.classList.add('miss');
+    setTimeout(() => btn && btn.classList.remove('miss'), 200);
+    const fill = document.getElementById('fj-sync');
+    if (fill) {
+      const cur = parseFloat(fill.style.width) || 0;
+      fill.style.width = Math.max(0, cur - 25) + '%';
+    }
+    const streakEl = document.getElementById('fj-streak');
+    if (streakEl) streakEl.textContent = '0';
+    if (status) { status.textContent = 'OFF BEAT'; status.style.color = '#ff4757'; }
+  }
+}
+
+/* ════════════════════════════════
+   GAME 6 — CORE DUMP
+════════════════════════════════ */
+function renderCoreDump(area) {
+  const hard = currentMode === 'hard';
+  const len = hard ? 12 : 8;
+  const timeLimit = 12;
+
+  area.innerHTML = `
+    <div style="width:100%;max-width:420px;display:flex;flex-direction:column;align-items:center;gap:0.75rem;">
+      <div class="game-title-big" style="color:#ffa502;">CORE DUMP</div>
+      <div class="game-subtitle">Type the code exactly as shown<br>${len} characters · ${timeLimit}s</div>
+      <div class="timer-bar-wrap">
+        <div class="timer-label"><span>TIME</span><span id="cd-time">${timeLimit}.0s</span></div>
+        <div class="timer-bar"><div class="timer-fill" id="cd-tfill" style="width:100%;background:#ffa502;"></div></div>
+      </div>
+      <div class="code-display" id="cd-display"><span style="color:var(--muted);font-size:1rem;letter-spacing:0.05em;">Press start to begin</span></div>
+      <input class="type-input" id="cd-input" maxlength="${len}" placeholder="Type code here..." disabled
+        oninput="cdCheck()" autocomplete="off" autocorrect="off" spellcheck="false">
+      <div class="status-text" id="cd-status" style="color:#ffa502;font-size:0.9rem;"></div>
+      <button class="start-btn" id="cd-start" style="border-color:#ffa502;color:#ffa502;" onclick="startCoreDump(${len},${timeLimit},${hard})">START</button>
+    </div>
+  `;
+}
+
+function generateCode(len) {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let s = '';
+  for (let i = 0; i < len; i++) s += chars[Math.floor(Math.random()*chars.length)];
+  return s;
+}
+
+function startCoreDump(len, timeLimit, hard) {
+  document.getElementById('cd-start').style.display = 'none';
+  document.getElementById('cd-input').disabled = false;
+  document.getElementById('cd-input').focus();
+
+  gameState.cdCode = generateCode(len);
+  gameState.cdLen = len;
+  gameState.cdHard = hard;
+  gameState.cdTime = timeLimit;
+  gameState.cdPlaying = true;
+  gameState.cdObscured = [];
+
+  renderCodeDisplay();
+
+  const tid = setInterval(() => {
+    if (!gameState.cdPlaying) { clearInterval(tid); return; }
+    gameState.cdTime -= 0.1;
+    if (gameState.cdTime <= 0) {
+      clearInterval(tid);
+      gameState.cdPlaying = false;
+      flash('#ff4757');
+      vibrate([300]);
+      const input = document.getElementById('cd-input');
+      if (input) { input.disabled = true; }
+      showResult(false, 'TIME\'S UP', 'Code not submitted in time.');
+      return;
+    }
+    const pct = gameState.cdTime / timeLimit;
+    const fill = document.getElementById('cd-tfill');
+    if (fill) { fill.style.width = (pct*100)+'%'; fill.style.background = pct < 0.3 ? '#ff4757' : '#ffa502'; }
+    const tl = document.getElementById('cd-time');
+    if (tl) tl.textContent = Math.max(0, gameState.cdTime).toFixed(1) + 's';
+
+    // Hard mode: obscure
+    if (hard && Math.random() < 0.015) {
+      const idxs = [];
+      while (idxs.length < 3) {
+        const r = Math.floor(Math.random() * len);
+        if (!idxs.includes(r)) idxs.push(r);
+      }
+      gameState.cdObscured = idxs;
+      renderCodeDisplay();
+      setTimeout(() => {
+        if (gameState.cdObscured) gameState.cdObscured = [];
+        renderCodeDisplay();
+      }, 500);
+    }
+  }, 100);
+  gameState.timers.push(tid);
+}
+
+function renderCodeDisplay() {
+  const el = document.getElementById('cd-display');
+  if (!el || !gameState.cdCode) return;
+  const input = (document.getElementById('cd-input')?.value || '').toUpperCase();
+  let html = '';
+  for (let i = 0; i < gameState.cdCode.length; i++) {
+    const obscured = gameState.cdObscured && gameState.cdObscured.includes(i);
+    let cls = 'code-char';
+    if (obscured) cls += ' obscured';
+    else if (i < input.length) {
+      cls += input[i] === gameState.cdCode[i] ? ' correct' : ' wrong';
+    }
+    html += `<span class="${cls}">${gameState.cdCode[i]}</span>`;
+  }
+  el.innerHTML = html;
+}
+
+function cdCheck() {
+  if (!gameState.cdPlaying) return;
+  const input = document.getElementById('cd-input');
+  if (!input) return;
+  const val = input.value.toUpperCase();
+  input.value = val;
+  renderCodeDisplay();
+
+  if (val.length === gameState.cdLen) {
+    if (val === gameState.cdCode) {
+      gameState.cdPlaying = false;
+      input.disabled = true;
+      vibrate([30,30,80]);
+      flash('#00f5a0');
+      showResult(true, 'CODE ACCEPTED', `Time remaining: ${Math.max(0, gameState.cdTime).toFixed(1)}s`);
+    } else {
+      // Wrong — new code
+      flash('#ff4757');
+      vibrate([100]);
+      input.value = '';
+      gameState.cdCode = generateCode(gameState.cdLen);
+      renderCodeDisplay();
+      const st = document.getElementById('cd-status');
+      if (st) { st.textContent = 'INVALID — NEW CODE GENERATED'; st.style.color = '#ff4757'; }
+      setTimeout(() => { const s = document.getElementById('cd-status'); if (s) s.textContent = ''; }, 1200);
+    }
+  }
+}
+
+/* ════════════════════════════════
+   GAME 7 — OVERLOAD
+════════════════════════════════ */
+function renderOverload(area) {
+  const hard = currentMode === 'hard';
+  const goalHits = 15;
+  const timeLimit = 20;
+  const windowMs = hard ? 800 : 1200;
+
+  area.innerHTML = `
+    <div style="width:100%;max-width:400px;display:flex;flex-direction:column;align-items:center;gap:0.75rem;">
+      <div class="game-title-big" style="color:#ff4757;">OVERLOAD</div>
+      <div class="game-subtitle">Tap red threats · Avoid white decoys<br>${hard ? '4 simultaneous · 0.8s window' : '1-3 simultaneous · 1.2s window'}</div>
+      <div class="timer-bar-wrap">
+        <div class="timer-label"><span>TIME</span><span id="ov-time">${timeLimit}.0s</span></div>
+        <div class="timer-bar"><div class="timer-fill" id="ov-tfill" style="width:100%;background:#ff4757;"></div></div>
+      </div>
+      <div style="display:flex;gap:2rem;justify-content:center;margin:0.25rem 0;">
+        <div style="text-align:center;">
+          <div style="font-family:var(--mono);font-size:0.7rem;color:var(--muted);letter-spacing:0.1em;">HITS</div>
+          <div style="font-family:var(--mono);font-size:1.6rem;color:#ff4757;" id="ov-hits">0 / ${goalHits}</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-family:var(--mono);font-size:0.7rem;color:var(--muted);letter-spacing:0.1em;">LIVES</div>
+          <div style="font-family:var(--mono);font-size:1.6rem;color:#ffa502;" id="ov-lives">3</div>
+        </div>
+      </div>
+      <div style="position:relative;">
+        <div class="overload-grid" id="ov-grid">
+          ${Array.from({length:9},(_,i) => `<div class="over-node" id="ov-n${i}" onclick="ovTap(${i})"></div>`).join('')}
+        </div>
+        <div id="ov-lockout" style="display:none;position:absolute;inset:0;background:rgba(255,71,87,0.15);border-radius:8px;display:none;align-items:center;justify-content:center;font-family:var(--mono);font-size:1rem;color:#ff4757;letter-spacing:0.1em;">LOCKOUT</div>
+      </div>
+      <div class="status-text" id="ov-status" style="font-size:0.9rem;"></div>
+      <button class="start-btn" id="ov-start" style="border-color:#ff4757;color:#ff4757;" onclick="startOverload(${hard},${windowMs},${goalHits},${timeLimit})">START</button>
+    </div>
+  `;
+}
+
+function startOverload(hard, windowMs, goal, timeLimit) {
+  document.getElementById('ov-start').style.display = 'none';
+  gameState.ovHits = 0;
+  gameState.ovLives = 3;
+  gameState.ovTime = timeLimit;
+  gameState.ovPlaying = true;
+  gameState.ovLocked = false;
+  gameState.ovActive = {}; // nodeIdx -> {type, timeout}
+
+  const timerId = setInterval(() => {
+    if (!gameState.ovPlaying) { clearInterval(timerId); return; }
+    gameState.ovTime -= 0.1;
+    if (gameState.ovTime <= 0) {
+      clearInterval(timerId);
+      gameState.ovPlaying = false;
+      flash('#ff4757');
+      showResult(false, 'OVERLOADED', `Only ${gameState.ovHits} of ${goal} threats neutralized.`);
+      return;
+    }
+    const pct = gameState.ovTime / timeLimit;
+    const fill = document.getElementById('ov-tfill');
+    if (fill) { fill.style.width = (pct*100)+'%'; }
+    const tl = document.getElementById('ov-time');
+    if (tl) tl.textContent = Math.max(0,gameState.ovTime).toFixed(1)+'s';
+  }, 100);
+  gameState.timers.push(timerId);
+
+  // Spawn nodes periodically
+  function spawnNode() {
+    if (!gameState.ovPlaying) return;
+    if (!gameState.ovLocked) {
+      const maxActive = hard ? 4 : 3;
+      const activeCount = Object.keys(gameState.ovActive).length;
+      if (activeCount < maxActive) {
+        // Pick free node
+        const free = [];
+        for (let i = 0; i < 9; i++) if (!gameState.ovActive[i]) free.push(i);
+        if (free.length > 0) {
+          const idx = free[Math.floor(Math.random()*free.length)];
+          const isDecoy = Math.random() < 0.25;
+          const el = document.getElementById('ov-n'+idx);
+          if (el) {
+            el.className = 'over-node ' + (isDecoy ? 'decoy' : 'threat');
+            el.textContent = isDecoy ? '●' : '✕';
+            gameState.ovActive[idx] = {type: isDecoy ? 'decoy' : 'threat'};
+            const t = setTimeout(() => {
+              if (gameState.ovActive[idx]) {
+                // Missed threat
+                if (gameState.ovActive[idx].type === 'threat') {
+                  gameState.ovHits = Math.max(-3, gameState.ovHits - 1);
+                  updateOvHits(goal);
+                  if (gameState.ovHits <= -3) {
+                    gameState.ovPlaying = false;
+                    flash('#ff4757');
+                    showResult(false, 'OVERLOADED', 'Too many missed threats.');
+                    return;
+                  }
+                }
+                delete gameState.ovActive[idx];
+                if (el) { el.className = 'over-node'; el.textContent = ''; }
+              }
+            }, windowMs);
+            gameState.timers.push(t);
+          }
+        }
+      }
+    }
+    const t = setTimeout(spawnNode, 400 + Math.random()*300);
+    gameState.timers.push(t);
+  }
+  spawnNode();
+}
+
+function updateOvHits(goal) {
+  const el = document.getElementById('ov-hits');
+  if (el) el.textContent = gameState.ovHits + ' / ' + goal;
+  const le = document.getElementById('ov-lives');
+  if (le) le.textContent = Math.max(0, 3 + gameState.ovHits < 0 ? 3 + gameState.ovHits : gameState.ovLives);
+}
+
+function ovTap(idx) {
+  if (!gameState.ovPlaying || gameState.ovLocked) return;
+  const node = gameState.ovActive[idx];
+  const el = document.getElementById('ov-n'+idx);
+  if (!node) return;
+
+  if (node.type === 'threat') {
+    gameState.ovHits++;
+    vibrate([30]);
+    if (el) { el.classList.add('popped'); setTimeout(() => { if (el) { el.className='over-node'; el.textContent=''; } }, 200); }
+    delete gameState.ovActive[idx];
+    const goal = 15;
+    const hitsEl = document.getElementById('ov-hits');
+    if (hitsEl) hitsEl.textContent = gameState.ovHits + ' / ' + goal;
+    flash('#00f5a0');
+    if (gameState.ovHits >= goal) {
+      gameState.ovPlaying = false;
+      vibrate([50,30,100]);
+      showResult(true, 'THREAT NEUTRALIZED', 'All targets eliminated.');
+    }
+  } else {
+    // Decoy — lockout
+    vibrate([200]);
+    flash('#ff4757');
+    delete gameState.ovActive[idx];
+    if (el) { el.className='over-node'; el.textContent=''; }
+    gameState.ovLocked = true;
+    const lock = document.getElementById('ov-lockout');
+    if (lock) lock.style.display = 'flex';
+    const t = setTimeout(() => {
+      gameState.ovLocked = false;
+      if (lock) lock.style.display = 'none';
+    }, 1000);
+    gameState.timers.push(t);
+    const st = document.getElementById('ov-status');
+    if (st) { st.textContent = 'LOCKOUT — DECOY HIT'; st.style.color = '#ff4757'; }
+    setTimeout(() => { const s = document.getElementById('ov-status'); if (s) s.textContent=''; }, 900);
+  }
+}
+
+/* ════════════════════════════════
+   GAME 8 — ZERO DAY
+════════════════════════════════ */
+function renderZeroDay(area) {
+  const hard = currentMode === 'hard';
+  const surviveMs = hard ? 20000 : 15000;
+
+  area.innerHTML = `
+    <div style="width:100%;max-width:400px;display:flex;flex-direction:column;align-items:center;gap:0.75rem;">
+      <div class="game-title-big" style="color:#9c88ff;">ZERO DAY</div>
+      <div class="game-subtitle">Steer the packet through firewall barriers<br>Survive ${hard?20:15} seconds · Drag or tilt</div>
+      <div class="timer-bar-wrap">
+        <div class="timer-label"><span>SURVIVE</span><span id="zd-time">${hard?'20.0':'15.0'}s</span></div>
+        <div class="timer-bar"><div class="timer-fill" id="zd-tfill" style="width:0%;background:#9c88ff;"></div></div>
+      </div>
+      <canvas id="zd-canvas" width="340" height="420" style="max-width:100%;"></canvas>
+      <div class="status-text" id="zd-status" style="color:#9c88ff;font-size:0.9rem;"></div>
+      <button class="start-btn" id="zd-start" style="border-color:#9c88ff;color:#9c88ff;" onclick="startZeroDay(${hard},${surviveMs})">START</button>
+    </div>
+  `;
+  // Draw idle state
+  const canvas = document.getElementById('zd-canvas');
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#0d1117';
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle = '#9c88ff';
+  ctx.font = '14px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('Ready to breach...', canvas.width/2, canvas.height/2);
+}
+
+function startZeroDay(hard, surviveMs) {
+  document.getElementById('zd-start').style.display = 'none';
+  const canvas = document.getElementById('zd-canvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+
+  const gapW = hard ? W * 0.28 : W * 0.38;
+  const barrierH = 18;
+  const barrierSpacingY = hard ? 110 : 130;
+
+  gameState.zdX = W / 2;
+  gameState.zdY = H - 60;
+  gameState.zdVX = 0;
+  gameState.zdAlive = true;
+  gameState.zdStart = performance.now();
+  gameState.zdSurvive = surviveMs;
+  gameState.zdBarriers = [];
+  gameState.zdScrollSpeed = 2;
+
+  // Generate initial barriers
+  for (let y = -barrierSpacingY; y > -H; y -= barrierSpacingY) {
+    addBarrier(y, W, gapW, barrierH, hard);
+  }
+
+  // Input handling
+  function onMove(e) {
+    if (!gameState.zdAlive) return;
+    e.preventDefault();
+    const r = canvas.getBoundingClientRect();
+    const src = e.touches ? e.touches[0] : e;
+    gameState.zdTargetX = (src.clientX - r.left) * (W / r.width);
+  }
+  canvas.addEventListener('mousemove', onMove);
+  canvas.addEventListener('touchmove', onMove, {passive:false});
+
+  // Device tilt
+  function onTilt(e) {
+    if (!gameState.zdAlive) return;
+    gameState.zdTilt = e.gamma || 0;
+  }
+  window.addEventListener('deviceorientation', onTilt);
+  gameState.zdCleanup = () => {
+    canvas.removeEventListener('mousemove', onMove);
+    canvas.removeEventListener('touchmove', onMove);
+    window.removeEventListener('deviceorientation', onTilt);
+  };
+
+  function loop() {
+    if (!gameState.zdAlive) return;
+    const now = performance.now();
+    const elapsed = now - gameState.zdStart;
+
+    // Speed ramp
+    gameState.zdScrollSpeed = 2 + Math.floor(elapsed / 5000) * 0.3;
+
+    // Move player
+    if (gameState.zdTargetX !== undefined) {
+      gameState.zdX += (gameState.zdTargetX - gameState.zdX) * 0.18;
+    } else if (gameState.zdTilt) {
+      gameState.zdX += gameState.zdTilt * 0.3;
+    }
+    gameState.zdX = Math.max(12, Math.min(W-12, gameState.zdX));
+
+    // Scroll barriers
+    for (let b of gameState.zdBarriers) {
+      b.y += gameState.zdScrollSpeed;
+    }
+
+    // Remove off-screen, add new
+    gameState.zdBarriers = gameState.zdBarriers.filter(b => b.y < H + 30);
+    const topmost = Math.min(...gameState.zdBarriers.map(b => b.y));
+    if (topmost > -barrierSpacingY + 60) {
+      addBarrier(topmost - barrierSpacingY, W, gapW, barrierH, hard);
+    }
+
+    // Collision
+    for (let b of gameState.zdBarriers) {
+      if (gameState.zdY >= b.y - barrierH/2 && gameState.zdY <= b.y + barrierH/2) {
+        const inGap = gameState.zdX >= b.gapX && gameState.zdX <= b.gapX + b.gapW;
+        if (!inGap) {
+          gameState.zdAlive = false;
+          if (gameState.zdCleanup) gameState.zdCleanup();
+          flash('#ff4757');
+          vibrate([300]);
+          showResult(false, 'BREACH FAILED', `Survived ${(elapsed/1000).toFixed(1)}s of ${surviveMs/1000}s`);
+          return;
+        }
+        // Near miss
+        const margin = Math.min(gameState.zdX - b.gapX, b.gapX + b.gapW - gameState.zdX);
+        if (margin < gapW * 0.12) {
+          const st = document.getElementById('zd-status');
+          if (st) { st.textContent = '⚠ NEAR MISS'; st.style.color = '#ffa502'; }
+          setTimeout(() => { const s = document.getElementById('zd-status'); if (s && s.textContent === '⚠ NEAR MISS') s.textContent = ''; }, 400);
+        }
+      }
+    }
+
+    // Timer
+    const pct = elapsed / surviveMs;
+    const fill = document.getElementById('zd-tfill');
+    if (fill) fill.style.width = Math.min(100, pct*100)+'%';
+    const tl = document.getElementById('zd-time');
+    if (tl) tl.textContent = Math.max(0, (surviveMs - elapsed)/1000).toFixed(1)+'s';
+
+    if (elapsed >= surviveMs) {
+      gameState.zdAlive = false;
+      if (gameState.zdCleanup) gameState.zdCleanup();
+      vibrate([50,30,100]);
+      flash('#00f5a0');
+      showResult(true, 'BREACH EVADED', 'Firewall bypassed. Connection secured.');
+      return;
+    }
+
+    // Draw
+    ctx.fillStyle = '#0d1117';
+    ctx.fillRect(0,0,W,H);
+
+    // Draw barriers
+    for (let b of gameState.zdBarriers) {
+      ctx.fillStyle = '#1e2d3d';
+      ctx.fillRect(0, b.y - barrierH/2, b.gapX, barrierH);
+      ctx.fillRect(b.gapX + b.gapW, b.y - barrierH/2, W - b.gapX - b.gapW, barrierH);
+      // Accent lines
+      ctx.fillStyle = '#ff4757';
+      ctx.fillRect(0, b.y - barrierH/2, b.gapX, 1);
+      ctx.fillRect(b.gapX + b.gapW, b.y - barrierH/2, W - b.gapX - b.gapW, 1);
+    }
+
+    // Draw player packet
+    ctx.save();
+    ctx.translate(gameState.zdX, gameState.zdY);
+    ctx.fillStyle = '#9c88ff';
+    ctx.shadowColor = '#9c88ff';
+    ctx.shadowBlur = 10;
+    ctx.beginPath();
+    ctx.moveTo(0, -10);
+    ctx.lineTo(8, 8);
+    ctx.lineTo(0, 4);
+    ctx.lineTo(-8, 8);
+    ctx.closePath();
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.restore();
+
+    gameState.animFrame = requestAnimationFrame(loop);
+  }
+
+  loop();
+}
+
+function addBarrier(y, W, gapW, barrierH, hard) {
+  const margin = 20;
+  const maxX = W - gapW - margin;
+  const gapX = margin + Math.random() * (maxX - margin);
+
+  // Hard mode: sometimes add spike (no-gap barrier) alongside, handled via extra segment
+  gameState.zdBarriers.push({ y, gapX, gapW, hard });
+}
+
+/* ════════════════════════════════
+   RESULT SCREEN
+════════════════════════════════ */
+function showResult(won, title, sub) {
+  stopAll();
+  const area = document.getElementById('game-area');
+  area.innerHTML = `
+    <div class="result-screen">
+      <div class="result-icon">${won ? '◈' : '✕'}</div>
+      <div class="result-title ${won ? 'win' : 'lose'}">${title}</div>
+      <div class="result-sub">${sub}</div>
+      <div class="result-btns">
+        <button class="result-btn primary" onclick="renderGame(${currentGame})">↺ RETRY</button>
+        <button class="result-btn" onclick="goMenu()">← MENU</button>
+      </div>
+    </div>
+  `;
+}
+</script>
+</body>
+</html>

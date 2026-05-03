@@ -144,6 +144,21 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     overflow: hidden;
+    
+    /* Global Copy Protection */
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+  }
+
+  /* Re-enable selection for inputs, textareas, and specific code blocks */
+  input, 
+  textarea, 
+  [contenteditable="true"] {
+    user-select: text !important;
+    -webkit-user-select: text !important;
   }
 
   body {
