@@ -5,9 +5,11 @@ import { motion } from 'framer-motion';
 interface GameTimerProps {
   startTime: string | null;
   finishTime: string | null;
+  paused?: boolean;
+  pausedAt?: string | null;
 }
 
-export function GameTimer({ startTime, finishTime }: GameTimerProps) {
+export function GameTimer({ startTime, finishTime, paused = false, pausedAt = null }: GameTimerProps) {
   const [elapsed, setElapsed] = useState(0);
 
   useEffect(() => {
@@ -23,6 +25,12 @@ export function GameTimer({ startTime, finishTime }: GameTimerProps) {
       return;
     }
 
+    if (paused) {
+      const pausedTime = pausedAt ? new Date(pausedAt).getTime() : Date.now();
+      setElapsed(pausedTime - start);
+      return;
+    }
+
     const interval = setInterval(() => {
       setElapsed(Date.now() - start);
     }, 1000);
@@ -31,7 +39,7 @@ export function GameTimer({ startTime, finishTime }: GameTimerProps) {
     setElapsed(Date.now() - start);
 
     return () => clearInterval(interval);
-  }, [startTime, finishTime]);
+  }, [startTime, finishTime, paused, pausedAt]);
 
   const totalSeconds = Math.max(0, Math.floor(elapsed / 1000));
   const hours = Math.floor(totalSeconds / 3600);

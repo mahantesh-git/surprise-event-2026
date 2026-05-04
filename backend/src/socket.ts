@@ -2,9 +2,22 @@ import { Server as HttpServer } from 'http';
 import { Server as SocketServer, Socket } from 'socket.io';
 import { ObjectId } from 'mongodb';
 import { verifyToken } from './auth';
-import { getTeamsCollection } from './db';
+import { getConfigCollection, getTeamsCollection } from './db';
 
 let io: SocketServer | null = null;
+const GAME_PAUSED_MESSAGE = 'The game has been paused by admin. Please wait until it is resumed.';
+
+async function isGamePaused() {
+  const config = await getConfigCollection();
+  const pauseConfig = await config.findOne({ key: 'gamePaused' });
+  return !!pauseConfig?.value;
+}
+
+async function blockIfPaused(socket: Socket) {
+  if (!(await isGamePaused())) return false;
+  socket.emit('game:blocked', { paused: true, message: GAME_PAUSED_MESSAGE });
+  return true;
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Initialise the Socket.io server (call once, right after http.createServer)
@@ -46,7 +59,8 @@ export function initSocketServer(httpServer: HttpServer): SocketServer {
       if ((auth as any).arena === 'arena1') {
         socket.join(`a1:${auth.teamId}`);
         // Arena 1 code-update relay: Solver → Runner (same team)
-        socket.on('a1:code-update', (data: { html: string; css: string; js: string }) => {
+        socket.on('a1:code-update', async (data: { html: string; css: string; js: string }) => {
+          if (await blockIfPaused(socket)) return;
           socket.to(`a1:${auth.teamId}`).emit('a1:code-update', data);
         });
         return; // Arena 1 teams don't need runner/solver sub-handlers below
@@ -89,13 +103,16 @@ export function initSocketServer(httpServer: HttpServer): SocketServer {
       });
 
       // Burn Swap Permission Flow
-      socket.on('swap:request', () => {
+      socket.on('swap:request', async () => {
+        if (await blockIfPaused(socket)) return;
         socket.to(`team_${auth.teamId}`).emit('swap:requested', { from: auth.role });
       });
-      socket.on('swap:accept', () => {
+      socket.on('swap:accept', async () => {
+        if (await blockIfPaused(socket)) return;
         socket.to(`team_${auth.teamId}`).emit('swap:accepted', { from: auth.role });
       });
-      socket.on('swap:decline', () => {
+      socket.on('swap:decline', async () => {
+        if (await blockIfPaused(socket)) return;
         socket.to(`team_${auth.teamId}`).emit('swap:declined', { from: auth.role });
       });
     } else if (auth.kind === 'admin') {
@@ -170,7 +187,8 @@ function attachRunnerHandlers(socket: Socket, auth: { teamId: string }) {
 
   socket.on(
     'location:stream',
-    (data: { lat: number; lng: number; heading: number | null; timestamp?: number }) => {
+    async (data: { lat: number; lng: number; heading: number | null; timestamp?: number }) => {
+      if (await blockIfPaused(socket)) return;
       if (tokenBucket <= 0) return;
       tokenBucket--;
 

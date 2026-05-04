@@ -273,6 +273,8 @@ export default function App() {
   const [devMode, setDevMode] = useState(false);
   const [notifications, setNotifications] = useState<Array<{ id: string; message: string; tone: 'info' | 'success' | 'error' | 'warning'; label: string }>>([]);
   const [isObjectiveOpen, setIsObjectiveOpen] = useState(true);
+  const [gamePaused, setGamePaused] = useState(false);
+  const [gamePausedAt, setGamePausedAt] = useState<string | null>(null);
 
   const previousRoundStateRef = useRef<number | null>(null);
   const lastRunnerHandoffNoticeRef = useRef<string>('');
@@ -288,13 +290,18 @@ export default function App() {
     isSwappingRef.current = isSwapping;
   }, [isSwapping]);
 
+  useEffect(() => {
+    setGamePaused(!!gameState?.gamePaused);
+    setGamePausedAt(gameState?.gamePausedAt ?? null);
+  }, [gameState?.gamePaused, gameState?.gamePausedAt]);
+
   // Global Copy Protection - Prevent manual copy events
   useEffect(() => {
     const handleCopy = (e: ClipboardEvent) => {
       // Allow copying within inputs/textareas
       const target = e.target as HTMLElement;
       const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
-      
+
       if (!isInput) {
         e.preventDefault();
         console.warn('[SECURITY] System content is read-only. Manual copy rejected.');
@@ -365,7 +372,7 @@ export default function App() {
   const baseRound = (rounds && rounds.length > 0 && gameState) ? rounds[Math.min(gameState.round, rounds.length - 1)] : null;
   const currentRound = gameState ? ((gameState as any)?.activeQuestionOverride || baseRound) : null;
 
-  const currentPos = useRunnerGps(session?.token ?? null, gameState?.stage ?? null);
+  const currentPos = useRunnerGps(session?.token ?? null, gameState?.stage ?? null, gamePaused);
   const [distanceToTarget, setDistanceToTarget] = useState<number | null>(null);
 
   useEffect(() => {
@@ -601,6 +608,34 @@ export default function App() {
   };
 
   useEffect(() => {
+    if (!socket) return;
+    const onPause = (data: { message?: string; pausedAt?: string }) => {
+      setGamePaused(true);
+      setGamePausedAt(data.pausedAt ?? new Date().toISOString());
+      pushNotification((data.message || 'Admin has paused the game.').toUpperCase(), 'warning', 'PAUSED');
+    };
+    const onResume = (data: { message?: string }) => {
+      setGamePaused(false);
+      setGamePausedAt(null);
+      pushNotification((data.message || 'Admin resumed the game.').toUpperCase(), 'success', 'RESUMED');
+      sync().catch(console.error);
+    };
+    const onBlocked = (data: { message?: string }) => {
+      setGamePaused(true);
+      pushNotification((data.message || 'Admin has paused the game.').toUpperCase(), 'warning', 'PAUSED');
+    };
+
+    socket.on('game:pause', onPause);
+    socket.on('game:resume', onResume);
+    socket.on('game:blocked', onBlocked);
+    return () => {
+      socket.off('game:pause', onPause);
+      socket.off('game:resume', onResume);
+      socket.off('game:blocked', onBlocked);
+    };
+  }, [socket, session?.token]);
+
+  useEffect(() => {
     if (!gameState || !session || !role) return;
     const prevRound = previousRoundStateRef.current;
     const handoffKey = `${gameState.round}:${gameState.handoff?.passkey ?? ''}`;
@@ -701,7 +736,11 @@ export default function App() {
         setTimeout(() => updateState({ stage: 'p1_solved' }), 1500);
       }
     } catch (error) {
-      setConsoleOutput({ stdout: '', stderr: 'Execution failed', matched: false });
+      const message = error instanceof Error ? error.message : 'Execution failed';
+      setConsoleOutput({ stdout: '', stderr: message, matched: false });
+      if (message.toLowerCase().includes('paused')) {
+        pushNotification(message.toUpperCase(), 'warning', 'PAUSED');
+      }
     } finally {
       setIsRunning(false);
     }
@@ -848,6 +887,17 @@ export default function App() {
 
     return (
       <motion.div key="game" variants={glitchVariants} initial="initial" animate="animate" exit="exit" className="relative z-10 w-full min-h-screen">
+        {gamePaused && (
+          <div className="fixed inset-0 z-[260] bg-black/90 backdrop-blur-sm flex items-center justify-center p-6">
+            <div className="max-w-md text-center border border-[var(--color-accent)]/40 bg-[var(--color-accent)]/10 p-8">
+              <ShieldAlert className="w-10 h-10 mx-auto mb-4 text-[var(--color-accent)]" />
+              <h2 className="text-xl font-black uppercase tracking-widest text-[var(--color-accent)] mb-3">Game Paused</h2>
+              <p className="text-sm text-white/70 uppercase tracking-widest">
+                Admin has paused the game. Execution, handoff, GPS updates, and verification are locked until resume.
+              </p>
+            </div>
+          </div>
+        )}
         <AnimatePresence>
           {showFullscreenExitGate && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] bg-black/90  flex items-center justify-center p-6">
@@ -883,7 +933,7 @@ export default function App() {
         <PersistentProgress totalRounds={rounds.length} currentRound={gameState?.round ?? 0} roundsDone={gameState?.roundsDone ?? []} difficulty={gameState?.difficulty} />
 
         {gameState.difficulty === 'hard' && gameState.stage === 'p1_solve' && (
-          <HardModeHUD startTime={gameState.currentRoundStartTime || ''} />
+          <HardModeHUD startTime={gameState.currentRoundStartTime || ''} paused={gamePaused} pausedAt={gamePausedAt} />
         )}
 
         <Navbar
@@ -892,6 +942,8 @@ export default function App() {
           metaText={role.toUpperCase()}
           startTime={gameState?.startTime}
           finishTime={gameState?.finishTime}
+          paused={gamePaused}
+          pausedAt={gamePausedAt}
         />
 
         <div className={cn("pt-24 sm:pt-28 pb-40 px-3 relative z-10 flex flex-col max-w-[1400px] mx-auto w-full h-[100dvh]",
@@ -1197,6 +1249,7 @@ export default function App() {
                           difficulty={gameState.difficulty as 'normal' | 'hard'}
                           arTestingBypassEnabled={gameState.arTestingBypassEnabled}
                           gameType={gameState.gameType}
+                          paused={gamePaused}
                         />
 
 

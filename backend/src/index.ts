@@ -7,6 +7,7 @@ import ExcelJS from 'exceljs';
 import dotenv from 'dotenv';
 import express from 'express';
 import path from 'path';
+import type { NextFunction, Request, Response } from 'express';
 
 import { ObjectId } from 'mongodb';
 import type { LoginPayload, GameState, QuestionDocument } from './types';
@@ -19,7 +20,7 @@ import { DEFAULT_QUESTIONS } from './defaultQuestions';
 import { asyncHandler, createApiErrorHandler, HttpError } from './errors';
 import type { ChatMessage } from './types';
 import { initDiscordBridge, sendAdminAlert } from './discord-bridge';
-import { initSocketServer, broadcastLeaderboard } from './socket';
+import { initSocketServer, broadcastGameEvent, broadcastLeaderboard, notifyTeamMessage } from './socket';
 import {
   findArena1TeamByName,
   findArena1TeamById,
@@ -57,6 +58,7 @@ initSocketServer(httpServer);
 
 const route = asyncHandler;
 let isShuttingDown = false;
+const GAME_PAUSED_MESSAGE = 'The game has been paused by admin. Please wait until it is resumed.';
 
 function buildLocationQrCode(round: number) {
   return `QUEST-LOC-R${Math.max(1, Math.trunc(round))}`;
@@ -201,6 +203,110 @@ function toObjectId(value: string, label: string) {
   return new ObjectId(value);
 }
 
+function shiftIsoDate(value: unknown, deltaMs: number) {
+  if (typeof value !== 'string' || !value) return value;
+  const time = new Date(value).getTime();
+  if (!Number.isFinite(time)) return value;
+  return new Date(time + deltaMs).toISOString();
+}
+
+async function isGamePaused() {
+  const config = await getConfigCollection();
+  const pauseConfig = await config.findOne({ key: 'gamePaused' });
+  return !!pauseConfig?.value;
+}
+
+async function getGamePausedAt() {
+  const config = await getConfigCollection();
+  const pausedAtConfig = await config.findOne({ key: 'gamePausedAt' });
+  return typeof pausedAtConfig?.value === 'string' ? pausedAtConfig.value : null;
+}
+
+function getArena1SlotTimeLeftMsAt(team: Awaited<ReturnType<typeof findArena1TeamById>>, nowMs: number): number {
+  if (!team || team.gameState.status !== 'active') return SLOT_DURATION_MS;
+  if (!team.gameState.slotStartedAt) return SLOT_DURATION_MS;
+  const elapsed = nowMs - new Date(team.gameState.slotStartedAt).getTime();
+  return Math.max(0, SLOT_DURATION_MS - elapsed);
+}
+
+async function requireGameActive(_request: Request, response: Response, next: NextFunction) {
+  if (await isGamePaused()) {
+    response.status(423).json({ error: GAME_PAUSED_MESSAGE, code: 'GAME_PAUSED' });
+    return;
+  }
+  next();
+}
+
+async function setGamePaused(paused: boolean) {
+  const config = await getConfigCollection();
+  const previous = await config.findOne({ key: 'gamePaused' });
+  const wasPaused = !!previous?.value;
+  const now = new Date();
+
+  if (paused) {
+    await config.updateOne(
+      { key: 'gamePaused' },
+      { $set: { value: true, updatedAt: now } },
+      { upsert: true },
+    );
+    await config.updateOne(
+      { key: 'gamePausedAt' },
+      { $set: { value: wasPaused ? (await config.findOne({ key: 'gamePausedAt' }))?.value ?? now.toISOString() : now.toISOString(), updatedAt: now } },
+      { upsert: true },
+    );
+    broadcastGameEvent('game:pause', { paused: true, pausedAt: now.toISOString(), message: GAME_PAUSED_MESSAGE });
+    return;
+  }
+
+  const pausedAtConfig = await config.findOne({ key: 'gamePausedAt' });
+  const pausedAt = typeof pausedAtConfig?.value === 'string' ? new Date(pausedAtConfig.value).getTime() : NaN;
+  const pauseDurationMs = wasPaused && Number.isFinite(pausedAt) ? Math.max(0, now.getTime() - pausedAt) : 0;
+
+  if (pauseDurationMs > 0) {
+    const teams = await getTeamsCollection();
+    const activeTeams = await teams.find({ 'gameState.stage': { $ne: 'complete' } }).toArray();
+    for (const team of activeTeams) {
+      await teams.updateOne(
+        { _id: team._id },
+        {
+          $set: {
+            'gameState.startTime': shiftIsoDate(team.gameState.startTime, pauseDurationMs),
+            'gameState.currentRoundStartTime': shiftIsoDate(team.gameState.currentRoundStartTime, pauseDurationMs),
+            updatedAt: now,
+          },
+        },
+      );
+    }
+
+    const a1Teams = await getArena1TeamsCollection();
+    const activeA1Teams = await a1Teams.find({ 'gameState.status': 'active' }).toArray();
+    for (const team of activeA1Teams) {
+      await a1Teams.updateOne(
+        { _id: team._id },
+        {
+          $set: {
+            'gameState.startedAt': shiftIsoDate(team.gameState.startedAt, pauseDurationMs),
+            'gameState.slotStartedAt': shiftIsoDate(team.gameState.slotStartedAt, pauseDurationMs),
+            updatedAt: now,
+          },
+        },
+      );
+    }
+  }
+
+  await config.updateOne(
+    { key: 'gamePaused' },
+    { $set: { value: false, updatedAt: now } },
+    { upsert: true },
+  );
+  await config.updateOne(
+    { key: 'gamePausedAt' },
+    { $set: { value: null, updatedAt: now } },
+    { upsert: true },
+  );
+  broadcastGameEvent('game:resume', { paused: false, message: 'Admin resumed the game. Systems are live.' });
+}
+
 function buildFinalRoundQrCode(teamId: string) {
   return `QUEST-FINISH-${teamId.slice(-6).toUpperCase()}`;
 }
@@ -238,7 +344,7 @@ app.post('/api/admin/adjust-score', requireAdmin, route(async (request: AdminAut
   response.json({ ok: true });
 }));
 
-app.post('/api/game/penalty', requireAuth, route(async (request: AuthedRequest, response) => {
+app.post('/api/game/penalty', requireAuth, requireGameActive, route(async (request: AuthedRequest, response) => {
   const { amount, reason } = request.body as { amount?: number; reason?: string };
   if (typeof amount !== 'number' || !reason) {
     response.status(400).json({ error: 'amount and reason are required' });
@@ -299,6 +405,11 @@ app.post('/api/auth/login', route(async (request, response) => {
 
   if (!teamName || !password || !role) {
     response.status(400).json({ error: 'teamName, password, and role are required' });
+    return;
+  }
+
+  if (await isGamePaused()) {
+    response.status(423).json({ error: GAME_PAUSED_MESSAGE, code: 'GAME_PAUSED' });
     return;
   }
 
@@ -588,11 +699,13 @@ app.get('/api/game/state', requireAuth, route(async (request: AuthedRequest, res
   response.json({
     gameState: augmentedState,
     lastMessage: team.lastMessage || null,
-    score: team.score || 0
+    score: team.score || 0,
+    gamePaused: await isGamePaused(),
+    gamePausedAt: await getGamePausedAt(),
   });
 }));
 
-app.patch('/api/game/state', requireAuth, route(async (request: AuthedRequest, response) => {
+app.patch('/api/game/state', requireAuth, requireGameActive, route(async (request: AuthedRequest, response) => {
   const auth = request.auth!;
   const team = await findTeamById(auth.teamId);
   if (!team) {
@@ -624,7 +737,7 @@ app.patch('/api/game/state', requireAuth, route(async (request: AuthedRequest, r
   });
 }));
 
-app.post('/api/game/reset', requireAuth, route(async (request: AuthedRequest, response) => {
+app.post('/api/game/reset', requireAuth, requireGameActive, route(async (request: AuthedRequest, response) => {
   const auth = request.auth;
   if (!auth) {
     response.status(401).json({ error: 'Not authenticated' });
@@ -655,7 +768,7 @@ app.post('/api/game/reset', requireAuth, route(async (request: AuthedRequest, re
   });
 }));
 
-app.get('/api/game/final-qr', requireAuth, route(async (request: AuthedRequest, response) => {
+app.get('/api/game/final-qr', requireAuth, requireGameActive, route(async (request: AuthedRequest, response) => {
   const auth = request.auth;
   if (!auth) {
     response.status(401).json({ error: 'Not authenticated' });
@@ -692,7 +805,7 @@ const PISTON_CONFIG: Record<string, { language: string; version: string; fileNam
   go: { language: 'go', version: '1.16.2', fileName: 'solution.go' },
 };
 
-app.post('/api/game/compile', requireAuth, route(async (request: AuthedRequest, response) => {
+app.post('/api/game/compile', requireAuth, requireGameActive, route(async (request: AuthedRequest, response) => {
   const auth = request.auth;
   if (!auth) {
     response.status(401).json({ error: 'Not authenticated' });
@@ -871,7 +984,7 @@ app.get('/api/questions', route(async (_request, response) => {
   response.json({ questions: masked });
 }));
 
-app.post('/api/team/request-help', requireAuth, route(async (request: AuthedRequest, response) => {
+app.post('/api/team/request-help', requireAuth, requireGameActive, route(async (request: AuthedRequest, response) => {
   if (!request.auth) {
     response.status(401).json({ error: 'Unauthorized' });
     return;
@@ -930,7 +1043,7 @@ function getDistance(lat1: number, lon1: number, lat2: number, lon2: number): nu
   return R * c;
 }
 
-app.post('/api/runner/verify-location-qr', requireAuth, route(async (request: AuthedRequest, response) => {
+app.post('/api/runner/verify-location-qr', requireAuth, requireGameActive, route(async (request: AuthedRequest, response) => {
   const auth = request.auth;
   if (!auth || auth.role !== 'runner') {
     response.status(403).json({ error: 'Only runners can verify location QR codes' });
@@ -1001,7 +1114,7 @@ app.post('/api/runner/verify-location-qr', requireAuth, route(async (request: Au
 }));
 
 // Runner verifies the QR passkey to unlock their minigame
-app.post('/api/runner/verify-passkey', requireAuth, route(async (request: AuthedRequest, response) => {
+app.post('/api/runner/verify-passkey', requireAuth, requireGameActive, route(async (request: AuthedRequest, response) => {
   const auth = request.auth;
   if (!auth || auth.role !== 'runner') {
     response.status(403).json({ error: 'Only runners can verify passkeys' });
@@ -1051,7 +1164,7 @@ app.post('/api/runner/verify-passkey', requireAuth, route(async (request: Authed
 }));
 
 // Runner completes minigame — advances both solver & runner to next round
-app.post('/api/runner/complete-round', requireAuth, route(async (request: AuthedRequest, response) => {
+app.post('/api/runner/complete-round', requireAuth, requireGameActive, route(async (request: AuthedRequest, response) => {
   const auth = request.auth;
   if (!auth || auth.role !== 'runner') {
     response.status(403).json({ error: 'Only runners can complete rounds' });
@@ -1168,7 +1281,7 @@ app.post('/api/runner/complete-round', requireAuth, route(async (request: Authed
 
 }));
 
-app.post('/api/runner/verify-final-qr', requireAuth, route(async (request: AuthedRequest, response) => {
+app.post('/api/runner/verify-final-qr', requireAuth, requireGameActive, route(async (request: AuthedRequest, response) => {
   const auth = request.auth;
   if (!auth || auth.role !== 'runner') {
     response.status(403).json({ error: 'Only runners can verify final QR code' });
@@ -1211,7 +1324,7 @@ app.post('/api/runner/verify-final-qr', requireAuth, route(async (request: Authe
   response.json({ ok: true, gameState: nextState });
 }));
 
-app.put('/api/runner/location', requireAuth, route(async (request: AuthedRequest, response) => {
+app.put('/api/runner/location', requireAuth, requireGameActive, route(async (request: AuthedRequest, response) => {
   const auth = request.auth!;
   // Allow both runner and solver roles to update tactical location
   // to ensure continuous tracking throughout the round.
@@ -1257,6 +1370,8 @@ app.put('/api/runner/location', requireAuth, route(async (request: AuthedRequest
 app.get('/api/leaderboard', route(async (_request, response) => {
   const teams = await getTeamsCollection();
   const docs = await teams.find({}, { sort: { 'gameState.round': -1, 'gameState.startTime': 1 } }).toArray();
+  const gamePaused = await isGamePaused();
+  const gamePausedAt = await getGamePausedAt();
 
   const leaderboard = docs.map(team => {
     const solvedCount = team.gameState.roundsDone.filter(Boolean).length;
@@ -1277,7 +1392,7 @@ app.get('/api/leaderboard', route(async (_request, response) => {
     };
   });
 
-  response.json({ leaderboard });
+  response.json({ leaderboard, gamePaused, gamePausedAt });
 }));
 
 app.get('/api/admin/config', requireAdmin, route(async (_request: AdminAuthedRequest, response) => {
@@ -1287,6 +1402,8 @@ app.get('/api/admin/config', requireAdmin, route(async (_request: AdminAuthedReq
     acc[doc.key] = doc.value;
     return acc;
   }, {} as Record<string, any>);
+  configMap.loginEnabled = configMap.loginEnabled ?? true;
+  configMap.gamePaused = !!configMap.gamePaused;
   response.json(configMap);
 }));
 
@@ -1294,6 +1411,11 @@ app.put('/api/admin/config', requireAdmin, route(async (request: AdminAuthedRequ
   const { key, value } = request.body as { key?: string; value?: any };
   if (!key) {
     response.status(400).json({ error: 'key is required' });
+    return;
+  }
+  if (key === 'gamePaused') {
+    await setGamePaused(!!value);
+    response.json({ ok: true });
     return;
   }
   const config = await getConfigCollection();
@@ -1304,7 +1426,7 @@ app.put('/api/admin/config', requireAdmin, route(async (request: AdminAuthedRequ
   );
   response.json({ ok: true });
 }));
-app.post('/api/team/claim-swap', requireAuth, route(async (request: AuthedRequest, response) => {
+app.post('/api/team/claim-swap', requireAuth, requireGameActive, route(async (request: AuthedRequest, response) => {
   const auth = request.auth!;
   const result = await claimReserveRound(auth.teamId);
   if (!result.ok) {
@@ -1340,9 +1462,7 @@ app.get('/api/chat/phrases', requireAuth, route(async (_request: AuthedRequest, 
   response.json({ phrases: phrases?.value || [] });
 }));
 
-import { notifyTeamMessage } from './socket';
-
-app.post('/api/chat/send', requireAuth, route(async (request: AuthedRequest, response) => {
+app.post('/api/chat/send', requireAuth, requireGameActive, route(async (request: AuthedRequest, response) => {
   const auth = request.auth!;
   const { text } = request.body as { text?: string };
 
@@ -1683,13 +1803,20 @@ app.post('/api/admin/teams/:id/adjust-time', requireAdmin, route(async (request:
 // ── A1: Team game state ──────────────────────────────────────────────────────
 app.get('/api/a1/game/state', requireArena1Auth, route(async (request: Arena1AuthedRequest, response) => {
   const auth = request.a1Auth!;
-  await checkAndAutoSkip(auth.teamId);
+  const gamePaused = await isGamePaused();
+  const gamePausedAt = await getGamePausedAt();
+  if (!gamePaused) {
+    await checkAndAutoSkip(auth.teamId);
+  }
   const team = await findArena1TeamById(auth.teamId);
   if (!team) {
     response.status(401).json({ error: 'Invalid session' });
     return;
   }
-  const msLeft = getSlotTimeLeftMs(team);
+  const pausedAtMs = gamePausedAt ? new Date(gamePausedAt).getTime() : NaN;
+  const msLeft = gamePaused && Number.isFinite(pausedAtMs)
+    ? getArena1SlotTimeLeftMsAt(team, pausedAtMs)
+    : getSlotTimeLeftMs(team);
   // Fetch current question (safe fields only — no answers)
   const currentResult = team.gameState.slotResults.find(r => r.slot === team.gameState.currentSlot);
   let currentQuestion = null;
@@ -1714,12 +1841,14 @@ app.get('/api/a1/game/state', requireArena1Auth, route(async (request: Arena1Aut
     msLeft,
     score: team.score,
     currentQuestion,
+    gamePaused,
+    gamePausedAt,
     team: { id: team._id.toString(), name: team.name, solverName: team.solverName, runnerName: team.runnerName },
   });
 }));
 
 // ── A1: Submit code ────────────────────────────────────────────────────────
-app.post('/api/a1/game/submit', requireArena1Auth, route(async (request: Arena1AuthedRequest, response) => {
+app.post('/api/a1/game/submit', requireArena1Auth, requireGameActive, route(async (request: Arena1AuthedRequest, response) => {
   const auth = request.a1Auth!;
   if (auth.role !== 'solver') {
     response.status(403).json({ error: 'Only solver can submit code' });
@@ -1744,7 +1873,7 @@ app.post('/api/a1/game/submit', requireArena1Auth, route(async (request: Arena1A
 }));
 
 // ── A1: Swap ───────────────────────────────────────────────────────────────
-app.post('/api/a1/game/swap', requireArena1Auth, route(async (request: Arena1AuthedRequest, response) => {
+app.post('/api/a1/game/swap', requireArena1Auth, requireGameActive, route(async (request: Arena1AuthedRequest, response) => {
   const auth = request.a1Auth!;
   await checkAndAutoSkip(auth.teamId);
   const result = await performSwap(auth.teamId);
@@ -1766,7 +1895,7 @@ app.post('/api/a1/game/swap', requireArena1Auth, route(async (request: Arena1Aut
 }));
 
 // ── A1: Skip ───────────────────────────────────────────────────────────────
-app.post('/api/a1/game/skip', requireArena1Auth, route(async (request: Arena1AuthedRequest, response) => {
+app.post('/api/a1/game/skip', requireArena1Auth, requireGameActive, route(async (request: Arena1AuthedRequest, response) => {
   const auth = request.a1Auth!;
   const result = await manualSkip(auth.teamId);
   if (!result.ok) {
@@ -1784,7 +1913,7 @@ app.post('/api/a1/game/skip', requireArena1Auth, route(async (request: Arena1Aut
   response.json({ ok: true, msLeft });
 }));
 
-app.post('/api/a1/game/share', requireArena1Auth, route(async (request: Arena1AuthedRequest, response) => {
+app.post('/api/a1/game/share', requireArena1Auth, requireGameActive, route(async (request: Arena1AuthedRequest, response) => {
   const auth = request.a1Auth!;
   const team = await findArena1TeamById(auth.teamId);
   if (!team) return response.status(404).json({ error: 'Team not found' });
@@ -2084,6 +2213,7 @@ async function main() {
   // Check every 15s if any active A1 team's slot has expired and auto-skip
   setInterval(async () => {
     try {
+      if (await isGamePaused()) return;
       const a1Teams = await getArena1TeamsCollection();
       const activeTeams = await a1Teams.find({ 'gameState.status': 'active' }).toArray();
       for (const team of activeTeams) {

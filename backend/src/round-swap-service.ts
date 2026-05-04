@@ -65,7 +65,9 @@ export async function getCurrentQuestionForTeam(teamId: string): Promise<any | n
     const reserveId = team.swappedRounds[currentRoundIndex.toString()];
     const reservePool = await getReservePoolCollection();
     const reserveQuestion = await reservePool.findOne({ _id: new ObjectId(reserveId) });
-    if (reserveQuestion) return reserveQuestion;
+    if (reserveQuestion) {
+      return { ...reserveQuestion, round: currentRoundIndex + 1 };
+    }
   }
 
   const questions = await getQuestionsCollection();

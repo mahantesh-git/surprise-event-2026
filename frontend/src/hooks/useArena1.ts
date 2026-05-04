@@ -10,6 +10,8 @@ export function useArena1(session: TeamSession | null) {
   const [question, setQuestion] = useState<Arena1Question | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [gamePaused, setGamePaused] = useState(false);
+  const [gamePausedAt, setGamePausedAt] = useState<string | null>(null);
 
   // Timer state - seeded from backend msLeft on each fetch
   const [timeLeftMs, setTimeLeftMs] = useState<number>(SLOT_DURATION_MS);
@@ -30,6 +32,8 @@ export function useArena1(session: TeamSession | null) {
       setGameState(res.gameState);
       // Backend returns `currentQuestion` (not `question`)
       setQuestion(res.currentQuestion);
+      setGamePaused(!!res.gamePaused);
+      setGamePausedAt(res.gamePausedAt ?? null);
       setTimeLeftMs(serverMsLeft);
       setError(null);
     } catch (err: any) {
@@ -56,17 +60,30 @@ export function useArena1(session: TeamSession | null) {
     socket.on('a1:slot-change', refresh);
     socket.on('a1:reviewed', refresh);
     socket.on('a1:submitted', refresh);
+    socket.on('game:pause', (data: { pausedAt?: string }) => {
+      setGamePaused(true);
+      setGamePausedAt(data.pausedAt ?? new Date().toISOString());
+    });
+    socket.on('game:resume', () => {
+      setGamePaused(false);
+      setGamePausedAt(null);
+      fetchState();
+    });
+    socket.on('game:blocked', () => setGamePaused(true));
     return () => {
       socket.off('a1:state-refresh', refresh);
       socket.off('a1:slot-change', refresh);
       socket.off('a1:reviewed', refresh);
       socket.off('a1:submitted', refresh);
+      socket.off('game:pause');
+      socket.off('game:resume');
+      socket.off('game:blocked');
     };
   }, [socket, session, fetchState]);
 
   // Client-side countdown (1s tick, using elapsed time since last fetch)
   useEffect(() => {
-    if (!gameState || gameState.status !== 'active') {
+    if (gamePaused || !gameState || gameState.status !== 'active') {
       if (gameState?.status === 'waiting') setTimeLeftMs(SLOT_DURATION_MS);
       else if (gameState?.status === 'done') setTimeLeftMs(0);
       return;
@@ -97,7 +114,8 @@ export function useArena1(session: TeamSession | null) {
       await fetchState(); // re-sync to get next question
       return true;
     } catch (err: any) {
-      setError(err.message || 'Submit failed');
+      if (err?.status === 423) setGamePaused(true);
+      else setError(err.message || 'Submit failed');
       return false;
     }
   };
@@ -110,7 +128,8 @@ export function useArena1(session: TeamSession | null) {
       await fetchState();
       return true;
     } catch (err: any) {
-      setError(err.message || 'Skip failed');
+      if (err?.status === 423) setGamePaused(true);
+      else setError(err.message || 'Skip failed');
       return false;
     }
   };
@@ -123,7 +142,8 @@ export function useArena1(session: TeamSession | null) {
       await fetchState();
       return true;
     } catch (err: any) {
-      setError(err.message || 'Swap failed');
+      if (err?.status === 423) setGamePaused(true);
+      else setError(err.message || 'Swap failed');
       return false;
     }
   };
@@ -134,6 +154,8 @@ export function useArena1(session: TeamSession | null) {
     timeLeftMs,
     loading,
     error,
+    gamePaused,
+    gamePausedAt,
     refreshState: fetchState,
     submitCode,
     skipSlot,

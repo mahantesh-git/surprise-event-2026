@@ -18,6 +18,8 @@ export interface GameState {
   swapsLeft?: number;
   arTestingBypassEnabled?: boolean;
   gameType?: string;
+  gamePaused?: boolean;
+  gamePausedAt?: string | null;
 }
 
 export interface HandoffDetails {
@@ -87,7 +89,12 @@ export function useGameState(role: Role) {
 
   const syncGameState = async (token: string) => {
     const response = await getGameState(token);
-    const stateWithMsg = { ...response.gameState, lastMessage: response.lastMessage ?? null };
+    const stateWithMsg = {
+      ...response.gameState,
+      lastMessage: response.lastMessage ?? null,
+      gamePaused: !!response.gamePaused,
+      gamePausedAt: response.gamePausedAt ?? null,
+    };
     
     setGameState(stateWithMsg);
     if (typeof response.score === 'number') {

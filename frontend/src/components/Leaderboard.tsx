@@ -228,6 +228,8 @@ export function Leaderboard() {
   const [questions, setQuestions] = useState<RoundQuestion[]>([]);
   const [loading, setLoading] = useState(true);
   const [now, setNow] = useState(Date.now());
+  const [gamePaused, setGamePaused] = useState(false);
+  const [gamePausedAt, setGamePausedAt] = useState<string | null>(null);
   const [isListVisible, setIsListVisible] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -248,21 +250,45 @@ export function Leaderboard() {
   };
 
   useEffect(() => {
+    if (gamePaused) {
+      const pausedAtMs = gamePausedAt ? new Date(gamePausedAt).getTime() : Date.now();
+      setNow(Number.isFinite(pausedAtMs) ? pausedAtMs : Date.now());
+      return;
+    }
+
+    setNow(Date.now());
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
-  }, []);
+  }, [gamePaused, gamePausedAt]);
 
   const fetchBoard = async () => {
     try {
+      const leaderboardFallback: Awaited<ReturnType<typeof getLeaderboard>> = {
+        leaderboard: [],
+        gamePaused: false,
+        gamePausedAt: null,
+      };
+      const questionsFallback: Awaited<ReturnType<typeof getQuestions>> = {
+        questions: [],
+      };
+
       const [ldbRes, qRes] = await Promise.all([
-        getLeaderboard().catch(() => ({ leaderboard: [] })),
-        getQuestions().catch(() => ({ questions: [] }))
+        getLeaderboard().catch(() => leaderboardFallback),
+        getQuestions().catch(() => questionsFallback)
       ]);
 
       const boardArr: LeaderboardTeam[] = ldbRes?.leaderboard || [];
       const questionsArray = qRes?.questions || (Array.isArray(qRes) ? qRes : []);
+      const paused = !!ldbRes?.gamePaused;
+      const pausedAt = ldbRes?.gamePausedAt ?? null;
+      const pausedNow = pausedAt ? new Date(pausedAt).getTime() : Date.now();
+      const effectiveNow = paused && Number.isFinite(pausedNow) ? pausedNow : Date.now();
 
-      const currentNow = Date.now();
+      setGamePaused(paused);
+      setGamePausedAt(pausedAt);
+      setNow(effectiveNow);
+
+      const currentNow = effectiveNow;
       const sorted = [...boardArr].sort((a, b) => {
         if (a.solvedCount !== b.solvedCount) return b.solvedCount - a.solvedCount;
         const aStart = a.startTime ? new Date(a.startTime).getTime() : currentNow;
@@ -348,12 +374,31 @@ export function Leaderboard() {
       });
     };
 
+    const handleGamePause = (data: { pausedAt?: string }) => {
+      const pausedAt = data.pausedAt ?? new Date().toISOString();
+      const pausedAtMs = new Date(pausedAt).getTime();
+      setGamePaused(true);
+      setGamePausedAt(pausedAt);
+      setNow(Number.isFinite(pausedAtMs) ? pausedAtMs : Date.now());
+    };
+
+    const handleGameResume = () => {
+      setGamePaused(false);
+      setGamePausedAt(null);
+      setNow(Date.now());
+      fetchBoard();
+    };
+
     socket.on('runner:location', handleRunnerLocation);
     socket.on('leaderboard:update', handleLeaderboardUpdate);
+    socket.on('game:pause', handleGamePause);
+    socket.on('game:resume', handleGameResume);
 
     return () => {
       socket.off('runner:location', handleRunnerLocation);
       socket.off('leaderboard:update', handleLeaderboardUpdate);
+      socket.off('game:pause', handleGamePause);
+      socket.off('game:resume', handleGameResume);
     };
   }, [socket]);
 

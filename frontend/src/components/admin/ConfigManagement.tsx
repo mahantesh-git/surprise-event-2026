@@ -15,7 +15,8 @@ import {
   KeyRound,
   Trash2,
   Copy,
-  Check
+  Check,
+  PauseCircle
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -44,6 +45,18 @@ export function ConfigManagement({ token, config, onRefresh, onError }: ConfigMa
       onRefresh();
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Failed to update config', 'error');
+    }
+  };
+
+  const handleTogglePause = async () => {
+    if (!token) return;
+    try {
+      const newVal = !config?.gamePaused;
+      await updateAdminConfig(token, 'gamePaused', newVal);
+      showToast(newVal ? 'GAME PAUSED' : 'GAME RESUMED');
+      onRefresh();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Failed to update pause state', 'error');
     }
   };
 
@@ -209,6 +222,28 @@ export function ConfigManagement({ token, config, onRefresh, onError }: ConfigMa
                 >
                   <span className={`inline-block h-6 w-6 transform bg-white transition-transform ${config?.loginEnabled ? 'translate-x-7 bg-black' : 'translate-x-1'
                     }`} />
+                </button>
+              </div>
+
+              <div className="h-[1px] w-full bg-white/5" />
+
+              <div className="flex justify-between items-center">
+                <div className="space-y-1">
+                  <h4 className="font-black uppercase tracking-widest text-sm text-[var(--color-accent)]">Emergency Game Pause</h4>
+                  <p className="text-[10px] font-mono text-white/60 uppercase tracking-tight max-w-[280px]">
+                    Freeze login, execution, handoff, verification, location updates, and Arena 1 submissions.
+                  </p>
+                </div>
+                <button
+                  onClick={handleTogglePause}
+                  className={`relative inline-flex h-8 w-14 items-center transition-all focus:outline-none ${config?.gamePaused ? 'bg-red-500' : 'bg-white/10'
+                    }`}
+                  title={config?.gamePaused ? 'Resume game' : 'Pause game'}
+                >
+                  <span className={`inline-flex h-6 w-6 transform bg-white transition-transform items-center justify-center ${config?.gamePaused ? 'translate-x-7 text-black' : 'translate-x-1 text-black'
+                    }`}>
+                    <PauseCircle className="w-3.5 h-3.5" />
+                  </span>
                 </button>
               </div>
 

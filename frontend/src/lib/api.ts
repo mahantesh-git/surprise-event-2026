@@ -179,7 +179,7 @@ export async function getSession(token: string) {
 }
 
 export async function getGameState(token: string) {
-  return requestJson<{ gameState: GameState; lastMessage?: ChatMessage; score?: number }>(`/game/state?_t=${Date.now()}`, { method: 'GET' }, token);
+  return requestJson<{ gameState: GameState; lastMessage?: ChatMessage; score?: number; gamePaused?: boolean; gamePausedAt?: string | null }>(`/game/state?_t=${Date.now()}`, { method: 'GET' }, token);
 }
 
 export async function updateGameState(token: string, updates: GameStateUpdate) {
@@ -191,6 +191,10 @@ export async function updateGameState(token: string, updates: GameStateUpdate) {
 
 export function isAuthError(error: unknown) {
   return error instanceof ApiError && (error.status === 401 || error.status === 403 || error.status === 404);
+}
+
+export function isGamePausedError(error: unknown) {
+  return error instanceof ApiError && error.status === 423;
 }
 
 export async function verifyRunnerLocationQr(token: string, qrCode: string, lat?: number, lng?: number) {
@@ -382,7 +386,7 @@ export interface LeaderboardTeam {
 }
 
 export async function getLeaderboard() {
-  return requestJson<{ leaderboard: LeaderboardTeam[] }>('/leaderboard', { method: 'GET' });
+  return requestJson<{ leaderboard: LeaderboardTeam[]; gamePaused?: boolean; gamePausedAt?: string | null }>('/leaderboard', { method: 'GET' });
 }
 
 export async function updateRunnerLocation(token: string, lat: number, lng: number, heading: number | null = null) {
@@ -520,6 +524,8 @@ export async function getArena1State(token: string) {
     gameState: Arena1GameState;
     currentQuestion: Arena1Question | null;
     msLeft: number;
+    gamePaused?: boolean;
+    gamePausedAt?: string | null;
   }>('/a1/game/state', { method: 'GET' }, token);
 }
 

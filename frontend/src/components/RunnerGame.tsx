@@ -1255,6 +1255,7 @@ interface RunnerGameProps {
   difficulty?: 'normal' | 'hard';
   arTestingBypassEnabled?: boolean;
   gameType?: string;
+  paused?: boolean;
 }
 
 // ─── MAIN COMPONENT ───────────────────────────────────────────
@@ -1268,7 +1269,8 @@ export function RunnerGame({
   onSwitchToMap,
   difficulty = 'normal',
   arTestingBypassEnabled,
-  gameType: initialGameType
+  gameType: initialGameType,
+  paused = false
 }: RunnerGameProps) {
   const [screen, setScreen] = useState<RunnerScreen>(() => {
     if (stage === 'runner_entry') return 'passkey';
@@ -1383,6 +1385,18 @@ export function RunnerGame({
 
   const info = gameInfo[gameType];
   const isLastRound = currentRoundIndex >= totalRounds - 1;
+
+  if (paused) {
+    return (
+      <div className="corner-card glass-morphism p-8 max-w-md mx-auto text-center border-[var(--color-accent)]/30">
+        <Shield className="w-10 h-10 mx-auto mb-4 text-[var(--color-accent)]" />
+        <h2 className="text-xl font-bold uppercase tracking-widest text-[var(--color-accent)] mb-3">Game Paused</h2>
+        <p className="text-[10px] text-white/60 font-mono uppercase tracking-widest leading-relaxed">
+          Admin has paused the game. Runner actions and mini-game timers are frozen until resume.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <AnimatePresence mode="wait">

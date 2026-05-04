@@ -5,16 +5,18 @@ import { cn } from '@/lib/utils';
 
 interface HardModeHUDProps {
   startTime: string;
+  paused?: boolean;
+  pausedAt?: string | null;
 }
 
-export function HardModeHUD({ startTime }: HardModeHUDProps) {
+export function HardModeHUD({ startTime, paused = false, pausedAt = null }: HardModeHUDProps) {
   const [jackpot, setJackpot] = useState(1000);
   const [timeLeft, setTimeLeft] = useState(30);
 
   useEffect(() => {
     const calculate = () => {
       const start = new Date(startTime).getTime();
-      const now = new Date().getTime();
+      const now = paused && pausedAt ? new Date(pausedAt).getTime() : Date.now();
       const elapsedSeconds = Math.floor((now - start) / 1000);
       
       const decayInterval = 30;
@@ -38,9 +40,10 @@ export function HardModeHUD({ startTime }: HardModeHUDProps) {
     };
 
     calculate();
+    if (paused) return;
     const timer = setInterval(calculate, 1000);
     return () => clearInterval(timer);
-  }, [startTime]);
+  }, [startTime, paused, pausedAt]);
 
   return (
     <div className="fixed top-24 right-4 md:right-8 z-50 pointer-events-none">

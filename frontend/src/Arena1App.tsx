@@ -35,8 +35,22 @@ function buildSrcDoc(code: TriPanelCode): string {
 </html>`;
 }
 
+function PauseOverlay() {
+  return (
+    <div className="fixed inset-0 z-[300] bg-black/90 backdrop-blur-sm flex items-center justify-center p-6">
+      <div className="max-w-md text-center border border-[var(--color-accent)]/40 bg-[var(--color-accent)]/10 p-8">
+        <ShieldAlert className="w-10 h-10 mx-auto mb-4 text-[var(--color-accent)]" />
+        <h2 className="text-xl font-black uppercase tracking-widest text-[var(--color-accent)] mb-3">Game Paused</h2>
+        <p className="text-sm text-white/70 uppercase tracking-widest">
+          Admin has paused the game. All execution and submissions are locked until resume.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export function Arena1App({ session, onLogout }: Arena1AppProps) {
-  const { gameState, question, timeLeftMs, loading, error, submitCode, skipSlot, swapSlot } = useArena1(session);
+  const { gameState, question, timeLeftMs, loading, error, gamePaused, submitCode, skipSlot, swapSlot } = useArena1(session);
   const { socket } = useSocket();
   const [code, setCode] = useState<TriPanelCode>({ html: '', css: '', js: '' });
   const isSolver = session.role === 'solver';
@@ -140,6 +154,7 @@ export function Arena1App({ session, onLogout }: Arena1AppProps) {
     return (
       <div className="min-h-[100dvh] bg-black text-white flex flex-col relative overflow-hidden">
         <TacticalBackground />
+        {gamePaused && <PauseOverlay />}
         {/* Minimal runner header */}
         <header className="relative z-10 flex items-center justify-between px-4 py-3 border-b border-white/10 bg-black/70 backdrop-blur-md">
           <div className="flex items-center gap-2">
@@ -212,6 +227,7 @@ export function Arena1App({ session, onLogout }: Arena1AppProps) {
   return (
     <div className="h-[100dvh] bg-black text-white flex flex-col font-mono relative overflow-hidden">
       <TacticalBackground />
+      {gamePaused && <PauseOverlay />}
 
       {/* Header */}
       <header className="relative z-10 flex items-center justify-between p-4 border-b border-white/10 bg-black/50 backdrop-blur-md">

@@ -10,6 +10,8 @@ export interface NavbarProps {
   className?: string;
   startTime?: string | null;
   finishTime?: string | null;
+  paused?: boolean;
+  pausedAt?: string | null;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -20,6 +22,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   className,
   startTime,
   finishTime,
+  paused = false,
+  pausedAt = null,
 }) => {
   // Use the brand name from props, or default to the requested title if it's the old 'QUEST' placeholder
   const displayBrand = brandName === 'QUEST' ? 'Quest : The Code Scavenger' : brandName;
@@ -48,7 +52,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         {/* Center: Timer */}
         {startTime && (
           <div className="hidden sm:flex items-center border-l border-white/10 pl-8">
-            <GameTimer startTime={startTime ?? null} finishTime={finishTime ?? null} />
+            <GameTimer startTime={startTime ?? null} finishTime={finishTime ?? null} paused={paused} pausedAt={pausedAt} />
           </div>
         )}
 
@@ -56,7 +60,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         <div className="flex items-center gap-3 sm:gap-4 ml-auto pl-3 sm:pl-8 sm:border-l border-white/10">
           {startTime && (
             <div className="flex sm:hidden">
-              <GameTimer startTime={startTime ?? null} finishTime={finishTime ?? null} />
+              <GameTimer startTime={startTime ?? null} finishTime={finishTime ?? null} paused={paused} pausedAt={pausedAt} />
             </div>
           )}
 

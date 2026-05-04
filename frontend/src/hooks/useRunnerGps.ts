@@ -24,7 +24,7 @@ const SEND_INTERVAL_MS = 100;
  * 3. `deviceorientationabsolute` (Android) is preferred over
  *    `deviceorientation` (iOS / fallback) for drift-free compass readings.
  */
-export function useRunnerGps(token: string | null, stage: string | null) {
+export function useRunnerGps(token: string | null, stage: string | null, paused = false) {
   const { socket, status } = useSocket();
 
   // ── Always-fresh refs — avoids stale closures inside setInterval ──────────
@@ -60,7 +60,7 @@ export function useRunnerGps(token: string | null, stage: string | null) {
 
   // ── Main effect — only re-runs when token/stage change ───────────────────
   useEffect(() => {
-    const isActive = !!token && !!stage && stage !== 'lobby';
+    const isActive = !!token && !!stage && stage !== 'lobby' && !paused;
 
     if (!isActive) {
       stopAll();
@@ -163,7 +163,7 @@ export function useRunnerGps(token: string | null, stage: string | null) {
     // ⚠ Intentionally NOT including socket/status here.
     // They are accessed via refs above — adding them would cause the GPS
     // watch to restart every time the socket reconnects, creating gaps.
-  }, [token, stage]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [token, stage, paused]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [pos, setPos] = useState<{ lat: number; lng: number; heading: number | null } | null>(null);
 
