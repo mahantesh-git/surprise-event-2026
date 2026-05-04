@@ -207,7 +207,7 @@ function buildFinalRoundQrCode(teamId: string) {
 
 // CORS Configuration - Hardened for production
 app.use(cors({
-  origin: '*', 
+  origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'ngrok-skip-browser-warning'],
   exposedHeaders: ['Content-Range', 'X-Content-Range'],
@@ -263,7 +263,7 @@ app.post('/api/admin/teams/:id/swap', requireAdmin, route(async (request: AdminA
 async function augmentGameState(teamId: string, baseState: GameState) {
   const currentQ = await getCurrentQuestionForTeam(teamId);
   const team = await findTeamById(teamId);
-  
+
   const configCollection = await getConfigCollection();
   const bypassConfig = await configCollection.findOne({ key: 'arTestingBypassEnabled' });
   const arTestingBypassEnabled = !!bypassConfig?.value;
@@ -972,12 +972,12 @@ app.post('/api/runner/verify-location-qr', requireAuth, route(async (request: Au
 
     if (!isNaN(targetLat) && !isNaN(targetLng)) {
       const dist = getDistance(lat, lng, targetLat, targetLng);
-      
+
       if (!isBypassEnabled && dist > 25) {
         response.status(403).json({ error: `Area Restricted: You are ${Math.round(dist)}m away from the target location.` });
         return;
       }
-      
+
       if (isBypassEnabled) {
         console.log(`[TEST] Geofence bypassed by admin. Actual distance: ${Math.round(dist)}m`);
       }

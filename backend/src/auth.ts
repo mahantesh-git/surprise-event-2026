@@ -53,7 +53,7 @@ export function requireAuth(request: AuthedRequest, response: Response, next: Ne
 export function requireAdmin(request: AdminAuthedRequest, response: Response, next: NextFunction) {
   const header = request.headers.authorization;
   let token = header?.startsWith('Bearer ') ? header.slice('Bearer '.length) : null;
-  
+
   if (!token && request.query.token) {
     token = request.query.token as string;
   }

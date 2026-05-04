@@ -3,7 +3,7 @@ import type { GameState, HandoffDetails, Role } from '@/hooks/useGameState';
 const getApiBaseUrl = () => {
   // Use VITE_API_HOST as primary, fallback to VITE_API_BASE_URL
   let h = import.meta.env.VITE_API_HOST || import.meta.env.VITE_API_BASE_URL || '';
-  
+
   // Debug log for production (visible in browser console)
   console.log('[API] Raw host from environment:', h || '(empty)');
 
@@ -33,12 +33,32 @@ const getApiBaseUrl = () => {
   // Cleanup: remove trailing slashes and ensure /api suffix
   h = h.replace(/\/+$/, '');
   const final = h.endsWith('/api') ? h : `${h}/api`;
-  
+
   console.log('[API] Final base URL initialized at:', final);
   return final;
 };
 
 const API_BASE = getApiBaseUrl();
+
+export function buildApiUrl(path: string) {
+  return `${API_BASE}${path}`;
+}
+
+export async function requestApiText(path: string, token?: string): Promise<string> {
+  const response = await fetch(buildApiUrl(path), {
+    headers: {
+      'ngrok-skip-browser-warning': 'true',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
+
+  const text = await response.text();
+  if (!response.ok) {
+    throw new ApiError(text || 'Request failed', response.status);
+  }
+
+  return text;
+}
 
 export class ApiError extends Error {
   status: number;
@@ -278,19 +298,19 @@ export async function adminLogin(email: string, password: string) {
 }
 
 export async function getAdminTeams(token: string) {
-  return requestJson<{ 
-    teams: Array<{ 
-      id: string; 
-      name: string; 
-      email: string; 
-      solverName: string; 
-      runnerName: string; 
-      createdAt: string; 
+  return requestJson<{
+    teams: Array<{
+      id: string;
+      name: string;
+      email: string;
+      solverName: string;
+      runnerName: string;
+      createdAt: string;
       lastLoginAt: string | null;
       score: number;
       scoreHistory: Array<{ amount: number; reason: string; timestamp: string }>;
       gameState: GameState;
-    }> 
+    }>
   }>('/admin/teams', { method: 'GET' }, token);
 }
 
