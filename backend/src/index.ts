@@ -1028,6 +1028,18 @@ app.post('/api/team/request-help', requireAuth, requireGameActive, route(async (
 
   response.json({ ok: true });
 }));
+function parseDMS(coord: string): number {
+  const trimmed = coord.trim();
+  const plain = parseFloat(trimmed);
+  if (!trimmed.includes('°') && !isNaN(plain)) return plain;
+  const match = trimmed.match(/(\d+)[°º]\s*(\d+)['''′]\s*([\d.]+)["""″]?\s*([NSEW]?)/i);
+  if (!match) return NaN;
+  const [, d, m, s, dir] = match;
+  let decimal = parseFloat(d) + parseFloat(m) / 60 + parseFloat(s) / 3600;
+  if (/[SW]/i.test(dir)) decimal = -decimal;
+  return decimal;
+}
+
 function getDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371e3; // Earth radius in meters
   const p1 = lat1 * Math.PI / 180;
@@ -1080,8 +1092,8 @@ app.post('/api/runner/verify-location-qr', requireAuth, requireGameActive, route
 
   // Geofence enforcement
   if (lat !== undefined && lng !== undefined) {
-    const targetLat = parseFloat(question.coord.lat);
-    const targetLng = parseFloat(question.coord.lng);
+    const targetLat = parseDMS(question.coord.lat);
+    const targetLng = parseDMS(question.coord.lng);
 
     if (!isNaN(targetLat) && !isNaN(targetLng)) {
       const dist = getDistance(lat, lng, targetLat, targetLng);

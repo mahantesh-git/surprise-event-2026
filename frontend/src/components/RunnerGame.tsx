@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { TacticalStatus } from './TacticalStatus';
 import { Button } from '@/components/ui/button';
 import { verifyRunnerPasskey, completeRunnerGame, updateGameState } from '@/lib/api';
+import { getDistance, parseDMS } from '@/lib/geofence';
 import { RunnerGyroScanner } from './RunnerGyroScanner';
 
 // ─── HAPTIC UTILITY ───────────────────────────────────────────
@@ -1292,8 +1293,8 @@ export function RunnerGame({
   useEffect(() => {
     if (screen !== 'location' || !currentRound?.coord) return;
 
-    const targetLat = parseFloat(currentRound.coord.lat);
-    const targetLng = parseFloat(currentRound.coord.lng);
+    const targetLat = parseDMS(currentRound.coord.lat);
+    const targetLng = parseDMS(currentRound.coord.lng);
 
     if (isNaN(targetLat) || isNaN(targetLng)) return;
 

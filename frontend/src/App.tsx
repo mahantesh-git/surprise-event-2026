@@ -51,7 +51,7 @@ import { HardModeHUD } from '@/components/HardModeHUD';
 import { SwapConfirmModal } from '@/components/SwapConfirmModal';
 import { SwapApprovalModal } from '@/components/SwapApprovalModal';
 import { WalkieTalkie } from '@/components/WalkieTalkie';
-import { getDistance } from '@/lib/geofence';
+import { getDistance, parseDMS } from '@/lib/geofence';
 const SOLVER_FULLSCREEN_EXIT_KEY = import.meta.env.VITE_SOLVER_EXIT_KEY || 'quest-exit';
 
 const notify = (msg: string, type: 'success' | 'info' | 'error' = 'info') => {
@@ -377,8 +377,8 @@ export default function App() {
 
   useEffect(() => {
     if (role === 'runner' && currentPos && currentRound && currentRound.coord) {
-      const targetLat = parseFloat(currentRound.coord.lat);
-      const targetLng = parseFloat(currentRound.coord.lng);
+      const targetLat = parseDMS(currentRound.coord.lat);
+      const targetLng = parseDMS(currentRound.coord.lng);
 
       if (!isNaN(targetLat) && !isNaN(targetLng)) {
         const dist = getDistance(currentPos.lat, currentPos.lng, targetLat, targetLng);
