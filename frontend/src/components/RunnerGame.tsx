@@ -1379,6 +1379,8 @@ export function RunnerGame({
       await completeRunnerGame(token);
       onRoundComplete();
     } catch {
+      // error — fall through to finally
+    } finally {
       setCompleting(false);
     }
   };
