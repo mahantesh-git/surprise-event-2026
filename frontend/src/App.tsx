@@ -733,7 +733,21 @@ export default function App() {
         testResults: result.testResults
       });
       if (allPassed) {
-        setTimeout(() => updateState({ stage: 'p1_solved' }), 1500);
+        // Immediately transition to runner_travel — skip the intermediate p1_solved stage
+        // and the manual "Synchronize Runner" button click. The backend will also push a
+        // socket event so the runner's UI updates in real-time without waiting for the 3s poll.
+        if (currentRound) {
+          await updateState({
+            stage: 'runner_travel',
+            handoff: {
+              passkey: currentRound.qrPasskey,
+              lat: currentRound.coord.lat,
+              lng: currentRound.coord.lng,
+              volunteer: currentRound.volunteer.name,
+              place: currentRound.coord.place,
+            },
+          });
+        }
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Execution failed';
