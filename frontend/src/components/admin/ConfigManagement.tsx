@@ -253,7 +253,7 @@ export function ConfigManagement({ token, config, onRefresh, onError }: ConfigMa
                 <div className="space-y-1">
                   <h4 className="font-black uppercase tracking-widest text-sm text-[var(--color-accent)]">AR Testing Geofence Bypass</h4>
                   <p className="text-[10px] font-mono text-white/60 uppercase tracking-tight max-w-[280px]">
-                    Globally disable 25m distance enforcement and exact QR matching for testing.
+                    Globally disable 10m distance enforcement and exact QR matching for testing.
                   </p>
                 </div>
                 <button

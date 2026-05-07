@@ -38,7 +38,7 @@ export function useRunnerGps(token: string | null, stage: string | null, paused 
   // ── Internal state ────────────────────────────────────────────────────────
   const watchIdRef       = useRef<number | null>(null);
   const sendTimerRef     = useRef<ReturnType<typeof setInterval> | null>(null);
-  const latestPositionRef = useRef<{ lat: number; lng: number; heading: number | null } | null>(null);
+  const latestPositionRef = useRef<{ lat: number; lng: number; heading: number | null; accuracy?: number } | null>(null);
   const latestRotationRef = useRef<number | null>(null); // compass heading (preferred)
 
   // ── Full cleanup helper ───────────────────────────────────────────────────
@@ -77,6 +77,7 @@ export function useRunnerGps(token: string | null, stage: string | null, paused 
             lat: pos.coords.latitude,
             lng: pos.coords.longitude,
             heading: pos.coords.heading,
+            accuracy: pos.coords.accuracy,
           };
         },
         () => { /* silent — don't disrupt game flow */ },
@@ -85,10 +86,6 @@ export function useRunnerGps(token: string | null, stage: string | null, paused 
     }
 
     // ── 2. Compass listener ──────────────────────────────────────────────────
-    // `deviceorientationabsolute` gives a true-north heading on Android.
-    // iOS uses `webkitCompassHeading` inside `deviceorientation`.
-    // The `hasAbsolute` flag ensures the fallback alpha doesn't override
-    // an already-accurate absolute reading.
     let hasAbsolute = false;
     const handleOrientation = (e: DeviceOrientationEvent & { webkitCompassHeading?: number }) => {
       if ((e as any).type === 'deviceorientationabsolute') {
@@ -96,7 +93,6 @@ export function useRunnerGps(token: string | null, stage: string | null, paused 
         if (e.alpha !== null) latestRotationRef.current = (360 - e.alpha) % 360;
       } else if ((e as any).type === 'deviceorientation') {
         if (e.webkitCompassHeading !== undefined) {
-          // iOS: webkitCompassHeading is already clockwise from true north
           latestRotationRef.current = (360 - e.webkitCompassHeading) % 360;
         } else if (!hasAbsolute && e.alpha !== null) {
           latestRotationRef.current = (360 - e.alpha) % 360;
@@ -108,8 +104,6 @@ export function useRunnerGps(token: string | null, stage: string | null, paused 
       typeof (window as any).DeviceOrientationEvent !== 'undefined' &&
       typeof (window as any).DeviceOrientationEvent.requestPermission === 'function'
     ) {
-      // iOS 13+ permission gate (must be called from a user gesture — already
-      // requested at login via App.tsx handleLogin)
       (window as any).DeviceOrientationEvent.requestPermission()
         .then((resp: string) => {
           if (resp === 'granted') {
@@ -129,19 +123,15 @@ export function useRunnerGps(token: string | null, stage: string | null, paused 
         const tok = tokenRef.current;
         if (!pos || !tok) return;
 
-        // Compass heading takes priority over GPS heading
-        const h = latestRotationRef.current !== null
-          ? latestRotationRef.current
-          : pos.heading;
-
+        const h = latestRotationRef.current !== null ? latestRotationRef.current : pos.heading;
         const payload = {
           lat: pos.lat,
           lng: pos.lng,
+          accuracy: pos.accuracy || 0,
           heading: h,
           timestamp: Date.now(),
         };
 
-        // ── Primary: WebSocket (always fresh via ref) ────────────────────────
         const s  = socketRef.current;
         const st = statusRef.current;
         if (s && st === 'connected') {
@@ -149,21 +139,15 @@ export function useRunnerGps(token: string | null, stage: string | null, paused 
           return;
         }
 
-        // ── Fallback: REST ──────────────────────────────────────────────────
         updateRunnerLocation(tok, pos.lat, pos.lng, h).catch(() => { /* silent */ });
       }, SEND_INTERVAL_MS);
     }
 
-    // Only remove orientation listeners on cleanup (GPS + timer persist until stopAll)
     return () => {
       window.removeEventListener('deviceorientationabsolute', handleOrientation as any, true);
       window.removeEventListener('deviceorientation',         handleOrientation as any, true);
     };
-
-    // ⚠ Intentionally NOT including socket/status here.
-    // They are accessed via refs above — adding them would cause the GPS
-    // watch to restart every time the socket reconnects, creating gaps.
-  }, [token, stage, paused]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [token, stage, paused]);
 
   const [pos, setPos] = useState<{ lat: number; lng: number; heading: number | null } | null>(null);
 

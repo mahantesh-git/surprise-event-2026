@@ -1,0 +1,285 @@
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;user-select:none;-webkit-user-select:none;}
+#game{font-family:'Orbitron',monospace;background:#0a0f1a;min-height:520px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:20px 16px;touch-action:none;}
+#status{font-size:9px;letter-spacing:3px;color:#555;margin-bottom:6px;}
+#phase{font-size:13px;letter-spacing:2px;color:#fff;margin-bottom:16px;min-height:20px;text-align:center;}
+#hud{display:flex;gap:24px;margin-bottom:20px;}
+.hud-item{text-align:center;}
+.hud-label{font-size:8px;letter-spacing:2px;color:#444;}
+.hud-val{font-size:16px;font-weight:700;color:#00ffb4;}
+#arena{position:relative;width:280px;height:280px;background:rgba(0,255,180,0.03);border:1px solid rgba(0,255,180,0.15);border-radius:8px;margin-bottom:20px;}
+.circle{position:absolute;width:70px;height:70px;border-radius:50%;border:2px solid rgba(0,255,180,0.4);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.1s;}
+.circle .num{font-size:20px;font-weight:700;color:rgba(0,255,180,0.5);}
+.circle.active{border-color:#00ffb4;background:rgba(0,255,180,0.08);}
+.circle.active .num{color:#00ffb4;}
+.circle.hit{border-color:#00ffb4;background:rgba(0,255,180,0.3);transform:scale(0.95);}
+.circle.fail{border-color:#ff4444;background:rgba(255,68,68,0.2);}
+#countdown-ring{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:80px;height:80px;}
+#progress-row{display:flex;gap:6px;margin-bottom:16px;}
+.prog-dot{width:28px;height:6px;border-radius:3px;background:rgba(0,255,180,0.15);border:1px solid rgba(0,255,180,0.2);transition:all 0.3s;}
+.prog-dot.done{background:#00ffb4;}
+.prog-dot.active{background:rgba(0,255,180,0.4);}
+#btn{width:100%;max-width:280px;padding:12px;background:transparent;border:1px solid rgba(0,255,180,0.3);border-radius:6px;color:#00ffb4;font-family:'Orbitron',monospace;font-size:10px;letter-spacing:2px;cursor:pointer;transition:all 0.2s;}
+#btn:hover{background:rgba(0,255,180,0.08);border-color:#00ffb4;}
+#flash{position:fixed;inset:0;pointer-events:none;opacity:0;z-index:100;}
+#msg{font-size:11px;letter-spacing:2px;min-height:18px;margin-bottom:12px;text-align:center;}
+</style>
+
+<div id="game">
+  <div id="status">ARENA 2 — SIGNAL BURST</div>
+  <div id="phase">Press START to begin</div>
+  <div id="hud">
+    <div class="hud-item"><div class="hud-label">ROUND</div><div class="hud-val" id="round-val">0/3</div></div>
+    <div class="hud-item"><div class="hud-label">WINDOW</div><div class="hud-val" id="window-val">300ms</div></div>
+    <div class="hud-item"><div class="hud-label">STATUS</div><div class="hud-val" id="status-val">—</div></div>
+  </div>
+  <div id="arena">
+    <div class="circle" id="c0" style="top:10px;left:10px;"><div class="num">1</div></div>
+    <div class="circle" id="c1" style="top:10px;right:10px;"><div class="num">2</div></div>
+    <div class="circle" id="c2" style="bottom:10px;left:10px;"><div class="num">3</div></div>
+    <div class="circle" id="c3" style="bottom:10px;right:10px;"><div class="num">4</div></div>
+    <svg id="countdown-ring" viewBox="0 0 80 80">
+      <circle cx="40" cy="40" r="30" fill="none" stroke="rgba(0,255,180,0.1)" stroke-width="3"/>
+      <circle id="ring-progress" cx="40" cy="40" r="30" fill="none" stroke="#00ffb4" stroke-width="3"
+        stroke-dasharray="188.5" stroke-dashoffset="188.5" stroke-linecap="round"
+        transform="rotate(-90 40 40)" opacity="0"/>
+    </svg>
+  </div>
+  <div id="msg"></div>
+  <div id="progress-row">
+    <div class="prog-dot" id="pd0"></div>
+    <div class="prog-dot" id="pd1"></div>
+    <div class="prog-dot" id="pd2"></div>
+  </div>
+  <button id="btn">START MISSION</button>
+  <div id="flash"></div>
+</div>
+
+<script>
+const circles = [0,1,2,3].map(i => document.getElementById('c'+i));
+const flash = document.getElementById('flash');
+const phaseEl = document.getElementById('phase');
+const msgEl = document.getElementById('msg');
+const roundVal = document.getElementById('round-val');
+const statusVal = document.getElementById('status-val');
+const btn = document.getElementById('btn');
+const ring = document.getElementById('ring-progress');
+const dots = [0,1,2].map(i => document.getElementById('pd'+i));
+
+let gameActive = false;
+let roundNum = 0;
+let totalRounds = 3;
+let windowMs = 300;
+let touchTimes = {};
+let checkTimer = null;
+let ringAnim = null;
+let countdownStart = null;
+
+function setFlash(color, alpha=0.2) {
+  flash.style.background = color;
+  flash.style.opacity = alpha;
+  setTimeout(() => flash.style.opacity = 0, 150);
+}
+
+function setMsg(text, color='#00ffb4') {
+  msgEl.textContent = text;
+  msgEl.style.color = color;
+}
+
+function setPhase(text) { phaseEl.textContent = text; }
+
+function updateDots() {
+  dots.forEach((d,i) => {
+    d.classList.remove('done','active');
+    if(i < roundNum) d.classList.add('done');
+    else if(i === roundNum && gameActive) d.classList.add('active');
+  });
+}
+
+function animateRing(durationMs) {
+  ring.style.opacity = '1';
+  ring.style.transition = 'none';
+  ring.setAttribute('stroke-dashoffset', '188.5');
+  countdownStart = Date.now();
+  
+  let start = null;
+  function step(ts) {
+    if(!start) start = ts;
+    const elapsed = ts - start;
+    const progress = Math.min(elapsed / durationMs, 1);
+    const offset = 188.5 * (1 - progress);
+    ring.setAttribute('stroke-dashoffset', offset);
+    if(progress < 1 && gameActive) {
+      ringAnim = requestAnimationFrame(step);
+    } else {
+      ring.style.opacity = '0';
+    }
+  }
+  ringAnim = requestAnimationFrame(step);
+}
+
+function resetCircles(state='') {
+  circles.forEach(c => {
+    c.classList.remove('active','hit','fail');
+    if(state === 'active') c.classList.add('active');
+  });
+}
+
+function startRound() {
+  touchTimes = {};
+  resetCircles('active');
+  setPhase('TAP ALL 4 SIMULTANEOUSLY');
+  setMsg('Hold all 4 circles at once', '#00ffb4');
+  statusVal.textContent = 'ARMED';
+  statusVal.style.color = '#00ffb4';
+  animateRing(10000);
+
+  // Listen for touches
+  const arena = document.getElementById('arena');
+  
+  function handleTouch(e) {
+    if(!gameActive) return;
+    e.preventDefault();
+    
+    const now = Date.now();
+    const touches = e.touches;
+    
+    // Check which circles are being touched
+    const touched = new Set();
+    for(let t of touches) {
+      circles.forEach((c,i) => {
+        const r = c.getBoundingClientRect();
+        if(t.clientX >= r.left && t.clientX <= r.right &&
+           t.clientY >= r.top && t.clientY <= r.bottom) {
+          touched.add(i);
+          if(!touchTimes[i]) touchTimes[i] = now;
+        }
+      });
+    }
+
+    // Visual feedback
+    circles.forEach((c,i) => {
+      c.classList.remove('hit');
+      if(touched.has(i)) c.classList.add('hit');
+    });
+
+    // Check if all 4 touched within window
+    if(touched.size === 4) {
+      const times = Object.values(touchTimes);
+      if(times.length >= 4) {
+        const spread = Math.max(...times) - Math.min(...times);
+        if(spread <= windowMs) {
+          arena.removeEventListener('touchstart', handleTouch);
+          arena.removeEventListener('touchmove', handleTouch);
+          cancelAnimationFrame(ringAnim);
+          roundSuccess();
+          return;
+        }
+      }
+    }
+
+    // Check on touchend if they released without success
+    if(e.type === 'touchend' && touched.size < 4) {
+      const hadAll = Object.keys(touchTimes).length === 4;
+      if(hadAll) {
+        const times = Object.values(touchTimes);
+        const spread = Math.max(...times) - Math.min(...times);
+        if(spread > windowMs) {
+          arena.removeEventListener('touchstart', handleTouch);
+          arena.removeEventListener('touchmove', handleTouch);
+          roundFail(spread);
+        }
+      }
+      touchTimes = {};
+    }
+  }
+
+  arena.addEventListener('touchstart', handleTouch, {passive:false});
+  arena.addEventListener('touchmove', handleTouch, {passive:false});
+  arena.addEventListener('touchend', handleTouch, {passive:false});
+
+  // Also support mouse clicks for desktop demo
+  circles.forEach((c,i) => {
+    c.onclick = () => {
+      if(!gameActive) return;
+      touchTimes[i] = Date.now();
+      c.classList.add('hit');
+      if(Object.keys(touchTimes).length === 4) {
+        const times = Object.values(touchTimes);
+        const spread = Math.max(...times) - Math.min(...times);
+        cancelAnimationFrame(ringAnim);
+        if(spread <= 1000) { // relaxed for mouse demo
+          roundSuccess();
+        } else {
+          roundFail(spread);
+        }
+      }
+    };
+  });
+}
+
+function roundSuccess() {
+  resetCircles('hit');
+  circles.forEach(c => c.classList.add('hit'));
+  setFlash('#00ffb4', 0.25);
+  navigator.vibrate?.([100,50,200]);
+  setMsg('SYNCHRONIZED', '#00ffb4');
+  statusVal.textContent = 'HIT';
+  statusVal.style.color = '#00ffb4';
+  roundNum++;
+  roundVal.textContent = roundNum+'/'+totalRounds;
+  updateDots();
+
+  setTimeout(() => {
+    if(roundNum >= totalRounds) {
+      gameComplete();
+    } else {
+      setPhase('ROUND CLEARED');
+      setTimeout(startRound, 1200);
+    }
+  }, 800);
+}
+
+function roundFail(spread) {
+  resetCircles();
+  circles.forEach(c => c.classList.add('fail'));
+  setFlash('#ff4444', 0.2);
+  navigator.vibrate?.([200]);
+  const ms = Math.round(spread);
+  setMsg('OUT OF SYNC — '+ms+'ms spread', '#ff4444');
+  statusVal.textContent = 'MISS';
+  statusVal.style.color = '#ff4444';
+  touchTimes = {};
+
+  setTimeout(() => {
+    if(gameActive) startRound();
+  }, 1200);
+}
+
+function gameComplete() {
+  gameActive = false;
+  cancelAnimationFrame(ringAnim);
+  resetCircles();
+  setPhase('SIGNAL BURST COMPLETE');
+  setMsg('ALL ROUNDS SYNCHRONIZED', '#00ffb4');
+  statusVal.textContent = 'DONE';
+  btn.textContent = 'PLAY AGAIN';
+  btn.style.display = 'block';
+  setFlash('#00ffb4', 0.3);
+  dots.forEach(d => { d.classList.remove('active'); d.classList.add('done'); });
+}
+
+btn.onclick = () => {
+  gameActive = true;
+  roundNum = 0;
+  touchTimes = {};
+  roundVal.textContent = '0/'+totalRounds;
+  statusVal.textContent = '—';
+  btn.style.display = 'none';
+  updateDots();
+  setPhase('INITIATING...');
+  setTimeout(startRound, 800);
+};
+</script>

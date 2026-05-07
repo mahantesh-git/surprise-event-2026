@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   Crosshair, Brain, LayoutGrid, CheckCircle2, RefreshCcw, Trophy,
   Star, Fingerprint, Shield, ChevronRight, AlertCircle, Activity, ClipboardPaste, Copy, Check,
-  MapPin, Camera, AlertTriangle
+  MapPin, Camera, AlertTriangle, Radio
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TacticalStatus } from './TacticalStatus';
@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { verifyRunnerPasskey, completeRunnerGame, updateGameState } from '@/lib/api';
 import { getDistance, parseDMS } from '@/lib/geofence';
 import { RunnerGyroScanner } from './RunnerGyroScanner';
+import { MirrorCodeGame, ThermalCalibrateGame, TelescopeLockGame, DnaSpliceGame } from './SwapMiniGames';
 
 // ─── HAPTIC UTILITY ───────────────────────────────────────────
 function haptic(pattern: number | number[] = 50) {
@@ -44,7 +45,7 @@ const TapGame = ({ onComplete, difficulty = 'normal' }: { onComplete: () => void
     let lastTick = Date.now();
     const timer = setInterval(() => {
       if (isDoneRef.current) return;
-      
+
       const now = Date.now();
       if (now - lastTick >= 100) {
         lastTick = now;
@@ -65,7 +66,7 @@ const TapGame = ({ onComplete, difficulty = 'normal' }: { onComplete: () => void
   useEffect(() => {
     const moveTimer = setInterval(() => {
       if (isDoneRef.current || timeLeft <= 0) return;
-      
+
       setTarget(prev => {
         const vel = velocityRef.current;
         let nx = prev.x + vel.dx * vel.speed;
@@ -83,16 +84,16 @@ const TapGame = ({ onComplete, difficulty = 'normal' }: { onComplete: () => void
       });
     }, 40); // Faster tick for smoother movement
     return () => clearInterval(moveTimer);
-  }, [restarts]); 
+  }, [restarts]);
 
   const handleTap = (e: React.PointerEvent) => {
     e.stopPropagation();
     if (timeLeft <= 0 || isDoneRef.current) return;
-    
+
     haptic(25);
     const newTaps = taps + 1;
     setTaps(newTaps);
-    
+
     if (newTaps >= required) {
       isDoneRef.current = true;
       setIsDone(true);
@@ -103,16 +104,16 @@ const TapGame = ({ onComplete, difficulty = 'normal' }: { onComplete: () => void
     if (newTaps % shrinkInterval === 0) {
       setScale(s => Math.max(0.7, s - shrinkAmount));
     }
-    
+
     // Smooth speed ramp
     const speedCap = difficulty === 'hard' ? 4.0 : 3.0;
     const speedInc = difficulty === 'hard' ? 1.08 : 1.05;
-    
-    setVelocity(v => ({ 
-      ...v, 
+
+    setVelocity(v => ({
+      ...v,
       speed: Math.min(speedCap, v.speed * speedInc),
-      dx: Math.random() > 0.5 ? 1 : -1, 
-      dy: Math.random() > 0.5 ? 1 : -1 
+      dx: Math.random() > 0.5 ? 1 : -1,
+      dy: Math.random() > 0.5 ? 1 : -1
     }));
 
     setTarget({ x: Math.random() * 60 + 15, y: Math.random() * 55 + 15 });
@@ -166,8 +167,8 @@ const TapGame = ({ onComplete, difficulty = 'normal' }: { onComplete: () => void
         <span>HITS: <span className="text-[var(--color-accent)]">{taps}</span>/{required}</span>
         <span>TIME: <span className={timeLeft <= 3 ? 'text-[var(--color-accent)]' : 'text-white/80'}>{timeLeft.toFixed(1)}s</span></span>
       </div>
-      <div 
-        className="relative w-full bg-black overflow-hidden border-b border-white/10" 
+      <div
+        className="relative w-full bg-black overflow-hidden border-b border-white/10"
         style={{ height: 'clamp(200px, 42dvh, 360px)' }}
         onPointerDown={handleMiss}
       >
@@ -195,7 +196,7 @@ const MemoryGame = ({ onComplete, difficulty = 'normal' }: { onComplete: () => v
   const [cards] = useState(() => [...symbols, ...symbols].sort(() => Math.random() - 0.5));
   const [flipped, setFlipped] = useState<number[]>([]);
   const [solved, setSolved] = useState<number[]>([]);
-  
+
   const [timeLeft, setTimeLeft] = useState(difficulty === 'hard' ? 30 : 45);
   const [wrongCount, setWrongCount] = useState(0);
   const maxWrong = difficulty === 'hard' ? 2 : 3;
@@ -333,9 +334,9 @@ const PatternGame = ({ onComplete, difficulty = 'normal' }: { onComplete: () => 
     if (difficulty === 'hard' && !playing && !done && !failed && pattern.length > 0) {
       const interval = setInterval(() => {
         if (Math.random() < 0.3) {
-           const idx = Math.floor(Math.random() * 4);
-           setDistractionActive(idx);
-           setTimeout(() => setDistractionActive(null), 150);
+          const idx = Math.floor(Math.random() * 4);
+          setDistractionActive(idx);
+          setTimeout(() => setDistractionActive(null), 150);
         }
       }, 800);
       return () => {
@@ -353,7 +354,7 @@ const PatternGame = ({ onComplete, difficulty = 'normal' }: { onComplete: () => 
 
     const next = [...userPattern, i];
     setUserPattern(next);
-    
+
     if (pattern[userPattern.length] !== i) {
       setWrongFlash(true); haptic([100, 50, 100]);
       if (restarts >= maxRestarts) {
@@ -417,12 +418,12 @@ const PatternGame = ({ onComplete, difficulty = 'normal' }: { onComplete: () => 
       </div>
       <div className="grid grid-cols-2 gap-3">
         {[0, 1, 2, 3].map((i) => {
-           const isActive = active === i;
-           const isDistraction = distractionActive === i;
-           const bgClass = isActive ? `${colorClasses[i].bg} shadow-lg scale-105` : 
-                           isDistraction ? `${colorClasses[i].bg} shadow-lg scale-105 opacity-60` : 
-                           colorClasses[i].dim;
-           return (
+          const isActive = active === i;
+          const isDistraction = distractionActive === i;
+          const bgClass = isActive ? `${colorClasses[i].bg} shadow-lg scale-105` :
+            isDistraction ? `${colorClasses[i].bg} shadow-lg scale-105 opacity-60` :
+              colorClasses[i].dim;
+          return (
             <motion.div
               key={i} whileTap={{ scale: 0.92 }} onClick={() => handlePress(i)}
               className={`cursor-pointer transition-all duration-200 border-0 ${bgClass}`}
@@ -451,23 +452,23 @@ const SignalTraceGame = ({ onComplete, difficulty = 'normal' }: { onComplete: ()
   const maxErrors = difficulty === 'hard' ? 0 : 2;
 
   const stateRef = React.useRef({
-    path: [] as {x: number, y: number}[], progress: 0, dragging: false, nodePos: {x: 0, y: 0},
+    path: [] as { x: number, y: number }[], progress: 0, dragging: false, nodePos: { x: 0, y: 0 },
     corridorW: difficulty === 'hard' ? 20 : 32
   });
 
   const generatePath = (W: number, H: number) => {
     const pts = []; const margin = 40; const steps = 7;
-    pts.push({x: margin+10, y: H - margin});
+    pts.push({ x: margin + 10, y: H - margin });
     for (let i = 1; i < steps; i++) {
-      const x = margin + (W - margin*2) * (i / (steps-1));
+      const x = margin + (W - margin * 2) * (i / (steps - 1));
       const y = (i % 2 === 0) ? H - margin : margin + 30;
-      pts.push({x, y});
+      pts.push({ x, y });
     }
     const smooth = [];
-    for (let i = 0; i < pts.length-1; i++) {
-      for (let t = 0; t < 20; t++) smooth.push({ x: pts[i].x + (pts[i+1].x - pts[i].x) * (t/20), y: pts[i].y + (pts[i+1].y - pts[i].y) * (t/20) });
+    for (let i = 0; i < pts.length - 1; i++) {
+      for (let t = 0; t < 20; t++) smooth.push({ x: pts[i].x + (pts[i + 1].x - pts[i].x) * (t / 20), y: pts[i].y + (pts[i + 1].y - pts[i].y) * (t / 20) });
     }
-    smooth.push(pts[pts.length-1]);
+    smooth.push(pts[pts.length - 1]);
     return smooth;
   };
 
@@ -476,33 +477,33 @@ const SignalTraceGame = ({ onComplete, difficulty = 'normal' }: { onComplete: ()
     const ctx = canvas.getContext('2d'); if (!ctx) return;
     const { path, corridorW, progress, nodePos } = stateRef.current;
     if (path.length === 0) return;
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
     ctx.lineWidth = corridorW * 2; ctx.strokeStyle = '#1e2d3d'; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     ctx.beginPath(); ctx.moveTo(path[0].x, path[0].y);
     for (let i = 1; i < path.length; i++) ctx.lineTo(path[i].x, path[i].y);
     ctx.stroke(); ctx.lineWidth = 1; ctx.strokeStyle = '#1e4060'; ctx.stroke();
 
     if (progress > 0) {
-      const idx = Math.floor(progress * (path.length-1));
+      const idx = Math.floor(progress * (path.length - 1));
       ctx.lineWidth = 3; ctx.strokeStyle = '#00f5a0'; ctx.shadowColor = '#00f5a0'; ctx.shadowBlur = 8;
       ctx.beginPath(); ctx.moveTo(path[0].x, path[0].y);
       for (let i = 1; i <= idx; i++) ctx.lineTo(path[i].x, path[i].y);
       ctx.stroke(); ctx.shadowBlur = 0;
     }
-    
-    ctx.beginPath(); ctx.arc(path[0].x, path[0].y, 8, 0, Math.PI*2); ctx.fillStyle = '#00f5a0'; ctx.fill();
-    ctx.beginPath(); ctx.arc(path[path.length-1].x, path[path.length-1].y, 8, 0, Math.PI*2); ctx.fillStyle = progress >= 1 ? '#00f5a0' : '#5a7a8a'; ctx.fill();
 
-    ctx.beginPath(); ctx.arc(nodePos.x, nodePos.y, 10, 0, Math.PI*2); ctx.fillStyle = '#00f5a0'; ctx.shadowColor = '#00f5a0'; ctx.shadowBlur = 12; ctx.fill(); ctx.shadowBlur = 0;
-    ctx.beginPath(); ctx.arc(nodePos.x, nodePos.y, 5, 0, Math.PI*2); ctx.fillStyle = '#fff'; ctx.fill();
+    ctx.beginPath(); ctx.arc(path[0].x, path[0].y, 8, 0, Math.PI * 2); ctx.fillStyle = '#00f5a0'; ctx.fill();
+    ctx.beginPath(); ctx.arc(path[path.length - 1].x, path[path.length - 1].y, 8, 0, Math.PI * 2); ctx.fillStyle = progress >= 1 ? '#00f5a0' : '#5a7a8a'; ctx.fill();
+
+    ctx.beginPath(); ctx.arc(nodePos.x, nodePos.y, 10, 0, Math.PI * 2); ctx.fillStyle = '#00f5a0'; ctx.shadowColor = '#00f5a0'; ctx.shadowBlur = 12; ctx.fill(); ctx.shadowBlur = 0;
+    ctx.beginPath(); ctx.arc(nodePos.x, nodePos.y, 5, 0, Math.PI * 2); ctx.fillStyle = '#fff'; ctx.fill();
   };
 
   const start = () => {
     const canvas = canvasRef.current; if (!canvas) return;
     stateRef.current.path = generatePath(canvas.width, canvas.height);
     stateRef.current.progress = 0;
-    stateRef.current.nodePos = {...stateRef.current.path[0]};
+    stateRef.current.nodePos = { ...stateRef.current.path[0] };
     setPlaying(true); setTimeLeft(maxTime); setStatus(null); setFailed(false); setErrors(0);
     draw();
   };
@@ -529,13 +530,13 @@ const SignalTraceGame = ({ onComplete, difficulty = 'normal' }: { onComplete: ()
   useEffect(() => {
     if (canvasRef.current && !playing && !done && stateRef.current.path.length === 0) {
       stateRef.current.path = generatePath(canvasRef.current.width, canvasRef.current.height);
-      stateRef.current.nodePos = {...stateRef.current.path[0]};
+      stateRef.current.nodePos = { ...stateRef.current.path[0] };
       draw();
     }
   }, [playing, done]);
 
   const getPos = (e: any) => {
-    const canvas = canvasRef.current; if (!canvas) return {x:0,y:0};
+    const canvas = canvasRef.current; if (!canvas) return { x: 0, y: 0 };
     const r = canvas.getBoundingClientRect();
     const src = e.touches ? e.touches[0] : e;
     return { x: (src.clientX - r.left) * (canvas.width / r.width), y: (src.clientY - r.top) * (canvas.height / r.height) };
@@ -552,37 +553,37 @@ const SignalTraceGame = ({ onComplete, difficulty = 'normal' }: { onComplete: ()
     if (!playing || !stateRef.current.dragging || failed) return;
     const pos = getPos(e);
     const { path, corridorW, progress } = stateRef.current;
-    let bestIdx = Math.floor(progress * (path.length-1));
+    let bestIdx = Math.floor(progress * (path.length - 1));
     let bestDist = Infinity;
     for (let i = bestIdx; i < path.length; i++) {
       const d = Math.hypot(pos.x - path[i].x, pos.y - path[i].y);
       if (d < bestDist) { bestDist = d; bestIdx = i; }
-      if (i - Math.floor(progress * (path.length-1)) > 30) break;
+      if (i - Math.floor(progress * (path.length - 1)) > 30) break;
     }
-    
+
     if (bestDist > corridorW) {
-      stateRef.current.dragging = false; stateRef.current.progress = 0; stateRef.current.nodePos = {...path[0]};
-      haptic(100); 
+      stateRef.current.dragging = false; stateRef.current.progress = 0; stateRef.current.nodePos = { ...path[0] };
+      haptic(100);
       setErrors(err => {
         const next = err + 1;
         if (next > maxErrors) {
-           setPlaying(false);
-           setFailed(true);
-           setStatus(difficulty === 'hard' ? 'INSTANT FAIL: OFF TRACK' : 'TOO MANY ERRORS');
+          setPlaying(false);
+          setFailed(true);
+          setStatus(difficulty === 'hard' ? 'INSTANT FAIL: OFF TRACK' : 'TOO MANY ERRORS');
         } else {
-           setStatus('OFF TRACK - RESTART'); 
-           setTimeout(() => setStatus(null), 800);
+          setStatus('OFF TRACK - RESTART');
+          setTimeout(() => setStatus(null), 800);
         }
         return next;
       });
     } else {
-      const newProg = bestIdx / (path.length-1);
+      const newProg = bestIdx / (path.length - 1);
       if (newProg > stateRef.current.progress) {
         stateRef.current.progress = newProg;
-        stateRef.current.nodePos = {...path[bestIdx]};
+        stateRef.current.nodePos = { ...path[bestIdx] };
       }
       if (stateRef.current.progress >= 0.99) {
-        stateRef.current.dragging = false; setPlaying(false); setDone(true); onComplete(); haptic([50,30,100]);
+        stateRef.current.dragging = false; setPlaying(false); setDone(true); onComplete(); haptic([50, 30, 100]);
       }
     }
     draw();
@@ -618,9 +619,9 @@ const SignalTraceGame = ({ onComplete, difficulty = 'normal' }: { onComplete: ()
         <span>ERRORS: <span className="text-red-400">{errors}</span>/{maxErrors}</span>
         <span>TIME: <span className={timeLeft <= 5 ? 'text-red-400' : 'text-white/80'}>{timeLeft.toFixed(1)}s</span></span>
       </div>
-      <div className="w-full h-1 bg-white/10 overflow-hidden"><div className="h-full bg-[var(--color-accent)] transition-all" style={{ width: `${(timeLeft/maxTime)*100}%`, background: timeLeft<maxTime*0.3?'#ff4757':'var(--color-accent)' }} /></div>
-      <canvas 
-        ref={canvasRef} width={420} height={340} 
+      <div className="w-full h-1 bg-white/10 overflow-hidden"><div className="h-full bg-[var(--color-accent)] transition-all" style={{ width: `${(timeLeft / maxTime) * 100}%`, background: timeLeft < maxTime * 0.3 ? '#ff4757' : 'var(--color-accent)' }} /></div>
+      <canvas
+        ref={canvasRef} width={420} height={340}
         className="border border-white/10 w-full touch-none bg-black cursor-crosshair rounded"
         onMouseDown={onStartMove} onMouseMove={onMove} onMouseUp={onEndMove} onMouseLeave={onEndMove}
         onTouchStart={onStartMove} onTouchMove={onMove} onTouchEnd={onEndMove}
@@ -657,10 +658,10 @@ const FrequencyJamGame = ({ onComplete, difficulty = 'normal' }: { onComplete: (
       setLevel(prev => {
         const next = prev - (dropRate / 10); // 10 ticks per second
         if (difficulty === 'hard' && next <= 0) {
-           setFailed(true);
-           setPlaying(false);
-           haptic([100, 100]);
-           return 0;
+          setFailed(true);
+          setPlaying(false);
+          haptic([100, 100]);
+          return 0;
         }
         return Math.max(0, next);
       });
@@ -673,14 +674,14 @@ const FrequencyJamGame = ({ onComplete, difficulty = 'normal' }: { onComplete: (
     const interval = setInterval(() => {
       if (level >= minTarget && level <= maxTarget) {
         setTimeInZone(prev => {
-           const next = prev + 100;
-           if (next >= targetTime) {
-              setDone(true);
-              setPlaying(false);
-              onComplete();
-              haptic([50, 30, 100]);
-           }
-           return next;
+          const next = prev + 100;
+          if (next >= targetTime) {
+            setDone(true);
+            setPlaying(false);
+            onComplete();
+            haptic([50, 30, 100]);
+          }
+          return next;
         });
       } else {
         setTimeInZone(prev => Math.max(0, prev - 200)); // drain quickly if outside zone
@@ -728,34 +729,34 @@ const FrequencyJamGame = ({ onComplete, difficulty = 'normal' }: { onComplete: (
         <span>HOLD TARGET: <span className="text-[var(--color-accent)]">{minTarget}% - {maxTarget}%</span></span>
         <span>SYNC: <span className={inZone ? 'text-[var(--color-accent)]' : 'text-white/80'}>{(timeInZone / 1000).toFixed(1)}s / {(targetTime / 1000).toFixed(1)}s</span></span>
       </div>
-      
+
       <div className="relative w-full h-48 bg-black border border-white/10 rounded flex items-end justify-center overflow-hidden">
         {/* Sweet spot background indicator */}
-        <div 
-          className="absolute w-full bg-[var(--color-accent)]/10 border-y border-[var(--color-accent)]/30 transition-all" 
-          style={{ bottom: `${minTarget}%`, height: `${maxTarget - minTarget}%` }} 
+        <div
+          className="absolute w-full bg-[var(--color-accent)]/10 border-y border-[var(--color-accent)]/30 transition-all"
+          style={{ bottom: `${minTarget}%`, height: `${maxTarget - minTarget}%` }}
         />
-        
+
         {/* Level Bar */}
-        <div 
+        <div
           className={`w-24 transition-all duration-100 ${inZone ? 'bg-[var(--color-accent)] shadow-[0_0_15px_var(--color-accent)]' : 'bg-white/40'}`}
           style={{ height: `${level}%` }}
         />
-        
+
         {/* Percent Label */}
         <div className="absolute top-4 left-4 font-mono text-xl text-white/50">{Math.round(level)}%</div>
       </div>
 
       {!playing && !failed && (
-         <button onClick={(e) => { e.stopPropagation(); start(); }} className="w-full bg-zinc-900 hover:bg-zinc-800 py-4 font-bold text-lg transition-colors border-0 mt-4 clip-oct">
-           {level === 30 && timeInZone === 0 ? '▶ Start Jam' : '🔄 Restart Jam'}
-         </button>
+        <button onClick={(e) => { e.stopPropagation(); start(); }} className="w-full bg-zinc-900 hover:bg-zinc-800 py-4 font-bold text-lg transition-colors border-0 mt-4 clip-oct">
+          {level === 30 && timeInZone === 0 ? '▶ Start Jam' : '🔄 Restart Jam'}
+        </button>
       )}
-      
+
       {playing && (
-         <div className="text-white/40 font-mono text-sm mt-4 animate-pulse">
-           TAP RAPIDLY TO MAINTAIN FREQUENCY
-         </div>
+        <div className="text-white/40 font-mono text-sm mt-4 animate-pulse">
+          TAP RAPIDLY TO MAINTAIN FREQUENCY
+        </div>
       )}
     </div>
   );
@@ -766,13 +767,13 @@ const CoreDumpGame = ({ onComplete, difficulty = 'normal' }: { onComplete: () =>
   const len = difficulty === 'hard' ? 12 : 8;
   const timeLimit = difficulty === 'hard' ? 12 : 15;
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  const genCode = () => Array.from({length:len}, () => chars[Math.floor(Math.random()*chars.length)]).join('');
-  
+  const genCode = () => Array.from({ length: len }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+
   const [code, setCode] = useState(genCode);
   const [input, setInput] = useState('');
   const [playing, setPlaying] = useState(false);
   const [timeLeft, setTimeLeft] = useState(timeLimit);
-  const [status, setStatus] = useState<string|null>(null);
+  const [status, setStatus] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const [failed, setFailed] = useState(false);
 
@@ -802,8 +803,8 @@ const CoreDumpGame = ({ onComplete, difficulty = 'normal' }: { onComplete: () =>
       const rid = setInterval(() => {
         setInput(prev => {
           if (prev.length < len && prev === code.substring(0, prev.length)) {
-             haptic(15);
-             return prev + code[prev.length];
+            haptic(15);
+            return prev + code[prev.length];
           }
           return prev;
         });
@@ -814,30 +815,30 @@ const CoreDumpGame = ({ onComplete, difficulty = 'normal' }: { onComplete: () =>
 
   useEffect(() => {
     if (input.length === len && input === code && playing) {
-      setPlaying(false); setDone(true); onComplete(); haptic([30,30,80]);
+      setPlaying(false); setDone(true); onComplete(); haptic([30, 30, 80]);
     }
   }, [input, code, len, playing, onComplete]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!playing || failed || done) return;
     const val = e.target.value.toUpperCase();
-    
+
     if (val.length < input.length) {
-       setInput(val);
-       return;
+      setInput(val);
+      return;
     }
 
     if (!code.startsWith(val)) {
-       haptic(100);
-       if (difficulty === 'hard') {
-          setTimeLeft(v => Math.max(0, v - 1));
-          setStatus('PENALTY: -1s');
-          setTimeout(() => setStatus(null), 800);
-       } else {
-          setStatus('INVALID CHAR');
-          setTimeout(() => setStatus(null), 800);
-       }
-       return;
+      haptic(100);
+      if (difficulty === 'hard') {
+        setTimeLeft(v => Math.max(0, v - 1));
+        setStatus('PENALTY: -1s');
+        setTimeout(() => setStatus(null), 800);
+      } else {
+        setStatus('INVALID CHAR');
+        setTimeout(() => setStatus(null), 800);
+      }
+      return;
     }
 
     setInput(val);
@@ -873,10 +874,10 @@ const CoreDumpGame = ({ onComplete, difficulty = 'normal' }: { onComplete: () =>
         <span>CHARS: <span className="text-[var(--color-accent)]">{input.length}</span>/{len}</span>
         <span>TIME: <span className={timeLeft <= 3 ? 'text-red-400' : 'text-white/80'}>{timeLeft.toFixed(1)}s</span></span>
       </div>
-      <div className="w-full h-1 bg-white/10 overflow-hidden"><div className="h-full transition-all bg-[var(--color-accent)]" style={{ width: `${(timeLeft/timeLimit)*100}%`, background: timeLeft<3?'#ff4757':'var(--color-accent)' }} /></div>
-      
+      <div className="w-full h-1 bg-white/10 overflow-hidden"><div className="h-full transition-all bg-[var(--color-accent)]" style={{ width: `${(timeLeft / timeLimit) * 100}%`, background: timeLeft < 3 ? '#ff4757' : 'var(--color-accent)' }} /></div>
+
       <div className="w-full bg-zinc-900 border border-white/10 p-6 rounded text-center font-mono text-3xl tracking-[0.2em] break-all h-24 flex items-center justify-center">
-        {!playing ? <span className="text-white/20 text-sm">Press start to begin</span> : 
+        {!playing ? <span className="text-white/20 text-sm">Press start to begin</span> :
           code.split('').map((c, i) => {
             const isInput = i < input.length;
             const isCorrect = isInput && input[i] === c;
@@ -884,9 +885,9 @@ const CoreDumpGame = ({ onComplete, difficulty = 'normal' }: { onComplete: () =>
           })
         }
       </div>
-      
+
       <input type="text" value={input} onChange={handleChange} disabled={!playing} placeholder="TYPE CODE..." className="w-full bg-black border border-white/20 text-center text-xl font-mono p-4 text-white uppercase focus:border-[var(--color-accent)] outline-none" autoFocus={playing} />
-      
+
       <div className="font-mono text-sm font-bold text-red-500 h-4">{status || ''}</div>
       {!playing && !failed && <button onClick={start} className="w-full bg-zinc-900 hover:bg-zinc-800 py-4 font-bold text-lg transition-colors border-0 mt-2 clip-oct">▶ Start Dump</button>}
     </div>
@@ -895,35 +896,35 @@ const CoreDumpGame = ({ onComplete, difficulty = 'normal' }: { onComplete: () =>
 
 // ─── OVERLOAD ─────────────────────────────────────────────────
 const OverloadGame = ({ onComplete, difficulty = 'normal' }: { onComplete: () => void, difficulty?: 'normal' | 'hard' }) => {
-  const goal = difficulty === 'hard' ? 20 : 15; 
-  const timeLimit = difficulty === 'hard' ? 20 : 18; 
+  const goal = difficulty === 'hard' ? 20 : 15;
+  const timeLimit = difficulty === 'hard' ? 20 : 18;
   const windowMs = difficulty === 'hard' ? 500 : 750;
   const initialLives = difficulty === 'hard' ? 1 : 2;
-  
+
   const [playing, setPlaying] = useState(false);
   const [timeLeft, setTimeLeft] = useState(timeLimit);
   const [hits, setHits] = useState(0);
   const [lives, setLives] = useState(initialLives);
   const [locked, setLocked] = useState(false);
-  const [status, setStatus] = useState<string|null>(null);
+  const [status, setStatus] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const [failed, setFailed] = useState(false);
-  const [nodes, setNodes] = useState<Record<number, {type: 'threat'|'decoy', id: number}>>({});
-  
+  const [nodes, setNodes] = useState<Record<number, { type: 'threat' | 'decoy', id: number }>>({});
+
   const stateRef = React.useRef({ hits: 0, lives: initialLives, idCounter: 0, startTime: 0 });
   const nodesRef = React.useRef(nodes);
   useEffect(() => { nodesRef.current = nodes; }, [nodes]);
 
-  const start = () => { 
-    setHits(0); 
-    setLives(initialLives); 
-    setTimeLeft(timeLimit); 
-    setPlaying(true); 
-    setNodes({}); 
-    setLocked(false); 
-    setStatus(null); 
+  const start = () => {
+    setHits(0);
+    setLives(initialLives);
+    setTimeLeft(timeLimit);
+    setPlaying(true);
+    setNodes({});
+    setLocked(false);
+    setStatus(null);
     setFailed(false);
-    stateRef.current = { hits: 0, lives: initialLives, idCounter: 0, startTime: Date.now() }; 
+    stateRef.current = { hits: 0, lives: initialLives, idCounter: 0, startTime: Date.now() };
   };
 
   useEffect(() => {
@@ -942,7 +943,7 @@ const OverloadGame = ({ onComplete, difficulty = 'normal' }: { onComplete: () =>
     const maxActive = difficulty === 'hard' ? 6 : 4;
     let active = true;
     let timeoutId: any;
-    
+
     const scheduleNext = () => {
       if (!active) return;
       const elapsed = (Date.now() - stateRef.current.startTime) / 1000;
@@ -954,17 +955,18 @@ const OverloadGame = ({ onComplete, difficulty = 'normal' }: { onComplete: () =>
 
       timeoutId = setTimeout(() => {
         if (!active) return;
-        
+
         const currentNodes = nodesRef.current;
         if (Object.keys(currentNodes).length < maxActive) {
-          const free = [0,1,2,3,4,5,6,7,8].filter(i => !currentNodes[i]);
+          const free = [0, 1, 2, 3, 4, 5, 6, 7, 8].filter(i => !currentNodes[i]);
           if (free.length > 0) {
+
             const idx = free[Math.floor(Math.random() * free.length)];
             const isDecoy = Math.random() < (difficulty === 'hard' ? 0.4 : 0.3);
             const id = ++stateRef.current.idCounter;
-            
-            setNodes(prev => ({...prev, [idx]: { type: isDecoy ? 'decoy' : 'threat', id }}));
-            
+
+            setNodes(prev => ({ ...prev, [idx]: { type: isDecoy ? 'decoy' : 'threat', id } }));
+
             // Setup expiration
             setTimeout(() => {
               if (!active) return;
@@ -976,14 +978,14 @@ const OverloadGame = ({ onComplete, difficulty = 'normal' }: { onComplete: () =>
                     stateRef.current.lives = newLives; setLives(newLives);
                     if (newLives <= 0) { setPlaying(false); setFailed(true); setStatus('SYSTEM OVERRUN'); haptic([200, 200]); }
                   }
-                  const next = {...curr}; delete next[idx]; return next;
+                  const next = { ...curr }; delete next[idx]; return next;
                 }
                 return curr;
               });
             }, windowMs);
           }
         }
-        
+
         scheduleNext();
       }, delay);
     };
@@ -996,17 +998,17 @@ const OverloadGame = ({ onComplete, difficulty = 'normal' }: { onComplete: () =>
   const handleTap = (idx: number) => {
     if (!playing || locked || failed || done) return;
     const node = nodes[idx]; if (!node) return;
-    
-    setNodes(prev => { const next = {...prev}; delete next[idx]; return next; });
-    
+
+    setNodes(prev => { const next = { ...prev }; delete next[idx]; return next; });
+
     if (node.type === 'threat') {
       const newHits = stateRef.current.hits + 1;
       stateRef.current.hits = newHits; setHits(newHits); haptic(30);
-      if (newHits >= goal) { setPlaying(false); setDone(true); onComplete(); haptic([50,30,100]); }
+      if (newHits >= goal) { setPlaying(false); setDone(true); onComplete(); haptic([50, 30, 100]); }
     } else {
-      haptic(200); 
-      setLocked(true); 
-      
+      haptic(200);
+      setLocked(true);
+
       let lockTime = 1500;
       if (difficulty === 'hard') {
         lockTime = 2000;
@@ -1050,11 +1052,11 @@ const OverloadGame = ({ onComplete, difficulty = 'normal' }: { onComplete: () =>
         <span>TOLERANCE: <span className="text-red-400">{lives}</span></span>
         <span>TIME: <span className={timeLeft <= 5 ? 'text-red-400' : 'text-white/80'}>{timeLeft.toFixed(1)}s</span></span>
       </div>
-      <div className="w-full h-1 bg-white/10 overflow-hidden"><div className="h-full transition-all bg-[var(--color-accent)]" style={{ width: `${(timeLeft/timeLimit)*100}%`, background: timeLeft<5?'#ff4757':'var(--color-accent)' }} /></div>
-      
+      <div className="w-full h-1 bg-white/10 overflow-hidden"><div className="h-full transition-all bg-[var(--color-accent)]" style={{ width: `${(timeLeft / timeLimit) * 100}%`, background: timeLeft < 5 ? '#ff4757' : 'var(--color-accent)' }} /></div>
+
       <div className="relative w-full aspect-square max-w-[320px] mx-auto mt-4">
         <div className="grid grid-cols-3 grid-rows-3 gap-3 absolute inset-0">
-          {[0,1,2,3,4,5,6,7,8].map(i => {
+          {[0, 1, 2, 3, 4, 5, 6, 7, 8].map(i => {
             const node = nodes[i];
             return (
               <motion.div key={i} whileTap={{ scale: 0.9 }} onPointerDown={(e) => { e.preventDefault(); handleTap(i); }}
@@ -1067,7 +1069,7 @@ const OverloadGame = ({ onComplete, difficulty = 'normal' }: { onComplete: () =>
         </div>
         {locked && <div className="absolute inset-0 bg-red-500/20 backdrop-blur-sm flex items-center justify-center font-mono text-red-500 font-bold tracking-widest z-10 rounded-lg">LOCKOUT</div>}
       </div>
-      
+
       <div className="font-mono text-sm font-bold text-red-500 h-4">{status || ''}</div>
       {!playing && !failed && <button onClick={start} className="w-full bg-zinc-900 hover:bg-zinc-800 py-4 font-bold text-lg transition-colors border-0 mt-2 clip-oct text-[var(--color-accent)]">▶ Start Defense</button>}
     </div>
@@ -1078,41 +1080,42 @@ const OverloadGame = ({ onComplete, difficulty = 'normal' }: { onComplete: () =>
 const ZeroDayGame = ({ onComplete, difficulty = 'normal' }: { onComplete: () => void, difficulty?: 'normal' | 'hard' }) => {
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
   const [playing, setPlaying] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(difficulty === 'hard' ? 25 : 20);
+  const [timeLeft, setTimeLeft] = useState(difficulty === 'hard' ? 15 : 20);
   const [done, setDone] = useState(false);
   const [failed, setFailed] = useState(false);
-  const [status, setStatus] = useState<string|null>(null);
-  
-  const stateRef = React.useRef({ 
-    x: 170, y: 360, targetX: 170, 
-    barriers: [] as {y: number, gapX: number, gapW: number, nearMissToggled?: boolean}[], 
-    speed: 2, lastTime: 0, 
-    surviveMs: difficulty === 'hard' ? 25000 : 20000, 
-    startMs: 0, animFrame: 0, 
+  const [status, setStatus] = useState<string | null>(null);
+
+  const stateRef = React.useRef({
+    x: 170, y: 360, targetX: 170,
+    barriers: [] as { y: number, gapX: number, gapW: number, nearMissToggled?: boolean }[],
+    speed: 2, lastTime: 0,
+    surviveMs: difficulty === 'hard' ? 15000 : 20000,
+    startMs: 0, animFrame: 0,
     nearMissCount: 0,
     isPlaying: false
   });
 
   const start = () => {
-    stateRef.current.x = 170; 
-    stateRef.current.targetX = 170; 
-    stateRef.current.barriers = []; 
-    stateRef.current.startMs = performance.now(); 
-    stateRef.current.lastTime = performance.now(); 
+    stateRef.current.x = 170;
+    stateRef.current.targetX = 170;
+    stateRef.current.barriers = [];
+    stateRef.current.surviveMs = difficulty === 'hard' ? 15000 : 20000;
+    stateRef.current.startMs = performance.now();
+    stateRef.current.lastTime = performance.now();
     stateRef.current.nearMissCount = 0;
     stateRef.current.isPlaying = true;
-    
-    setPlaying(true); 
-    setTimeLeft(stateRef.current.surviveMs/1000); 
-    setStatus(null); 
+
+    setPlaying(true);
+    setTimeLeft(stateRef.current.surviveMs / 1000);
+    setStatus(null);
     setFailed(false);
-    
+
     const hard = difficulty === 'hard';
-    const W = 340; const H = 420; 
-    const gapW = hard ? W*0.22 : W*0.30; 
+    const W = 340; const H = 420;
+    const gapW = hard ? W * 0.22 : W * 0.30;
     const spY = hard ? 110 : 130;
-    
-    for(let y = -spY; y > -H; y -= spY) stateRef.current.barriers.push({y, gapX: Math.random()*(W-gapW), gapW});
+
+    for (let y = -spY; y > -H; y -= spY) stateRef.current.barriers.push({ y, gapX: Math.random() * (W - gapW), gapW });
     loop();
   };
 
@@ -1122,64 +1125,64 @@ const ZeroDayGame = ({ onComplete, difficulty = 'normal' }: { onComplete: () => 
     const now = performance.now();
     const elapsed = now - s.startMs;
     if (elapsed >= s.surviveMs) {
-      s.isPlaying = false; setPlaying(false); setDone(true); onComplete(); haptic([50,30,100]); return;
+      s.isPlaying = false; setPlaying(false); setDone(true); onComplete(); haptic([50, 30, 100]); return;
     }
-    
-    setTimeLeft((s.surviveMs - elapsed)/1000);
-    
+
+    setTimeLeft((s.surviveMs - elapsed) / 1000);
+
     // Speed ramps every 3s for normal, 2s for hard
     const rampInterval = difficulty === 'hard' ? 2000 : 3000;
     s.speed = 2 + Math.floor(elapsed / rampInterval) * 0.4;
-    
+
     s.x += (s.targetX - s.x) * 0.18;
-    s.x = Math.max(12, Math.min(340-12, s.x));
-    
+    s.x = Math.max(12, Math.min(340 - 12, s.x));
+
     s.barriers.forEach(b => b.y += s.speed);
     s.barriers = s.barriers.filter(b => b.y < 420 + 30);
-    
+
     const tops = s.barriers.map(b => b.y); const topmost = tops.length ? Math.min(...tops) : 0;
-    const spY = difficulty === 'hard' ? 110 : 130; 
-    const gapW = difficulty === 'hard' ? 340*0.22 : 340*0.30;
-    if (topmost > -spY + 60) s.barriers.push({y: topmost - spY, gapX: Math.random()*(340-gapW), gapW});
-    
+    const spY = difficulty === 'hard' ? 110 : 130;
+    const gapW = difficulty === 'hard' ? 340 * 0.22 : 340 * 0.30;
+    if (topmost > -spY + 60) s.barriers.push({ y: topmost - spY, gapX: Math.random() * (340 - gapW), gapW });
+
     let crashed = false;
     let nearMiss = false;
     for (let b of s.barriers) {
       if (s.y >= b.y - 9 && s.y <= b.y + 9) {
         if (s.x < b.gapX || s.x > b.gapX + b.gapW) { crashed = true; break; }
         const margin = Math.min(s.x - b.gapX, b.gapX + b.gapW - s.x);
-        if (margin < gapW * 0.12) { 
-           if (!b.nearMissToggled) {
-              b.nearMissToggled = true;
-              nearMiss = true;
-           }
+        if (margin < gapW * 0.12) {
+          if (!b.nearMissToggled) {
+            b.nearMissToggled = true;
+            nearMiss = true;
+          }
         }
       }
     }
-    
+
     if (nearMiss) {
-        setStatus('⚠ NEAR MISS'); setTimeout(() => setStatus(curr => curr==='⚠ NEAR MISS'?null:curr), 400);
-        if (difficulty === 'hard') {
-           s.nearMissCount++;
-           if (s.nearMissCount >= 2) {
-              s.isPlaying = false; setPlaying(false); setFailed(true); setStatus('HULL INTEGRITY CRITICAL'); haptic(300); return;
-           }
-        } else {
-           s.startMs += 2000; // Add 2s to the survive timer
+      setStatus('⚠ NEAR MISS'); setTimeout(() => setStatus(curr => curr === '⚠ NEAR MISS' ? null : curr), 400);
+      if (difficulty === 'hard') {
+        s.nearMissCount++;
+        if (s.nearMissCount >= 2) {
+          s.isPlaying = false; setPlaying(false); setFailed(true); setStatus('HULL INTEGRITY CRITICAL'); haptic(300); return;
         }
+      } else {
+        s.startMs += 2000; // Add 2s to the survive timer
+      }
     }
 
     if (crashed) { s.isPlaying = false; setPlaying(false); setFailed(true); setStatus('BREACH FAILED'); haptic(300); return; }
-    
+
     const ctx = canvasRef.current?.getContext('2d');
     if (ctx) {
-      ctx.fillStyle = '#0d1117'; ctx.fillRect(0,0,340,420);
+      ctx.fillStyle = '#0d1117'; ctx.fillRect(0, 0, 340, 420);
       s.barriers.forEach(b => {
-        ctx.fillStyle = '#1e2d3d'; ctx.fillRect(0, b.y-9, b.gapX, 18); ctx.fillRect(b.gapX+b.gapW, b.y-9, 340-b.gapX-b.gapW, 18);
-        ctx.fillStyle = '#9c88ff'; ctx.fillRect(0, b.y-9, b.gapX, 1); ctx.fillRect(b.gapX+b.gapW, b.y-9, 340-b.gapX-b.gapW, 1);
+        ctx.fillStyle = '#1e2d3d'; ctx.fillRect(0, b.y - 9, b.gapX, 18); ctx.fillRect(b.gapX + b.gapW, b.y - 9, 340 - b.gapX - b.gapW, 18);
+        ctx.fillStyle = '#9c88ff'; ctx.fillRect(0, b.y - 9, b.gapX, 1); ctx.fillRect(b.gapX + b.gapW, b.y - 9, 340 - b.gapX - b.gapW, 1);
       });
       ctx.save(); ctx.translate(s.x, s.y); ctx.fillStyle = '#9c88ff'; ctx.shadowColor = '#9c88ff'; ctx.shadowBlur = 10;
-      ctx.beginPath(); ctx.moveTo(0,-10); ctx.lineTo(8,8); ctx.lineTo(0,4); ctx.lineTo(-8,8); ctx.closePath(); ctx.fill(); ctx.restore();
+      ctx.beginPath(); ctx.moveTo(0, -10); ctx.lineTo(8, 8); ctx.lineTo(0, 4); ctx.lineTo(-8, 8); ctx.closePath(); ctx.fill(); ctx.restore();
     }
     s.animFrame = requestAnimationFrame(loop);
   };
@@ -1194,7 +1197,7 @@ const ZeroDayGame = ({ onComplete, difficulty = 'normal' }: { onComplete: () => 
   useEffect(() => {
     if (!playing && !done && !failed) {
       const ctx = canvasRef.current?.getContext('2d');
-      if (ctx) { ctx.fillStyle = '#0d1117'; ctx.fillRect(0,0,340,420); ctx.fillStyle = '#9c88ff'; ctx.font = '14px monospace'; ctx.textAlign = 'center'; ctx.fillText('Ready to breach...', 170, 210); }
+      if (ctx) { ctx.fillStyle = '#0d1117'; ctx.fillRect(0, 0, 340, 420); ctx.fillStyle = '#9c88ff'; ctx.font = '14px monospace'; ctx.textAlign = 'center'; ctx.fillText('Ready to breach...', 170, 210); }
     }
   }, [playing, done, failed]);
 
@@ -1231,18 +1234,235 @@ const ZeroDayGame = ({ onComplete, difficulty = 'normal' }: { onComplete: () => 
         <span>SURVIVE: <span className={timeLeft <= 5 ? 'text-red-400' : 'text-purple-400'}>{Math.max(0, timeLeft).toFixed(1)}s</span></span>
         {difficulty === 'hard' && <span>NEAR MISS: <span className={stateRef.current.nearMissCount > 0 ? 'text-red-400' : 'text-white/80'}>{stateRef.current.nearMissCount}/2</span></span>}
       </div>
-      <div className="w-full h-1 bg-white/10 overflow-hidden"><div className="h-full transition-all" style={{ width: `${(1 - timeLeft/(difficulty==='hard'?25:20))*100}%`, background: '#9c88ff' }} /></div>
-      
+      <div className="w-full h-1 bg-white/10 overflow-hidden"><div className="h-full transition-all" style={{ width: `${(1 - timeLeft / 10) * 100}%`, background: '#9c88ff' }} /></div>
+
       <canvas ref={canvasRef} width={340} height={420} className="w-full max-w-[340px] border border-white/10 bg-black touch-none rounded" onMouseMove={onMove} onTouchMove={onMove} />
-      
+
       <div className="font-mono text-sm font-bold text-orange-400 h-4">{status || ''}</div>
       {!playing && !failed && <button onClick={start} className="w-full bg-zinc-900 hover:bg-zinc-800 py-4 font-bold text-lg transition-colors border-0 mt-2 clip-oct text-[var(--color-accent)]">▶ Breach Network</button>}
     </div>
   );
 };
 
+// ─── SIGNAL BURST GAME ──────────────────────────────────────────
+const SignalBurstGame = ({ onComplete, difficulty = 'normal' }: { onComplete: () => void, difficulty?: 'normal' | 'hard' }) => {
+  const [playing, setPlaying] = useState(false);
+  const [round, setRound] = useState(0);
+  const [status, setStatus] = useState<'IDLE' | 'ARMED' | 'HIT' | 'MISS' | 'DONE'>('IDLE');
+  const [msg, setMsg] = useState('Press START to begin');
+  const [windowMs] = useState(difficulty === 'hard' ? 250 : 400);
+  const [touched, setTouched] = useState<Set<number>>(new Set());
+  const [done, setDone] = useState(false);
+
+  const totalRounds = 3;
+  const touchTimesRef = useRef<Record<number, number>>({});
+  const ringRef = useRef<SVGCircleElement>(null);
+  const animRef = useRef<number | null>(null);
+
+  const startRound = () => {
+    setTouched(new Set());
+    touchTimesRef.current = {};
+    setStatus('ARMED');
+    setMsg('Hold all 4 points simultaneously');
+    animateRing(8000);
+  };
+
+  const animateRing = (durationMs: number) => {
+    if (!ringRef.current) return;
+    const ring = ringRef.current;
+    ring.style.opacity = '1';
+    ring.setAttribute('stroke-dashoffset', '188.5');
+    
+    const start = performance.now();
+    const step = (now: number) => {
+      const elapsed = now - start;
+      const progress = Math.min(elapsed / durationMs, 1);
+      const offset = 188.5 * (1 - progress);
+      ring.setAttribute('stroke-dashoffset', offset.toString());
+      
+      if (progress < 1) {
+        animRef.current = requestAnimationFrame(step);
+      } else {
+        ring.style.opacity = '0';
+        handleFail(durationMs); // Timeout
+      }
+    };
+    animRef.current = requestAnimationFrame(step);
+  };
+
+  const handleSuccess = () => {
+    if (animRef.current) cancelAnimationFrame(animRef.current);
+    if (ringRef.current) ringRef.current.style.opacity = '0';
+    
+    setStatus('HIT');
+    setMsg('SYNCHRONIZED');
+    haptic([50, 30, 50]);
+    
+    const nextRound = round + 1;
+    setRound(nextRound);
+    
+    if (nextRound >= totalRounds) {
+      setDone(true);
+      setStatus('DONE');
+      setPlaying(false);
+      setTimeout(onComplete, 1200);
+    } else {
+      setTimeout(startRound, 1000);
+    }
+  };
+
+  const handleFail = (spread: number) => {
+    if (animRef.current) cancelAnimationFrame(animRef.current);
+    if (ringRef.current) ringRef.current.style.opacity = '0';
+
+    setStatus('MISS');
+    setMsg(spread >= 8000 ? 'TIMEOUT - SIGNAL LOST' : `DESYNC - ${spread}ms spread`);
+    haptic(150);
+    setTouched(new Set());
+    touchTimesRef.current = {};
+
+    setTimeout(() => {
+      startRound();
+    }, 1500);
+  };
+
+  const handleTouch = (id: number, type: 'start' | 'end') => (e: React.PointerEvent) => {
+    if (!playing || status !== 'ARMED') return;
+    e.preventDefault();
+    
+    if (type === 'start') {
+      const now = Date.now();
+      touchTimesRef.current[id] = now;
+      
+      setTouched(prev => {
+        const next = new Set(prev);
+        next.add(id);
+        
+        if (next.size === 4) {
+          const times = Object.values(touchTimesRef.current);
+          const spread = Math.max(...times) - Math.min(...times);
+          if (spread <= windowMs) handleSuccess();
+          else handleFail(spread);
+        }
+        return next;
+      });
+    } else {
+      setTouched(prev => {
+        const next = new Set(prev);
+        next.delete(id);
+        delete touchTimesRef.current[id];
+        return next;
+      });
+    }
+  };
+
+  const startGame = () => {
+    setPlaying(true);
+    setRound(0);
+    setDone(false);
+    setTimeout(startRound, 500);
+  };
+
+  useEffect(() => {
+    return () => { if (animRef.current) cancelAnimationFrame(animRef.current); };
+  }, []);
+
+  return (
+    <div className="flex flex-col items-center space-y-6">
+      <div className="flex justify-between w-full font-mono text-[10px] text-white/40 uppercase tracking-widest px-2">
+        <div className="text-center">
+          <div className="opacity-50 mb-1">Burst</div>
+          <div className="text-white text-sm font-bold">{round}/{totalRounds}</div>
+        </div>
+        <div className="text-center">
+          <div className="opacity-50 mb-1">Tolerance</div>
+          <div className="text-emerald-400 text-sm font-bold">{windowMs}ms</div>
+        </div>
+        <div className="text-center">
+          <div className="opacity-50 mb-1">Status</div>
+          <div className={cn("text-sm font-bold", status === 'HIT' ? 'text-green-400' : status === 'MISS' ? 'text-red-400' : 'text-white/60')}>{status}</div>
+        </div>
+      </div>
+
+      <div className="relative w-72 h-72 bg-emerald-500/5 border border-emerald-500/20 rounded-xl overflow-hidden shadow-inner flex items-center justify-center touch-none">
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-1/2 left-0 right-0 h-px bg-emerald-500" />
+          <div className="absolute top-0 bottom-0 left-1/2 w-px bg-emerald-500" />
+        </div>
+
+        {[
+          { id: 0, style: { top: '15%', left: '15%' } },
+          { id: 1, style: { top: '15%', right: '15%' } },
+          { id: 2, style: { bottom: '15%', left: '15%' } },
+          { id: 3, style: { bottom: '15%', right: '15%' } },
+        ].map((c) => (
+          <button
+            key={c.id}
+            onPointerDown={handleTouch(c.id, 'start')}
+            onPointerUp={handleTouch(c.id, 'end')}
+            onPointerLeave={handleTouch(c.id, 'end')}
+            className={cn(
+              "absolute w-16 h-16 rounded-full border-2 flex items-center justify-center transition-all duration-100",
+              touched.has(c.id) 
+                ? "bg-emerald-500/30 border-emerald-400 scale-90 shadow-[0_0_15px_rgba(52,211,153,0.3)]" 
+                : "bg-white/5 border-white/20"
+            )}
+            style={c.style}
+          >
+            <Radio className={cn("w-6 h-6", touched.has(c.id) ? "text-white" : "text-white/20")} />
+          </button>
+        ))}
+
+        <svg className="absolute w-20 h-20 pointer-events-none" viewBox="0 0 80 80">
+          <circle cx="40" cy="40" r="30" fill="none" stroke="currentColor" strokeWidth="2" className="text-white/5" />
+          <circle 
+            ref={ringRef}
+            cx="40" cy="40" r="30" fill="none" stroke="currentColor" strokeWidth="2"
+            strokeDasharray="188.5" strokeDashoffset="188.5" strokeLinecap="round"
+            className="text-emerald-400 transition-opacity duration-300"
+            style={{ transform: 'rotate(-90deg)', transformOrigin: 'center', opacity: 0 }}
+          />
+        </svg>
+
+        {done && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center space-y-2">
+            <div className="w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center">
+              <CheckCircle2 className="w-8 h-8 text-green-400" />
+            </div>
+            <div className="text-green-400 font-bold uppercase tracking-widest text-xs">Signal Stabilized</div>
+          </motion.div>
+        )}
+      </div>
+
+      <div className="flex flex-col items-center space-y-3 w-full">
+        <div className={cn("text-[10px] font-mono uppercase tracking-[0.2em] h-4 transition-colors", status === 'MISS' ? 'text-red-400' : 'text-white/40')}>
+          {msg}
+        </div>
+        
+        <div className="flex gap-1.5">
+          {[0, 1, 2].map(i => (
+            <div key={i} className={cn(
+              "w-10 h-1 rounded-full transition-all duration-500",
+              i < round ? "bg-emerald-400" : i === round && playing ? "bg-white/30 animate-pulse" : "bg-white/10"
+            )} />
+          ))}
+        </div>
+      </div>
+
+      {!playing && !done && (
+        <button 
+          onClick={startGame}
+          className="w-full bg-emerald-500 hover:bg-emerald-400 text-black font-bold uppercase tracking-[0.2em] h-12 text-xs transition-all clip-oct"
+        >
+          Initiate Burst
+        </button>
+      )}
+    </div>
+  );
+};
+
 // ─── TYPES ────────────────────────────────────────────────────
-type GameType = 'tap' | 'memory' | 'pattern' | 'signal_trace' | 'frequency_jam' | 'core_dump' | 'overload' | 'zero_day';
+type GameType = 'tap' | 'memory' | 'pattern' | 'signal_trace' | 'frequency_jam' | 'core_dump' | 'overload' | 'signal_burst' | 'zero_day' | 'mirror_code' | 'thermal_calibrate' | 'telescope_lock' | 'dna_splice';
 type RunnerScreen = 'location' | 'ar_scanner' | 'manual_fallback' | 'passkey' | 'game' | 'victory';
 
 interface RunnerGameProps {
@@ -1348,6 +1568,11 @@ export function RunnerGame({
     core_dump: { title: 'CORE DUMP', icon: <Activity className="w-6 h-6 text-orange-400" />, color: 'text-orange-400' },
     overload: { title: 'OVERLOAD', icon: <AlertCircle className="w-6 h-6 text-red-400" />, color: 'text-red-400' },
     zero_day: { title: 'ZERO DAY', icon: <Shield className="w-6 h-6 text-purple-400" />, color: 'text-purple-400' },
+    signal_burst: { title: 'SIGNAL BURST', icon: <Radio className="w-6 h-6 text-emerald-400" />, color: 'text-emerald-400' },
+    mirror_code: { title: 'MIRROR CODE', icon: <LayoutGrid className="w-6 h-6 text-emerald-400" />, color: 'text-emerald-400' },
+    thermal_calibrate: { title: 'THERMAL CALIBRATE', icon: <Activity className="w-6 h-6 text-[#ff6b00]" />, color: 'text-[#ff6b00]' },
+    telescope_lock: { title: 'TELESCOPE LOCK', icon: <Crosshair className="w-6 h-6 text-blue-400" />, color: 'text-blue-400' },
+    dna_splice: { title: 'DNA SPLICE', icon: <Activity className="w-6 h-6 text-[#b400ff]" />, color: 'text-[#b400ff]' },
   };
 
   const handleVerifyPasskey = async () => {
@@ -1430,8 +1655,8 @@ export function RunnerGame({
                   {distance !== null && (
                     <div className="text-center text-xs font-mono">
                       <span className="text-white/40">DISTANCE TO TARGET: </span>
-                      <span className={distance <= 25 ? "text-green-400 font-bold" : "text-red-400 font-bold"}>
-                        {Math.round(distance)}m {distance <= 25 ? "(SIGNAL ACQUIRED)" : "(OUT OF RANGE)"}
+                      <span className={distance <= 10 ? "text-green-400 font-bold" : "text-red-400 font-bold"}>
+                        {Math.round(distance)}m {distance <= 10 ? "(SIGNAL ACQUIRED)" : "(OUT OF RANGE)"}
                       </span>
                     </div>
                   )}
@@ -1458,16 +1683,16 @@ export function RunnerGame({
                 <Button
                   className={cn(
                     "w-full font-bold uppercase tracking-[0.2em] h-14 transition-all",
-                    (arTestingBypassEnabled || (distance !== null && distance <= 25))
+                    (arTestingBypassEnabled || (distance !== null && distance <= 10))
                       ? "btn-primary !bg-[var(--color-accent)] !text-white hover:brightness-125"
                       : "bg-zinc-800 text-white/20 border-white/5 cursor-not-allowed"
                   )}
                   size="md"
-                  disabled={!arTestingBypassEnabled && (distance === null || distance > 25)}
+                  disabled={!arTestingBypassEnabled && (distance === null || distance > 10)}
                   onClick={() => { setError(null); setScreen('ar_scanner'); }}
                 >
                   <Camera className="mr-2 h-5 w-5" />
-                  {!arTestingBypassEnabled && distance !== null && distance > 25
+                  {!arTestingBypassEnabled && distance !== null && distance > 10
                     ? `OUT OF RANGE (${Math.round(distance)}m)`
                     : (arTestingBypassEnabled ? "BYPASS: OPEN AR LINK" : "OPEN GYRO-AR LINK")}
                 </Button>
@@ -1546,8 +1771,8 @@ export function RunnerGame({
                   {distance !== null && (
                     <div className="flex justify-between text-xs font-mono">
                       <span className="text-white/40">Distance</span>
-                      <span className={distance <= 25 ? "text-green-400 font-bold" : "text-red-400 font-bold"}>
-                        {Math.round(distance)}m {distance <= 25 ? "(OK)" : "(TOO FAR)"}
+                      <span className={distance <= 10 ? "text-green-400 font-bold" : "text-red-400 font-bold"}>
+                        {Math.round(distance)}m {distance <= 10 ? "(OK)" : "(TOO FAR)"}
                       </span>
                     </div>
                   )}
@@ -1559,12 +1784,12 @@ export function RunnerGame({
               <Button
                 className={cn(
                   "w-full font-bold uppercase tracking-[0.2em] h-14 transition-all",
-                  distance !== null && distance <= 25
+                  distance !== null && distance <= 10
                     ? "!bg-yellow-500/20 border border-yellow-500/40 hover:!bg-yellow-500/30 text-yellow-300"
                     : "bg-zinc-800 text-white/20 border-white/5 cursor-not-allowed"
                 )}
                 size="md"
-                disabled={distance === null || distance > 25}
+                disabled={distance === null || distance > 10}
                 onClick={() => {
                   // Volunteer-confirmed manual capture — go directly to passkey
                   setError(null);
@@ -1572,17 +1797,17 @@ export function RunnerGame({
                 }}
               >
                 <MapPin className="mr-2 h-5 w-5" />
-                {distance !== null && distance > 25 ? "OUT OF RANGE" : "CONFIRM MANUAL ARRIVAL"}
+                {distance !== null && distance > 10 ? "OUT OF RANGE" : "CONFIRM MANUAL ARRIVAL"}
               </Button>
               <Button
                 className={cn(
                   "w-full font-bold uppercase tracking-[0.2em] h-12 transition-all",
-                  distance !== null && distance <= 25
+                  distance !== null && distance <= 10
                     ? "bg-zinc-900 hover:bg-zinc-800 text-white/60"
                     : "bg-zinc-950 text-white/10 border-white/5 cursor-not-allowed"
                 )}
                 size="md"
-                disabled={distance === null || distance > 25}
+                disabled={distance === null || distance > 10}
                 onClick={() => setScreen('ar_scanner')}
               >
                 <Camera className="mr-2 h-4 w-4" /> RETRY AR CAMERA
@@ -1675,15 +1900,15 @@ export function RunnerGame({
                 <Button
                   className={cn(
                     "w-full font-bold uppercase tracking-[0.2em] h-14 transition-all",
-                    distance !== null && distance <= 25
+                    distance !== null && distance <= 10
                       ? "btn-primary"
                       : "bg-zinc-800 text-white/20 border-white/5 cursor-not-allowed"
                   )}
                   size="md"
                   onClick={handleVerifyPasskey}
-                  disabled={isVerifyingPasskey || !passkey.trim() || (distance !== null && distance > 25)}
+                  disabled={isVerifyingPasskey || !passkey.trim() || (distance !== null && distance > 10)}
                 >
-                  {distance !== null && distance > 25
+                  {distance !== null && distance > 10
                     ? `OUT OF RANGE (${Math.round(distance)}m)`
                     : isVerifyingPasskey ? (
                       <span className="flex items-center gap-2">
@@ -1729,6 +1954,11 @@ export function RunnerGame({
               {gameType === 'core_dump' && <CoreDumpGame onComplete={handleGameComplete} difficulty={difficulty} />}
               {gameType === 'overload' && <OverloadGame onComplete={handleGameComplete} difficulty={difficulty} />}
               {gameType === 'zero_day' && <ZeroDayGame onComplete={handleGameComplete} difficulty={difficulty} />}
+              {gameType === 'signal_burst' && <SignalBurstGame onComplete={handleGameComplete} difficulty={difficulty} />}
+              {gameType === 'mirror_code' && <MirrorCodeGame onComplete={handleGameComplete} difficulty={difficulty} />}
+              {gameType === 'thermal_calibrate' && <ThermalCalibrateGame onComplete={handleGameComplete} difficulty={difficulty} />}
+              {gameType === 'telescope_lock' && <TelescopeLockGame onComplete={handleGameComplete} difficulty={difficulty} />}
+              {gameType === 'dna_splice' && <DnaSpliceGame onComplete={handleGameComplete} difficulty={difficulty} />}
             </div>
             <div className="text-center text-white/20 text-[10px] font-mono py-4 uppercase tracking-widest">
               Complete the challenge to finish this round

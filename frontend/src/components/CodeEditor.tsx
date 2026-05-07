@@ -33,11 +33,13 @@ export const LANGUAGE_TEMPLATES: Record<SupportedLanguage, string> = {
 };
 
 const LANGUAGE_COMPLETIONS: Record<string, string[]> = {
-  python: ['def', 'class', 'import', 'from', 'return', 'if', 'elif', 'else', 'while', 'for', 'in', 'try', 'except', 'finally', 'with', 'as', 'pass', 'break', 'continue', 'yield', 'lambda', 'global', 'nonlocal', 'assert', 'del', 'True', 'False', 'None', 'and', 'or', 'not', 'is', 'print', 'len', 'range', 'str', 'int', 'float', 'list', 'dict', 'set', 'tuple', 'open', 'type', 'sum', 'min', 'max', 'abs'],
-  java: ['abstract', 'assert', 'boolean', 'break', 'byte', 'case', 'catch', 'char', 'class', 'const', 'continue', 'default', 'do', 'double', 'else', 'enum', 'extends', 'final', 'finally', 'float', 'for', 'goto', 'if', 'implements', 'import', 'instanceof', 'int', 'interface', 'long', 'native', 'new', 'package', 'private', 'protected', 'public', 'return', 'short', 'static', 'strictfp', 'super', 'switch', 'synchronized', 'this', 'throw', 'throws', 'transient', 'try', 'void', 'volatile', 'while', 'String', 'System.out.println', 'System.out.print', 'Math'],
-  c: ['auto', 'break', 'case', 'char', 'const', 'continue', 'default', 'do', 'double', 'else', 'enum', 'extern', 'float', 'for', 'goto', 'if', 'int', 'long', 'register', 'return', 'short', 'signed', 'sizeof', 'static', 'struct', 'switch', 'typedef', 'union', 'unsigned', 'void', 'volatile', 'while', 'printf', 'scanf', 'malloc', 'free', 'NULL', '#include'],
-  cpp: ['auto', 'break', 'case', 'char', 'const', 'continue', 'default', 'do', 'double', 'else', 'enum', 'extern', 'float', 'for', 'goto', 'if', 'int', 'long', 'register', 'return', 'short', 'signed', 'sizeof', 'static', 'struct', 'switch', 'typedef', 'union', 'unsigned', 'void', 'volatile', 'while', 'class', 'catch', 'const_cast', 'delete', 'dynamic_cast', 'explicit', 'export', 'false', 'friend', 'inline', 'mutable', 'namespace', 'new', 'operator', 'private', 'protected', 'public', 'reinterpret_cast', 'static_cast', 'template', 'this', 'throw', 'true', 'try', 'typeid', 'typename', 'using', 'virtual', 'cout', 'cin', 'endl', 'std', 'vector', 'string', 'map', 'set', '#include'],
-  go: ['break', 'default', 'func', 'interface', 'select', 'case', 'defer', 'go', 'map', 'struct', 'chan', 'else', 'goto', 'package', 'switch', 'const', 'fallthrough', 'if', 'range', 'type', 'continue', 'for', 'import', 'return', 'var', 'fmt.Println', 'fmt.Printf', 'make', 'new', 'len', 'cap', 'append', 'close', 'panic', 'recover', 'string', 'int', 'int64', 'float64', 'bool'],
+  python: ['False', 'None', 'True', 'and', 'as', 'assert', 'async', 'await', 'break', 'class', 'continue', 'def', 'del', 'elif', 'else', 'except', 'finally', 'for', 'from', 'global', 'if', 'import', 'in', 'is', 'lambda', 'nonlocal', 'not', 'or', 'pass', 'raise', 'return', 'try', 'while', 'with', 'yield', 'print', 'input', 'len', 'range', 'str', 'int', 'float', 'list', 'dict', 'set', 'tuple', 'open', 'type', 'sum', 'min', 'max', 'abs', 'sorted', 'enumerate', 'zip', 'any', 'all', 'map', 'filter', 'round', 'pow', 'hex', 'bin', 'oct', 'ord', 'chr', 'repr', 'dir', 'vars', 'help'],
+  javascript: ['break', 'case', 'catch', 'class', 'const', 'continue', 'debugger', 'default', 'delete', 'do', 'else', 'export', 'extends', 'finally', 'for', 'function', 'if', 'import', 'in', 'instanceof', 'new', 'return', 'super', 'switch', 'this', 'throw', 'try', 'typeof', 'var', 'void', 'while', 'with', 'yield', 'enum', 'await', 'implements', 'package', 'protected', 'static', 'interface', 'private', 'public', 'true', 'false', 'null', 'undefined', 'NaN', 'Infinity', 'console.log', 'prompt', 'Math', 'JSON', 'Array', 'Object', 'String', 'Number', 'Boolean', 'Map', 'Set', 'Promise', 'parseInt', 'parseFloat', 'isNaN', 'isFinite', 'encodeURI', 'decodeURI', 'require', 'module.exports'],
+  typescript: ['break', 'case', 'catch', 'class', 'const', 'continue', 'debugger', 'default', 'delete', 'do', 'else', 'export', 'extends', 'finally', 'for', 'function', 'if', 'import', 'in', 'instanceof', 'new', 'return', 'super', 'switch', 'this', 'throw', 'try', 'typeof', 'var', 'void', 'while', 'with', 'yield', 'enum', 'await', 'implements', 'package', 'protected', 'static', 'interface', 'private', 'public', 'true', 'false', 'null', 'undefined', 'type', 'declare', 'namespace', 'as', 'any', 'unknown', 'never', 'number', 'string', 'boolean', 'symbol', 'bigint', 'readonly', 'keyof', 'infer', 'is', 'module', 'abstract', 'constructor', 'get', 'set', 'intrinsic'],
+  java: ['abstract', 'assert', 'boolean', 'break', 'byte', 'case', 'catch', 'char', 'class', 'const', 'continue', 'default', 'do', 'double', 'else', 'enum', 'extends', 'final', 'finally', 'float', 'for', 'goto', 'if', 'implements', 'import', 'instanceof', 'int', 'interface', 'long', 'native', 'new', 'package', 'private', 'protected', 'public', 'return', 'short', 'static', 'strictfp', 'super', 'switch', 'synchronized', 'this', 'throw', 'throws', 'transient', 'try', 'void', 'volatile', 'while', 'true', 'false', 'null', 'var', 'yield', 'record', 'sealed', 'non-sealed', 'permits', 'transitive', 'String', 'System.out.println', 'System.out.print', 'System.in', 'Scanner', 'Math', 'List', 'ArrayList', 'Map', 'HashMap', 'Set', 'HashSet', 'Integer', 'Double', 'Character', 'BufferedReader', 'InputStreamReader'],
+  c: ['auto', 'break', 'case', 'char', 'const', 'continue', 'default', 'do', 'double', 'else', 'enum', 'extern', 'float', 'for', 'goto', 'if', 'inline', 'int', 'long', 'register', 'restrict', 'return', 'short', 'signed', 'sizeof', 'static', 'struct', 'switch', 'typedef', 'union', 'unsigned', 'void', 'volatile', 'while', '_Alignas', '_Alignof', '_Atomic', '_Bool', '_Complex', '_Generic', '_Imaginary', '_Noreturn', '_Static_assert', '_Thread_local', 'printf', 'scanf', 'gets', 'fgets', 'getchar', 'putchar', 'malloc', 'free', 'realloc', 'NULL', '#include', '#define', '#ifdef', '#ifndef', '#endif', 'size_t', 'ssize_t', 'intptr_t', 'uintptr_t'],
+  cpp: ['auto', 'break', 'case', 'char', 'const', 'continue', 'default', 'do', 'double', 'else', 'enum', 'extern', 'float', 'for', 'goto', 'if', 'int', 'long', 'register', 'return', 'short', 'signed', 'sizeof', 'static', 'struct', 'switch', 'typedef', 'union', 'unsigned', 'void', 'volatile', 'while', 'class', 'catch', 'const_cast', 'delete', 'dynamic_cast', 'explicit', 'export', 'false', 'friend', 'inline', 'mutable', 'namespace', 'new', 'operator', 'private', 'protected', 'public', 'reinterpret_cast', 'static_cast', 'template', 'this', 'throw', 'true', 'try', 'typeid', 'typename', 'using', 'virtual', 'alignas', 'alignof', 'and', 'and_eq', 'asm', 'bitand', 'bitor', 'bool', 'char16_t', 'char32_t', 'char8_t', 'co_await', 'co_return', 'co_yield', 'compl', 'concept', 'consteval', 'constexpr', 'constinit', 'decltype', 'noexcept', 'not', 'not_eq', 'nullptr', 'or', 'or_eq', 'reflexpr', 'requires', 'static_assert', 'thread_local', 'wchar_t', 'xor', 'xor_eq', 'cout', 'cin', 'endl', 'getline', 'std', 'vector', 'string', 'map', 'set', 'list', 'deque', 'pair', 'queue', 'stack', 'priority_queue', 'algorithm', 'iostream', 'cmath', 'cstdio'],
+  go: ['break', 'default', 'func', 'interface', 'select', 'case', 'defer', 'go', 'map', 'struct', 'chan', 'else', 'goto', 'package', 'switch', 'const', 'fallthrough', 'if', 'range', 'type', 'continue', 'for', 'import', 'return', 'var', 'fmt.Println', 'fmt.Printf', 'fmt.Print', 'fmt.Scan', 'fmt.Scanln', 'fmt.Scanf', 'make', 'new', 'len', 'cap', 'append', 'close', 'panic', 'recover', 'string', 'int', 'int64', 'float64', 'bool', 'errors', 'time', 'sync', 'os', 'bufio'],
 };
 
 const LANGUAGE_SNIPPETS: Record<string, { label: string, insertText: string, documentation?: string }[]> = {
@@ -227,7 +229,7 @@ export function CodeEditor({
   const monacoLang = LANGUAGE_OPTIONS.find(l => l.id === language)?.monacoLang ?? 'plaintext';
 
   return (
-    <div className="flex flex-col h-full overflow-hidden glass-morphism rounded-none border border-[var(--color-accent)]/20 shadow-[0_0_20px_rgba(217,31,64,0.1)] pointer-events-auto relative">
+    <div className="flex flex-col h-full glass-morphism rounded-none border border-[var(--color-accent)]/20 shadow-[0_0_20px_rgba(217,31,64,0.1)] pointer-events-auto relative">
       {/* Language Tabs */}
       <div className="flex items-center glass-morphism-bar overflow-x-auto scrollbar-hide border-b border-[var(--color-accent)]/20">
         {LANGUAGE_OPTIONS.map(opt => {
@@ -255,8 +257,8 @@ export function CodeEditor({
             </button>
           );
         })}
-        
-        <button 
+
+        <button
           onClick={() => editorRef.current?.focus()}
           className="ml-auto flex items-center gap-2 px-4 py-2 text-[9px] font-mono text-[var(--color-accent)] hover:bg-[var(--color-accent)]/10 uppercase tracking-widest transition-all"
         >
@@ -270,7 +272,7 @@ export function CodeEditor({
       </div>
 
       {/* Monaco Editor Wrapper */}
-      <div 
+      <div
         className="glass-morphism-editor border-t-0 pointer-events-auto cursor-text min-h-0 flex-1"
         onClick={() => editorRef.current?.focus()}
       >
@@ -286,7 +288,7 @@ export function CodeEditor({
             domReadOnly: false,
             minimap: { enabled: false },
             fontSize: 13,
-            fontFamily:"'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace",
+            fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace",
             fontLigatures: true,
             lineHeight: 22,
             padding: { top: 14, bottom: 14 },

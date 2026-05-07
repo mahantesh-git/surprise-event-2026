@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { QRCodeCanvas } from 'qrcode.react';
 import * as THREE from 'three';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Lock } from 'lucide-react';
 
 interface RunnerGyroScannerProps {
   onCapture: (data: string) => void;
@@ -27,6 +27,7 @@ export const RunnerGyroScanner: React.FC<RunnerGyroScannerProps> = ({
   const [permissionGranted, setPermissionGranted] = useState<boolean | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
   const [status, setStatus] = useState<'INITIALIZING' | 'SEARCHING' | 'LOCKED' | 'DECOY'>('INITIALIZING');
+  const statusRef = useRef(status);
 
   // Three.js Refs
   const sceneRef = useRef<THREE.Scene | null>(null);
@@ -43,8 +44,12 @@ export const RunnerGyroScanner: React.FC<RunnerGyroScannerProps> = ({
   const lastScanTime = useRef<number>(0);
   const isTargetVisible = useRef(false);
   const targetDataRef = useRef(targetData);
+  const distanceRef = useRef(distance);
 
+  // Sync refs to state/props to avoid stale closures in animation loop
   useEffect(() => { targetDataRef.current = targetData; }, [targetData]);
+  useEffect(() => { distanceRef.current = distance; }, [distance]);
+  useEffect(() => { statusRef.current = status; }, [status]);
   // Stable refs for callbacks to prevent useEffect from re-running
   const onFailRef = useRef(onFail);
   const onCaptureRef = useRef(onCapture);
@@ -53,6 +58,9 @@ export const RunnerGyroScanner: React.FC<RunnerGyroScannerProps> = ({
   useEffect(() => { onCaptureRef.current = onCapture; }, [onCapture]);
 
   // --- 1. SENSOR PERMISSION ---
+  // Track whether we need the manual button (iOS only — needs a user gesture)
+  const [needsManualPermission, setNeedsManualPermission] = useState(false);
+
   const requestSensorPermission = async () => {
     try {
       // iOS specific permission request
@@ -60,18 +68,37 @@ export const RunnerGyroScanner: React.FC<RunnerGyroScannerProps> = ({
         const response = await (DeviceOrientationEvent as any).requestPermission();
         if (response === 'granted') {
           setPermissionGranted(true);
+          setNeedsManualPermission(false);
         } else {
           onFail('Sensor permission denied');
         }
       } else {
-        // Android/Desktop usually don't need explicit request for DeviceOrientation
+        // Android/Desktop — no explicit permission needed
         setPermissionGranted(true);
       }
     } catch (err) {
       console.error('Error requesting sensors:', err);
-      setPermissionGranted(true); // Fallback for browsers that don't support the request but have the event
+      setPermissionGranted(true); // Fallback
     }
   };
+
+  // Auto-request on mount — skips the UI entirely on Android/desktop
+  useEffect(() => {
+    const autoRequest = async () => {
+      try {
+        if (typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
+          // iOS: calling outside a user gesture will throw — show the manual button instead
+          setNeedsManualPermission(true);
+        } else {
+          // Android / Desktop: grant immediately, no button needed
+          setPermissionGranted(true);
+        }
+      } catch {
+        setPermissionGranted(true);
+      }
+    };
+    autoRequest();
+  }, []);
 
   // --- 2. CAMERA INITIALIZATION ---
   useEffect(() => {
@@ -270,39 +297,60 @@ export const RunnerGyroScanner: React.FC<RunnerGyroScannerProps> = ({
       }
 
       // --- 4. GAZE-BASED AUTO-SCANNING ---
-      // ONLY ALLOW SCANNING IF WITHIN 25m
-      if (cameraRef.current && cubeRef.current && status === 'SEARCHING' && (distance === null || distance <= 25)) {
-        const raycaster = new THREE.Raycaster();
-        raycaster.setFromCamera(new THREE.Vector2(0, 0), cameraRef.current);
-
+      // ONLY ALLOW SCANNING IF WITHIN 10m (unless bypass is on)
+      const currentDist = distanceRef.current;
+      const canScan = testingBypassEnabled || currentDist === null || currentDist <= 10;
+      
+      if (cameraRef.current && cubeRef.current && statusRef.current === 'SEARCHING' && canScan) {
         const group = cubeRef.current as THREE.Group;
-        const intersects = raycaster.intersectObjects(group.children);
 
-        if (intersects.length > 0) {
-          const hit = intersects[0].object;
-          const isReal = hit.userData.isReal;
+        // Sample a slightly wider cross pattern for even more forgiving detection
+        const samplePoints = [
+          new THREE.Vector2(0, 0),       // center
+          new THREE.Vector2(0.08, 0),    // right
+          new THREE.Vector2(-0.08, 0),   // left
+          new THREE.Vector2(0, 0.08),    // up
+          new THREE.Vector2(0, -0.08),   // down
+          new THREE.Vector2(0.05, 0.05), // top-right
+          new THREE.Vector2(-0.05, -0.05)// bottom-left
+        ];
 
-          if (isReal) {
-            // WE ARE LOOKING AT THE REAL ONE!
-            setScanProgress(prev => {
-              const next = prev + 1.5;
-              if (next >= 100) {
-                setStatus('LOCKED');
-                onCaptureRef.current(targetDataRef.current || '');
-                return 100;
-              }
-              return next;
-            });
-          } else {
-            // HIT A DECOY!
-            setScanProgress(prev => Math.max(0, prev - 5)); // Harder penalty for decoys
-            // Show decoy warning briefly
-            setStatus('DECOY' as any);
-            setTimeout(() => setStatus('SEARCHING'), 1000);
+        let hitReal = false;
+        let hitDecoy = false;
+
+        for (const point of samplePoints) {
+          const raycaster = new THREE.Raycaster();
+          raycaster.setFromCamera(point, cameraRef.current);
+          const intersects = raycaster.intersectObjects(group.children);
+          if (intersects.length > 0) {
+            if (intersects[0].object.userData.isReal) { hitReal = true; break; }
+            else { hitDecoy = true; }
           }
+        }
+
+        if (hitReal) {
+          // ON TARGET — fill faster for better feel
+          let completed = false;
+          setScanProgress(prev => {
+            const next = prev + 4.0; // Slightly faster (~25 frames)
+            if (next >= 100) {
+              completed = true;
+              return 100;
+            }
+            return next;
+          });
+
+          if (completed) {
+            setStatus('LOCKED');
+            onCaptureRef.current(targetDataRef.current || '');
+          }
+        } else if (hitDecoy) {
+          setScanProgress(prev => Math.max(0, prev - 3));
+          setStatus('DECOY');
+          setTimeout(() => setStatus('SEARCHING'), 800);
         } else {
-          // LOST LOCK
-          setScanProgress(prev => Math.max(0, prev - 2));
+          // Off target — drain slowly
+          setScanProgress(prev => Math.max(0, prev - 1.2));
         }
       }
 
@@ -365,7 +413,19 @@ export const RunnerGyroScanner: React.FC<RunnerGyroScannerProps> = ({
     }
   };
 
-  if (!permissionGranted) {
+  // Show a minimal loading screen while auto-permission is resolving (should be instant on Android/desktop)
+  if (!permissionGranted && !needsManualPermission) {
+    return createPortal(
+      <div className="fixed inset-0 flex flex-col items-center justify-center bg-black z-[99999]" style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh' }}>
+        <div className="w-12 h-12 border-2 border-[#00f2ff] border-t-transparent rounded-full animate-spin mb-4" />
+        <p className="text-[#00f2ff]/60 font-mono text-xs uppercase tracking-[0.2em]">Initializing...</p>
+      </div>,
+      document.body
+    );
+  }
+
+  // iOS only: requires a user gesture to unlock DeviceOrientationEvent
+  if (needsManualPermission && !permissionGranted) {
     return createPortal(
       <div className="fixed inset-0 flex flex-col items-center justify-center bg-black z-[99999] p-6 text-center" style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh' }}>
         <div className="w-20 h-20 border-2 border-[#00f2ff] rounded-full flex items-center justify-center mb-6 animate-pulse">
@@ -424,12 +484,14 @@ export const RunnerGyroScanner: React.FC<RunnerGyroScannerProps> = ({
         )}
 
         {/* Directional Guide (Arrow) */}
-        {status === 'SEARCHING' && !testingBypassEnabled && distance !== null && distance > 25 && (
-          <div className="absolute inset-0 bg-red-950/40 backdrop-blur-md flex flex-col items-center justify-center z-50 p-8 text-center">
-            <AlertTriangle className="w-16 h-16 text-red-500 mb-4 animate-pulse" />
-            <h2 className="text-red-500 font-mono text-2xl font-bold mb-2 tracking-tighter">OUT OF RANGE</h2>
-            <p className="text-white/60 font-mono text-sm leading-relaxed mb-6">
-              YOU MUST BE WITHIN 25m OF THE TARGET TO SCAN. <br />
+        {status === 'SEARCHING' && !testingBypassEnabled && distance !== null && distance > 10 && (
+          <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/80 backdrop-blur-md p-8 text-center">
+            <div className="p-4 bg-red-500/20 rounded-full mb-6 border border-red-500/50">
+              <Lock className="w-12 h-12 text-red-500" />
+            </div>
+            <h2 className="text-2xl font-black text-white mb-4 tracking-tighter">OUT OF PROXIMITY</h2>
+            <p className="text-white/60 font-mono text-sm uppercase leading-relaxed max-w-xs">
+              YOU MUST BE WITHIN 10m OF THE TARGET TO SCAN. <br />
               CURRENT DISTANCE: <span className="text-red-400 font-bold">{Math.round(distance)}m</span>
             </p>
             <div className="w-48 h-1 bg-white/10 rounded-full overflow-hidden">
@@ -438,26 +500,38 @@ export const RunnerGyroScanner: React.FC<RunnerGyroScannerProps> = ({
           </div>
         )}
 
-        {status === 'SEARCHING' && (testingBypassEnabled || distance === null || distance <= 25) && (
+        {status === 'SEARCHING' && (testingBypassEnabled || distance === null || distance <= 10) && (
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full flex flex-col items-center justify-center pointer-events-none">
-            {/* Scan Progress Bar */}
-            {scanProgress > 0 && (
-              <div className="absolute top-[40%] flex flex-col items-center">
-                <div className="w-48 h-1 bg-white/10 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-red-500 transition-all duration-100 ease-linear shadow-[0_0_10px_#ff4444]"
-                    style={{ width: `${scanProgress}%` }}
-                  />
-                </div>
-              </div>
-            )}
 
-            <div className={`relative flex items-center justify-center transition-all duration-500 scale-100`}>
-              {/* Corner Brackets of the Square - Permanent Red */}
-              <div className={`absolute -top-10 -left-10 w-4 h-4 border-t-2 border-l-2 border-red-500 transition-all duration-300 ${scanProgress > 0 ? 'translate-x-2 translate-y-2' : ''}`} />
-              <div className={`absolute -top-10 -right-10 w-4 h-4 border-t-2 border-r-2 border-red-500 transition-all duration-300 ${scanProgress > 0 ? '-translate-x-2 translate-y-2' : ''}`} />
-              <div className={`absolute -bottom-10 -left-10 w-4 h-4 border-b-2 border-l-2 border-red-500 transition-all duration-300 ${scanProgress > 0 ? 'translate-x-2 -translate-y-2' : ''}`} />
-              <div className={`absolute -bottom-10 -right-10 w-4 h-4 border-b-2 border-r-2 border-red-500 transition-all duration-300 ${scanProgress > 0 ? '-translate-x-2 -translate-y-2' : ''}`} />
+            {/* Targeting Reticle — always visible */}
+            <div className={`relative flex items-center justify-center transition-all duration-300 ${scanProgress > 0 ? 'scale-90' : 'scale-100'}`}>
+              {/* Corner Brackets — turn accent when scanning */}
+              <div className={`absolute -top-14 -left-14 w-6 h-6 border-t-2 border-l-2 transition-all duration-300 ${scanProgress > 0 ? 'border-[#00f2ff] translate-x-2 translate-y-2' : 'border-red-500'}`} />
+              <div className={`absolute -top-14 -right-14 w-6 h-6 border-t-2 border-r-2 transition-all duration-300 ${scanProgress > 0 ? 'border-[#00f2ff] -translate-x-2 translate-y-2' : 'border-red-500'}`} />
+              <div className={`absolute -bottom-14 -left-14 w-6 h-6 border-b-2 border-l-2 transition-all duration-300 ${scanProgress > 0 ? 'border-[#00f2ff] translate-x-2 -translate-y-2' : 'border-red-500'}`} />
+              <div className={`absolute -bottom-14 -right-14 w-6 h-6 border-b-2 border-r-2 transition-all duration-300 ${scanProgress > 0 ? 'border-[#00f2ff] -translate-x-2 -translate-y-2' : 'border-red-500'}`} />
+              {/* Center dot */}
+              <div className={`w-2 h-2 rounded-full transition-all duration-300 ${scanProgress > 0 ? 'bg-[#00f2ff] shadow-[0_0_8px_#00f2ff]' : 'bg-red-500/60'}`} />
+            </div>
+
+            {/* Scan Progress Bar — always shown, reflects 0–100% */}
+            <div className="absolute bottom-[28%] flex flex-col items-center gap-2 w-56">
+              {scanProgress > 0 ? (
+                <div className="flex items-center gap-2 text-[#00f2ff] font-mono text-xs uppercase tracking-[0.2em]">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#00f2ff] animate-ping" />
+                  SCANNING... {Math.round(scanProgress)}%
+                </div>
+              ) : (
+                <div className="text-white/40 font-mono text-xs uppercase tracking-[0.2em] animate-pulse">
+                  AIM AT TARGET QR
+                </div>
+              )}
+              <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-75 ease-linear ${scanProgress > 0 ? 'bg-[#00f2ff] shadow-[0_0_10px_#00f2ff]' : 'bg-white/20'}`}
+                  style={{ width: `${Math.max(2, scanProgress)}%` }}
+                />
+              </div>
             </div>
           </div>
         )}

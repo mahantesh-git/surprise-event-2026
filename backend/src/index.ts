@@ -383,8 +383,14 @@ async function augmentGameState(teamId: string, baseState: GameState) {
     qrPasskey: currentQ.qrPasskey
   } : null;
 
-  const GAME_TYPES = ['tap', 'memory', 'pattern', 'signal_trace', 'frequency_jam', 'core_dump', 'overload', 'zero_day'] as const;
-  const gameType = GAME_TYPES[baseState.round % GAME_TYPES.length];
+  const GAME_TYPES = ['tap', 'memory', 'pattern', 'signal_trace', 'frequency_jam', 'core_dump', 'overload', 'signal_burst', 'zero_day'] as const;
+  const SWAP_GAME_TYPES = ['mirror_code', 'thermal_calibrate', 'telescope_lock', 'dna_splice'] as const;
+  
+  const isSwappedRound = team?.swappedRounds && team.swappedRounds[baseState.round.toString()];
+  
+  const gameType = isSwappedRound 
+    ? SWAP_GAME_TYPES[(team.swapsUsed || 0) % SWAP_GAME_TYPES.length]
+    : GAME_TYPES[baseState.round % GAME_TYPES.length];
 
   return {
     ...baseState,
@@ -730,6 +736,10 @@ app.patch('/api/game/state', requireAuth, requireGameActive, route(async (reques
 
   const augmentedState = await augmentGameState(team._id.toString(), nextState);
 
+  // Push a real-time socket update to the team so both solver and runner UIs
+  // refresh immediately without waiting for the 3-second polling interval.
+  notifyTeamMessage(team._id.toString(), 'game:update', { type: 'state_change', stage: nextState.stage });
+
   response.json({
     gameState: augmentedState,
     lastMessage: team.lastMessage || null,
@@ -902,10 +912,10 @@ app.post('/api/game/compile', requireAuth, requireGameActive, route(async (reque
             files: [{ name: pistonCfg.fileName, content: code }],
             stdin: tc.input || '',
             args: [],
-            run_timeout: 5000,
-            compile_timeout: 5000,
+            run_timeout: 15000,
+            compile_timeout: 15000,
           }, {
-            timeout: 10000,
+            timeout: 25000,
             headers: {
               'User-Agent': 'Quest-Scavenger-Hunt/1.0'
             }
@@ -1098,7 +1108,7 @@ app.post('/api/runner/verify-location-qr', requireAuth, requireGameActive, route
     if (!isNaN(targetLat) && !isNaN(targetLng)) {
       const dist = getDistance(lat, lng, targetLat, targetLng);
 
-      if (!isBypassEnabled && dist > 25) {
+      if (!isBypassEnabled && dist > 10) {
         response.status(403).json({ error: `Area Restricted: You are ${Math.round(dist)}m away from the target location.` });
         return;
       }
@@ -1169,9 +1179,12 @@ app.post('/api/runner/verify-passkey', requireAuth, requireGameActive, route(asy
   await teams.updateOne({ _id: team._id }, { $set: { gameState: nextState, updatedAt: new Date() } });
 
   // Return the game type for this round (cycle through all 8 games)
-  const GAME_TYPES = ['tap', 'memory', 'pattern', 'signal_trace', 'frequency_jam', 'core_dump', 'overload', 'zero_day'] as const;
-  const gameType = GAME_TYPES[currentRoundIndex % GAME_TYPES.length];
-
+  const GAME_TYPES = ['tap', 'memory', 'pattern', 'signal_trace', 'frequency_jam', 'core_dump', 'overload', 'signal_burst', 'zero_day'] as const;
+  const SWAP_GAME_TYPES = ['mirror_code', 'thermal_calibrate', 'telescope_lock', 'dna_splice'] as const;
+  const isSwappedRound = team.swappedRounds && team.swappedRounds[team.gameState.round.toString()];
+  const gameType = isSwappedRound 
+    ? SWAP_GAME_TYPES[(team.swapsUsed || 0) % SWAP_GAME_TYPES.length]
+    : GAME_TYPES[team.gameState.round % GAME_TYPES.length];
   response.json({ ok: true, gameType, stage: 'runner_game' });
 }));
 

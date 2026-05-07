@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { RoundQuestion } from '@/lib/api';
 import { useSocket } from '@/contexts/SocketContext';
+import { getWalkingRoute } from '@/lib/routing';
 import { Navigation, LocateFixed, AlertCircle, Maximize, Minimize } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import L from 'leaflet';
@@ -371,7 +372,7 @@ export function SectorMap({ rounds, currentRound, activeQuestion, roundsDone, st
     }
   }, [mapInstance, runnerCoords, hasTarget, targetLat, targetLng, routeCoords]);
 
-  // Render the OSRM route
+  // Render the current route
   useEffect(() => {
     if (!mapInstance) return;
     if (routeGlowRef.current) mapInstance.removeLayer(routeGlowRef.current);
@@ -398,22 +399,34 @@ export function SectorMap({ rounds, currentRound, activeQuestion, roundsDone, st
       if (dist < 5 && routeCoords.length > 0) return;
     }
 
-    const url = `https://router.project-osrm.org/route/v1/foot/${rLng},${rLat};${targetLng},${targetLat}?overview=full&geometries=geojson`;
+    const fetchRoute = async () => {
+      try {
+        const route = await getWalkingRoute(
+          { lat: rLat, lng: rLng },
+          { lat: targetLat, lng: targetLng }
+        );
 
-    fetch(url)
-      .then(r => r.json())
-      .then(data => {
-        const rawCoords: L.LatLngTuple[] = data.routes?.[0]?.geometry?.coordinates?.map(([lng, lat]: [number, number]) => [lat, lng] as L.LatLngTuple) ?? [];
-        if (rawCoords.length > 0) {
-          const coords: L.LatLngTuple[] = [[rLat, rLng], ...rawCoords, [targetLat!, targetLng!]];
+        if (route && route.coordinates.length > 0) {
+          const coords: L.LatLngTuple[] = route.coordinates as L.LatLngTuple[];
           setRouteCoords(coords);
           localStorage.setItem(`${storageKeyPrefix}_route`, JSON.stringify(coords));
           lastRouteFetchRef.current = [rLat, rLng];
+        } else {
+          // Fallback: Straight line if routing fails
+          const fallback: L.LatLngTuple[] = [[rLat, rLng], [targetLat, targetLng]];
+          setRouteCoords(fallback);
+          localStorage.setItem(`${storageKeyPrefix}_route`, JSON.stringify(fallback));
+          lastRouteFetchRef.current = [rLat, rLng];
         }
-      })
-      .catch(err => {
+      } catch (err) {
         console.warn('OSRM Route Fetch Error:', err);
-      });
+        // Fallback: Straight line if routing fails
+        const fallback: L.LatLngTuple[] = [[rLat, rLng], [targetLat, targetLng]];
+        setRouteCoords(fallback);
+      }
+    };
+
+    fetchRoute();
   }, [mapInstance, runnerCoords, hasTarget, targetLat, targetLng, storageKeyPrefix]);
 
   const navUrl = hasTarget

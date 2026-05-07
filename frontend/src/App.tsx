@@ -391,13 +391,13 @@ export default function App() {
             if (window.navigator.vibrate) window.navigator.vibrate([100]);
             lastRunnerHandoffNoticeRef.current = `prox:50:${gameState.round}`;
           }
-          // 25m Alert
-          if (dist <= 25 && dist > 20 && lastRunnerHandoffNoticeRef.current !== `prox:25:${gameState.round}`) {
+          // 15m Alert
+          if (dist <= 15 && dist > 12 && lastRunnerHandoffNoticeRef.current !== `prox:15:${gameState.round}`) {
             if (window.navigator.vibrate) window.navigator.vibrate([100, 50, 100]);
-            lastRunnerHandoffNoticeRef.current = `prox:25:${gameState.round}`;
+            lastRunnerHandoffNoticeRef.current = `prox:15:${gameState.round}`;
           }
-          // 15m Target Reached
-          if (dist <= 15 && lastRunnerHandoffNoticeRef.current !== `geofence:${gameState.round}`) {
+          // 10m Target Reached
+          if (dist <= 10 && lastRunnerHandoffNoticeRef.current !== `geofence:${gameState.round}`) {
             if (window.navigator.vibrate) window.navigator.vibrate([200, 100, 200, 100, 200]);
             notify("TARGET REACHED: PROCEED TO QR SCAN", "success");
             lastRunnerHandoffNoticeRef.current = `geofence:${gameState.round}`;
@@ -495,6 +495,7 @@ export default function App() {
       notify('SWAP EXECUTED: NEW MISSION ACQUIRED', 'success');
       setSwapConfirmOpen(false);
       setIsTacticalMenuOpen(false);
+      setConsoleOutput(null); // Clear console on swap
       await sync();
     } catch (err: any) {
       notify(err.message || 'Swap operation failed', 'error');
@@ -543,7 +544,7 @@ export default function App() {
 
   const isMyTurn = gameState ? (
     (role === 'solver' && ['p1_solve', 'p1_solved'].includes(gameState.stage)) ||
-    (role === 'runner' && ['runner_travel', 'runner_entry', 'runner_game', 'runner_done'].includes(gameState.stage)) ||
+    (role === 'runner' && ['location', 'runner_travel', 'runner_entry', 'runner_game', 'runner_done'].includes(gameState.stage)) ||
     gameState.stage === 'final_qr'
   ) : false;
 
@@ -571,21 +572,34 @@ export default function App() {
   }, [role, session?.team.id]);
 
   const previousRoundRef = useRef(gameState?.round);
+  const previousQuestionIdRef = useRef<string | null>(null);
+
   useEffect(() => {
-    if (gameState && gameState.round !== previousRoundRef.current) {
-      if (gameState.stage === 'p1_solve') {
-        const round = rounds[Math.min(gameState.round, rounds.length - 1)];
-        if (round) {
-          const defaultLang = (round.p1.language ?? 'python') as SupportedLanguage;
+    if (!gameState) return;
+
+    const currentQuestionId = currentRound?.id || null;
+    const roundChanged = gameState.round !== previousRoundRef.current;
+    const questionChanged = currentQuestionId && currentQuestionId !== previousQuestionIdRef.current;
+
+    if (roundChanged || questionChanged) {
+      console.log(`[App] Mission transition detected. Round: ${gameState.round}, ID: ${currentQuestionId}`);
+      
+      if (role === 'solver') {
+        const roundData = currentRound;
+        if (roundData) {
+          const defaultLang = (roundData.p1.language ?? 'python') as SupportedLanguage;
           setSelectedLanguage(defaultLang);
-          setP1Code(LANGUAGE_TEMPLATES[defaultLang]);
+          // Use question-specific code if provided, otherwise fallback to template
+          setP1Code(roundData.p1.code || LANGUAGE_TEMPLATES[defaultLang]);
           setConsoleOutput(null);
-          setIsObjectiveOpen(true); // Switch to Mission Intel on new round handoff
+          setIsObjectiveOpen(true);
         }
       }
+      
       previousRoundRef.current = gameState.round;
+      previousQuestionIdRef.current = currentQuestionId;
     }
-  }, [gameState?.round, gameState?.stage, rounds]);
+  }, [gameState?.round, currentRound?.id, gameState?.stage, rounds, role]);
 
   useEffect(() => {
     if (!session?.token || !gameState || gameState.stage !== 'final_qr') {
@@ -802,6 +816,12 @@ export default function App() {
     exit: { opacity: 0, skewX: 15, filter: 'brightness(0) contrast(1.5)', x: 20, transition: { duration: 0.3 } }
   };
 
+  const pageFadeVariants = {
+    initial: { opacity: 0 },
+    animate: { opacity: 1, transition: { duration: 0.2 } },
+    exit: { opacity: 0, transition: { duration: 0.2 } }
+  };
+
   const clipVariants = {
     initial: { clipPath: 'inset(50% 50% 50% 50%)', opacity: 0 },
     animate: { clipPath: 'inset(0% 0% 0% 0%)', opacity: 1, transition: { duration: 0.8, ease: [0.76, 0, 0.24, 1] as const } },
@@ -817,7 +837,7 @@ export default function App() {
   const renderAppContent = () => {
     if (pathname === '/admin') {
       return (
-        <motion.div key="admin" variants={fadeScaleVariants} initial="initial" animate="animate" exit="exit" className="relative z-10 w-full min-h-screen">
+        <motion.div key="admin" variants={pageFadeVariants} initial="initial" animate="animate" exit="exit" className="relative z-10 w-full min-h-screen">
           <AdminPanel
             onBack={() => {
               window.history.pushState({}, '', '/');
@@ -835,7 +855,7 @@ export default function App() {
             {!role ? (
               <motion.div
                 key="role"
-                variants={fadeScaleVariants}
+                variants={pageFadeVariants}
                 initial="initial"
                 animate="animate"
                 exit="exit"
@@ -846,7 +866,7 @@ export default function App() {
             ) : (
               <motion.div
                 key="login"
-                variants={fadeScaleVariants}
+                variants={pageFadeVariants}
                 initial="initial"
                 animate="animate"
                 exit="exit"
@@ -879,7 +899,7 @@ export default function App() {
 
     if (loading || roundsLoading || !gameState) {
       return (
-        <motion.div key="loading" variants={fadeScaleVariants} initial="initial" animate="animate" exit="exit" className="relative z-10 w-full min-h-screen flex items-center justify-center">
+        <motion.div key="loading" variants={pageFadeVariants} initial="initial" animate="animate" exit="exit" className="relative z-10 w-full min-h-screen flex items-center justify-center">
           <Loader2 className="w-8 h-8 animate-spin text-[var(--color-accent)]" />
         </motion.div>
       );
@@ -887,7 +907,7 @@ export default function App() {
 
     if (roundsError || !rounds.length) {
       return (
-        <motion.div key="error" variants={fadeScaleVariants} initial="initial" animate="animate" exit="exit" className="relative z-10 w-full min-h-screen flex items-center justify-center text-white p-6">
+        <motion.div key="error" variants={pageFadeVariants} initial="initial" animate="animate" exit="exit" className="relative z-10 w-full min-h-screen flex items-center justify-center text-white p-6">
           <div className="text-center space-y-4">
             <h2 className="text-xl font-bold uppercase tracking-widest text-red-500">System Error</h2>
             <p className="text-sm opacity-60">{roundsError || 'No mission rounds configured.'}</p>
@@ -900,7 +920,7 @@ export default function App() {
     if (!currentRound) return null;
 
     return (
-      <motion.div key="game" variants={glitchVariants} initial="initial" animate="animate" exit="exit" className="relative z-10 w-full min-h-screen">
+      <motion.div key="game" variants={pageFadeVariants} initial="initial" animate="animate" exit="exit" className="relative z-10 w-full min-h-screen">
         {gamePaused && (
           <div className="fixed inset-0 z-[260] bg-black/90 backdrop-blur-sm flex items-center justify-center p-6">
             <div className="max-w-md text-center border border-[var(--color-accent)]/40 bg-[var(--color-accent)]/10 p-8">
@@ -989,7 +1009,7 @@ export default function App() {
             >
               <div className="max-w-6xl w-full flex flex-col space-y-8 relative mx-auto my-auto px-3">
                 {/* Solver Tactical View during Runner phases */}
-                {role === 'solver' && ['runner_travel', 'runner_entry', 'runner_game', 'runner_done', 'final_qr'].includes(gameState.stage) ? (
+                {role === 'solver' && ['location', 'runner_travel', 'runner_entry', 'runner_game', 'runner_done', 'final_qr'].includes(gameState.stage) ? (
                   <div className="w-full flex flex-col h-[500px]">
 
                     <div className="flex-1 relative rounded overflow-hidden border border-white/10 shadow-2xl">
@@ -1031,7 +1051,7 @@ export default function App() {
             <div className="flex-1">
               <AnimatePresence mode="wait">
                 {gameState.stage === 'p1_solve' && (
-                  <motion.div key="p1_solve" variants={glitchVariants} initial="initial" animate="animate" exit="exit" className="flex flex-col gap-4 h-full w-full">
+                  <motion.div key="p1_solve" variants={pageFadeVariants} initial="initial" animate="animate" exit="exit" className="flex flex-col gap-4 h-full w-full">
                     {/* Objective Header */}
                     <div className="flex items-center gap-6 mb-2">
                       <div className="flex items-center gap-3">
@@ -1055,6 +1075,7 @@ export default function App() {
                     <div className="flex flex-col lg:flex-row gap-4 flex-[10] min-h-0 w-full">
                       <div className="flex flex-col flex-[3] min-h-[240px] lg:min-h-[300px] min-w-0">
                         <CodeEditor
+                          key={currentRound.id}
                           value={p1Code}
                           onChange={setP1Code}
                           language={selectedLanguage}
@@ -1180,7 +1201,7 @@ export default function App() {
                 )}
 
                 {gameState.stage === 'p1_solved' && (
-                  <motion.div key="p1_solved" variants={glitchVariants} initial="initial" animate="animate" exit="exit" className="flex flex-col items-center justify-center h-full">
+                  <motion.div key="p1_solved" variants={pageFadeVariants} initial="initial" animate="animate" exit="exit" className="flex flex-col items-center justify-center h-full">
                     <div className="max-w-md w-full pt-12 px-4 mx-auto">
                       <div className="space-y-8 text-center">
                         <div className="flex flex-col items-center gap-4">
@@ -1212,7 +1233,7 @@ export default function App() {
                 )}
 
                 {['runner_travel', 'runner_entry', 'runner_game', 'runner_done'].includes(gameState.stage) && (
-                  <motion.div key="runner_phase" variants={glitchVariants} initial="initial" animate="animate" exit="exit" className="flex-1 flex flex-col">
+                  <motion.div key="runner_phase" variants={pageFadeVariants} initial="initial" animate="animate" exit="exit" className="flex-1 flex flex-col">
                     {role === 'solver' ? (
                       <div className="max-w-md mx-auto space-y-6 w-full pt-12">
                         <div className="text-center space-y-2">
@@ -1242,7 +1263,7 @@ export default function App() {
                     ) : (
                       <div className="flex-1 flex flex-col">
                         {/* Distance HUD for Runner during Travel */}
-                        {distanceToTarget !== null && gameState?.stage === 'runner_travel' && (
+                        {distanceToTarget !== null && ['location', 'runner_travel'].includes(gameState?.stage) && (
                           <div className="mb-4 p-4 glass-morphism rounded border border-[var(--color-accent)]/20 animate-pulse text-center">
                             <div className="text-[10px] font-mono uppercase text-white/40 mb-1">Target_Proximity</div>
                             <div className="text-3xl font-heading text-[var(--color-accent)] tracking-tighter">
@@ -1273,7 +1294,7 @@ export default function App() {
                 )}
 
                 {gameState.stage === 'final_qr' && (
-                  <motion.div key="final_qr" variants={glitchVariants} initial="initial" animate="animate" exit="exit" className="flex-1 flex flex-col items-center justify-center w-full pt-12">
+                  <motion.div key="final_qr" variants={pageFadeVariants} initial="initial" animate="animate" exit="exit" className="flex-1 flex flex-col items-center justify-center w-full pt-12">
                     <div className="space-y-8 flex flex-col items-center justify-center max-w-md w-full">
                       <h2 className="text-3xl font-bold uppercase tracking-[0.2em] text-[var(--color-accent)]">Extraction Point</h2>
                       {role === 'solver' ? (
@@ -1297,7 +1318,7 @@ export default function App() {
                 )}
 
                 {gameState.stage === 'complete' && (
-                  <motion.div key="complete" variants={fadeScaleVariants} initial="initial" animate="animate" exit="exit" className="max-w-2xl mx-auto text-center py-12 px-8 bg-black/40  rounded-3xl border border-white/5 shadow-[0_0_50px_rgba(0,0,0,0.5)]">
+                  <motion.div key="complete" variants={pageFadeVariants} initial="initial" animate="animate" exit="exit" className="max-w-2xl mx-auto text-center py-12 px-8 bg-black/40  rounded-3xl border border-white/5 shadow-[0_0_50px_rgba(0,0,0,0.5)]">
                     <CheckCircle2 className="w-20 h-20 text-[var(--color-accent)] mx-auto mb-6" />
                     <h1 className="font-bold uppercase tracking-[0.2em] mb-2 text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]" style={{ fontSize: 'clamp(1.5rem, 6vw, 2.5rem)' }}>Quest Complete</h1>
                     <p className="text-white/70 uppercase tracking-widest mb-12 font-medium">Mission parameters successfully executed.</p>

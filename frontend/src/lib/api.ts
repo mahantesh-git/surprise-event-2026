@@ -119,9 +119,9 @@ export interface GameStateUpdate extends Partial<Omit<GameState, 'handoff'>> {
 }
 
 async function requestJson<T>(path: string, init: RequestInit = {}, token?: string, _retry = 1): Promise<T> {
-  // 15 second timeout — covers Railway cold-start without hanging forever
+  // 60 second timeout — covers Railway cold-start and backend Piston retries without hanging forever
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 15_000);
+  const timeoutId = setTimeout(() => controller.abort(), 60_000);
 
   try {
     const response = await fetch(`${API_BASE}${path}`, {

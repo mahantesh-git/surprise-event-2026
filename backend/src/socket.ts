@@ -187,12 +187,12 @@ function attachRunnerHandlers(socket: Socket, auth: { teamId: string }) {
 
   socket.on(
     'location:stream',
-    async (data: { lat: number; lng: number; heading: number | null; timestamp?: number }) => {
+    async (data: { lat: number; lng: number; heading: number | null; accuracy?: number; timestamp?: number }) => {
       if (await blockIfPaused(socket)) return;
       if (tokenBucket <= 0) return;
       tokenBucket--;
 
-      const { lat, lng, heading } = data;
+      const { lat, lng, heading, accuracy } = data;
 
       if (
         typeof lat !== 'number' || typeof lng !== 'number' ||
@@ -200,6 +200,7 @@ function attachRunnerHandlers(socket: Socket, auth: { teamId: string }) {
       ) return;
 
       const h = typeof heading === 'number' && isFinite(heading) ? heading : null;
+      const acc = typeof accuracy === 'number' && isFinite(accuracy) ? accuracy : 0;
 
       // 1. Broadcast to admin instantly — no DB wait
       io?.to('admin').emit('runner:location', {
@@ -207,6 +208,7 @@ function attachRunnerHandlers(socket: Socket, auth: { teamId: string }) {
         lat,
         lng,
         heading: h,
+        accuracy: acc,
         timestamp: data.timestamp ?? Date.now(),
       });
 
@@ -215,6 +217,7 @@ function attachRunnerHandlers(socket: Socket, auth: { teamId: string }) {
         lat,
         lng,
         heading: h,
+        accuracy: acc,
         timestamp: data.timestamp ?? Date.now(),
       });
 
