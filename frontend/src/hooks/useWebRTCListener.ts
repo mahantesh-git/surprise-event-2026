@@ -7,15 +7,12 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { Socket } from 'socket.io-client';
+import { config } from '@/config';
 
 const ICE_SERVERS: RTCIceServer[] = [
   { urls: 'stun:stun.l.google.com:19302' },
   { urls: 'stun:stun1.l.google.com:19302' },
-  {
-    urls: import.meta.env.VITE_TURN_SERVER_URL || 'turn:openrelay.metered.ca:443?transport=tcp',
-    username: import.meta.env.VITE_TURN_SERVER_USERNAME || 'openrelayproject',
-    credential: import.meta.env.VITE_TURN_SERVER_CREDENTIAL || 'openrelayproject',
-  },
+  ...config.turnServers,
 ];
 
 interface UseWebRTCListenerOptions {

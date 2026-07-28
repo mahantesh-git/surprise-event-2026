@@ -1,15 +1,24 @@
-FROM node:20-bookworm-slim
+FROM node:20-alpine AS build
 
 WORKDIR /app
 
-COPY frontend/package*.json ./
-RUN apt-get update \
-	&& apt-get install -y --no-install-recommends python3 make g++ pkg-config libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev \
-	&& rm -rf /var/lib/apt/lists/* \
+COPY package*.json ./
+
+RUN apk add --no-cache python3 make g++ pkgconfig cairo-dev pango-dev jpeg-dev giflib-dev librsvg-dev \
 	&& npm install
 
-COPY frontend/. .
+COPY . ./
+
+RUN npm run build
+
+FROM node:20-alpine AS runtime
+WORKDIR /app
+RUN npm install -g serve
+COPY --from=build /app/dist /app/dist
+COPY serve.json /app/serve.json
+COPY entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
 
 EXPOSE 3000
 
-CMD ["npm", "run", "dev"]
+ENTRYPOINT ["/app/entrypoint.sh"]

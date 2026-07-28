@@ -68,6 +68,11 @@ function suppressTlsErrors(): Plugin {
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
+  // BACKEND_URL is a build-time env var (no VITE_ prefix) used only by the
+  // Vite dev server Node process to know where to proxy API/Socket requests.
+  // In Docker: set BACKEND_URL=http://backend:4000 in docker-compose.
+  // In local dev: defaults to http://127.0.0.1:4000.
+  const backendUrl = env.BACKEND_URL || 'http://127.0.0.1:4000';
   return {
     plugins: [react(), basicSsl(), tailwindcss(), suppressTlsErrors()],
     optimizeDeps: {
@@ -83,14 +88,14 @@ export default defineConfig(({ mode }) => {
       host: '0.0.0.0',
       proxy: {
         '/api': {
-          target: 'http://127.0.0.1:4000',
+          target: backendUrl,
           changeOrigin: true,
           secure: false,
         },
         // Proxy Socket.io so the browser can connect via wss:// (same HTTPS
         // origin) without triggering a mixed-content block.
         '/socket.io': {
-          target: 'http://127.0.0.1:4000',
+          target: backendUrl,
           changeOrigin: true,
           secure: false,
           ws: true,               // upgrade HTTP→WebSocket tunnel

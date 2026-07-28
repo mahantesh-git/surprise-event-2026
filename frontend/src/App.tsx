@@ -51,8 +51,9 @@ import { HardModeHUD } from '@/components/HardModeHUD';
 import { SwapConfirmModal } from '@/components/SwapConfirmModal';
 import { SwapApprovalModal } from '@/components/SwapApprovalModal';
 import { WalkieTalkie } from '@/components/WalkieTalkie';
+import { config } from '@/config';
 import { getDistance, parseDMS } from '@/lib/geofence';
-const SOLVER_FULLSCREEN_EXIT_KEY = import.meta.env.VITE_SOLVER_EXIT_KEY || 'quest-exit';
+const SOLVER_FULLSCREEN_EXIT_KEY = config.solverExitKey;
 
 const notify = (msg: string, type: 'success' | 'info' | 'error' = 'info') => {
   console.log(`[TacticalNotify] ${type.toUpperCase()}: ${msg}`);

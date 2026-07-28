@@ -1,45 +1,8 @@
 import type { GameState, HandoffDetails, Role } from '@/hooks/useGameState';
+import { config } from '@/config';
 
 const getApiBaseUrl = () => {
-  // Use VITE_API_HOST as primary, fallback to VITE_API_BASE_URL
-  let h = import.meta.env.VITE_API_HOST || import.meta.env.VITE_API_BASE_URL || '';
-
-  // Debug log for production (visible in browser console)
-  console.log('[API] Raw host from environment:', h || '(empty)');
-
-  if (!h && typeof window !== 'undefined') {
-    // If no host specified, and we're on localhost, assume local backend
-    if (window.location.hostname === 'localhost') {
-      h = 'http://localhost:4000';
-    } else {
-      // Otherwise fallback to relative /api
-      return '/api';
-    }
-  }
-
-  if (!h) return '/api';
-
-  // Ensure protocol exists and is secure for production
- const isLocalhost =
-  h.includes('localhost') ||
-  h.includes('127.0.0.1') ||
-  /^(https?:\/\/)?(10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.)/.test(h);
-
-if (!h.startsWith('http') && !h.startsWith('//')) {
-  h = isLocalhost ? `http://${h}` : `https://${h}`;
-} else if (!isLocalhost && h.startsWith('http://')) {
-  // Force upgrade http to https for production URLs to avoid Mixed Content blocks
-  h = h.replace('http://', 'https://');
-}
-
-
-
-  // Cleanup: remove trailing slashes and ensure /api suffix
-  h = h.replace(/\/+$/, '');
-  const final = h.endsWith('/api') ? h : `${h}/api`;
-
-  console.log('[API] Final base URL initialized at:', final);
-  return final;
+  return config.apiBaseUrl;
 };
 
 const API_BASE = getApiBaseUrl();

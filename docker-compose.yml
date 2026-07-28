@@ -2,8 +2,8 @@ services:
     api:
         image: ghcr.io/engineer-man/piston
         container_name: piston_api
-        restart: always
         privileged: true
+        restart: unless-stopped
         ports:
             - "127.0.0.1:2000:2000"
         volumes:
@@ -14,19 +14,21 @@ services:
             - PISTON_RUN_TIMEOUT=30000
             - PISTON_COMPILE_TIMEOUT=60000
         networks:
-            - quest
+            - piston
     
     frontend:
-        image: quest-frontend
+        image: quest-frontend-testing-image-2
         build:
-            context: .
-            dockerfile: ./frontend/Dockerfile 
+            context: ./frontend
+            dockerfile: Dockerfile 
         container_name: quest_frontend
-        restart: always
+        restart: unless-stopped
         ports:
             - "3000:3000"
         env_file:
             - ./frontend/.env
+        depends_on:
+            - backend
         networks:
             - quest
 
@@ -39,15 +41,56 @@ services:
         container_name: quest_backend
         restart: always
         ports:
-            - "4000:4000"
+            - "127.0.0.1:4000:4000"
         env_file:
             - ./backend/.env
         networks:
             - quest
+            - mongo-data-network
+            - piston
+        
+    mongo:
+        image: mongo
+        container_name: mongo
+        env_file:
+            - ./.env.mongo
+        ports:
+          - "0.0.0.0:27017:27017"
+        volumes:
+          - quest-data:/data/db 
+        networks:
+          - n8n_network
+          - mongo-data-network
+          - expense-tracker
+    
+    mongo-express:
+        image: mongo-express
+        container_name: quest_mongo_express
+        profiles:
+            - quest-express
+        ports:
+            - "127.0.0.1:8081:8081"
+        
+        env_file:
+            - ./.env.mongo-express
+        depends_on:
+            - mongo
+        networks:
+            - mongo-data-network
+            - expense-tracker
 
 
 volumes:
     piston_data:
+    quest-data:
+
 networks:
+    n8n_network:
+        external: true
     quest:
-        driver: bridge
+        external: true
+    mongo-data-network:
+        external: true
+    piston:
+    expense-tracker:
+        external: true

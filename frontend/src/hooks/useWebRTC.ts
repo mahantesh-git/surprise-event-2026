@@ -15,6 +15,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { Socket } from 'socket.io-client';
+import { config } from '@/config';
 
 interface UseWebRTCOptions {
   socket: Socket | null;
@@ -29,18 +30,7 @@ const ICE_SERVERS: RTCIceServer[] = [
   { urls: 'stun:stun.l.google.com:19302' },
   { urls: 'stun:stun1.l.google.com:19302' },
   { urls: 'stun:stun2.l.google.com:19302' },
-  // TCP TURN — punches through symmetric NAT (mobile 4G/5G)
-  {
-    urls: import.meta.env.VITE_TURN_SERVER_URL || 'turn:openrelay.metered.ca:443?transport=tcp',
-    username: import.meta.env.VITE_TURN_SERVER_USERNAME || 'openrelayproject',
-    credential: import.meta.env.VITE_TURN_SERVER_CREDENTIAL || 'openrelayproject',
-  },
-  // UDP TURN fallback
-  {
-    urls: import.meta.env.VITE_TURN_SERVER_URL_ALT || 'turn:openrelay.metered.ca:80',
-    username: import.meta.env.VITE_TURN_SERVER_USERNAME || 'openrelayproject',
-    credential: import.meta.env.VITE_TURN_SERVER_CREDENTIAL || 'openrelayproject',
-  },
+  ...config.turnServers,
 ];
 
 export function useWebRTC({ socket, teamId: _teamId, role, enabled }: UseWebRTCOptions) {

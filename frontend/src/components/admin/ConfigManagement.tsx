@@ -21,7 +21,7 @@ import {
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { updateAdminConfig, wipeAdminDatabase } from '@/lib/api';
+import { buildApiUrl, updateAdminConfig, wipeAdminDatabase } from '@/lib/api';
 import { useAdminToast } from '@/contexts/AdminToastContext';
 
 interface ConfigManagementProps {
@@ -124,7 +124,7 @@ export function ConfigManagement({ token, config, onRefresh, onError }: ConfigMa
   const fetchBypassKey = useCallback(async () => {
     if (!token) return;
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_HOST || import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000'}/api/admin/device-bypass-key`, {
+      const res = await fetch(buildApiUrl('/admin/device-bypass-key'), {
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       });
       const data = await res.json();
@@ -138,7 +138,7 @@ export function ConfigManagement({ token, config, onRefresh, onError }: ConfigMa
     if (!token) return;
     setBypassKeyLoading(true);
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_HOST || import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000'}/api/admin/device-bypass-key`, {
+      const res = await fetch(buildApiUrl('/admin/device-bypass-key'), {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({}),
@@ -155,7 +155,7 @@ export function ConfigManagement({ token, config, onRefresh, onError }: ConfigMa
   const handleClearBypassKey = async () => {
     if (!token) return;
     try {
-      await fetch(`${import.meta.env.VITE_API_HOST || import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000'}/api/admin/device-bypass-key`, {
+      await fetch(buildApiUrl('/admin/device-bypass-key'), {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -172,7 +172,7 @@ export function ConfigManagement({ token, config, onRefresh, onError }: ConfigMa
     });
     if (!ok) return;
     try {
-      await fetch(`${import.meta.env.VITE_API_HOST || import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000'}/api/admin/clear-device-lock`, {
+      await fetch(buildApiUrl('/admin/clear-device-lock'), {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ teamId: 'all' }),

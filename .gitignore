@@ -69,3 +69,21 @@ $RECYCLE.BIN/
 *.swp
 *.swo
 *~
+
+# Docker files
+# Ignore local docker override files (personal local config)
+docker-compose.override.yml
+docker-compose.override.yaml
+docker-mongo-compose.yaml
+
+# Ignore any mounted volume data directories
+**/data/db/
+**/mongo-data/
+
+# Ignore docker build cache and temp artifacts
+.dockerignore.local
+
+ngrok.yml
+.env
+.env.mongo
+.env.mongo-express
